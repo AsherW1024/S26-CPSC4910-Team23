@@ -36,14 +36,22 @@ def queryDb(query: str):
 	finally:
 		connection.close()
 
-
-
 """
-This is the about page. Right now it serves as the landing page. Later this will
-need to be changed to have a different route. '@application.route("/about/")'
-for example.
+For now, this is serving as the landing page. 
+Prompts users to either register or log in.
+Pressing either will bring users to the about page.
+After account creation and log ins are implemented,
+buttons will take them there instead.
 """
 @application.route("/")
+def welcome():
+	return render_template("welcome.html")
+
+
+"""
+about page
+"""
+@application.route("/about")
 def about():
 	#query db to find out how many accounts are in accounts table
 	accountCount = queryDb("select count(*), count(account_id) from accounts")
