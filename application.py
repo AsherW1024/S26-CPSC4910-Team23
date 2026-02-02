@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import *
 import pymysql
 from config import db_config
 
@@ -49,25 +49,7 @@ def about():
 	accountCount = queryDb("select count(*), count(account_id) from accounts")
 	accountCount = accountCount['count(*)']
 
-	html = f"""
-		<!DOCTYPE html>
-		<html lang="en">
-		<head>
-			<meta charset="UTF-8">
-			<title>About</title>
-		<link rel="stylesheet" type="text/css" href="/static/style.css">
-		</head>
-		<body>
-			<h1>About</h1>
-			<p>This application is being developed by team 23</p>
-			<br>
-			<p>This application is built with Flask and deployed on Elastic Beanstalk</p>
-			<br>
-			<p>Number of accounts: {accountCount}</p>
-		</body>
-		</html>
-	"""
-	return html
+	return render_template("about.html", accountCount=accountCount)
 
 if __name__ == "__main__":
 	application.run()
