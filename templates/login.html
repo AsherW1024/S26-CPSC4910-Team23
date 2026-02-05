@@ -11,6 +11,17 @@
     <div>
         <h2 class="title is-2">Login</h2>
         <h5 class="title is-5">Please fill in your email/username and password.</h5>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class=flashes>
+                {% for category, message in messages %}
+                    {% if category in ["password", "username", "created", "registered"] %}
+                        <div class="{{ category }}">{{ message }}</div>
+                    {% endif %}
+                {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
     </div>
     <div class="box">
         <form method="POST" action="/login">
@@ -21,9 +32,6 @@
                     <span class="icon is-small is-left">
                         <i class="fas fa-user"></i>
                     </span>
-                    <span class="error">
-                        Please enter a valid username or email
-                    </span>
                 </div>
             </div>
             <div class="field">
@@ -32,9 +40,6 @@
                     <input class="input" type="password" name="password" placeholder="Password input" pattern=".{8,128}" required>
                     <span class="icon is-small is-left">
                         <i class="fas fa-lock"></i>
-                    </span>
-                    <span class="error">
-                        Please enter digits or letters with a minimum of 8 characters
                     </span>
                 </div>
             </div>

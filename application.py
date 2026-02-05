@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, request
+from flask import Flask, render_template, redirect, url_for, request, session, flash
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 import pymysql
@@ -7,7 +7,7 @@ import os
 
 application = Flask(__name__)
 
-#application.secret_key = os.urandom(24)  # Use a secure random key in production
+application.secret_key = os.urandom(24)  # Use a secure random key in production
 
 """
 This uses the data provided in the db_config.py file to intinialize and return
@@ -67,7 +67,9 @@ def welcome():
 
 @application.route("/home")
 def home():
-	return render_template("home.html")
+	if 'UserID' in session:
+		return render_template("home.html", layout = "activenav.html")
+	return render_template("home.html", layout = "nav.html")
 
 """
 This is the about page. Right now it serves as the landing page. Later this will
@@ -77,10 +79,12 @@ for example.
 @application.route("/about")
 def about():
 	#query db to find out how many accounts are in accounts table
-	accountCount = queryDb("select count(*), count(account_id) from accounts")
+	accountCount = queryDb("SELECT count(*), count(account_id) FROM accounts")
 	accountCount = accountCount['count(*)']
 
-	return render_template("about.html", accountCount=accountCount)
+	if 'UserID' in session:
+		return render_template("about.html", layout = "activenav.html",  accountCount=accountCount)
+	return render_template("about.html", layout = "nav.html",  accountCount=accountCount)
 
 @application.route("/login")
 def login():
@@ -90,17 +94,20 @@ def login():
 def loginUser():
 
 	identifier = request.form.get("identifier")
-	exists = paramQueryDb("select UserID, Password_hash from Users where Email = %s or Username = %s", (identifier, identifier))
+	exists = paramQueryDb("SELECT UserID, Password_hash FROM Users WHERE Email = %s or Username = %s", (identifier, identifier))
 
 	if not exists:
+		flash("Please enter the correct credentials", "username")
 		return redirect(url_for("login"))
 
 	password = request.form.get("password")
 	hashPassword = exists["Password_hash"]
 
 	if not exists or not check_password_hash(hashPassword, password):
+		flash("Please enter the correct credentials", "password")
 		return redirect(url_for("login"))
-		
+
+	session['UserID'] = exists['UserID']
 	return redirect(url_for("home"))
 
 @application.route("/register")
@@ -111,9 +118,10 @@ def register():
 def registerUser():
 	email = request.form.get("email")
 
-	exists = paramQueryDb("select UserID from Users where Email=%s", (email,))
+	exists = paramQueryDb("SELECT UserID FROM Users WHERE Email=%s", (email,))
 
 	if exists:
+		flash("User already has an account", "registered")
 		return redirect(url_for("login"))
 
 	name = request.form.get("name")
@@ -128,4 +136,19 @@ def registerUser():
 		"""INSERT INTO Users (Email, Name, Username, Password_hash, TimeCreated)
 		VALUES (%s, %s, %s, %s, %s)""", (email, name, username, hashPassword, timeCreated))
 
+	flash("User account created please login", "created")
 	return redirect(url_for("login"))
+
+@application.route("/catalog")
+def catalog():
+	return render_template("catalog.html")
+
+@application.route("/profile")
+def profile():
+	profile = paramQueryDb("SELECT * FROM Users WHERE UserID = %s", (session["UserID"],))
+	return render_template("profile.html", layout = "activenav.html", name=profile["Name"], username=profile["Username"], email=profile["Email"])
+
+@application.route("/logout")
+def logout():
+	session.pop("UserID", None)
+	return render_template("/home.html", layout="nav.html")
