@@ -1,10 +1,11 @@
-from flask import *
+from flask import Flask, render_template, redirect, url_for
 import pymysql
 from config import db_config
+import os
 
 application = Flask(__name__)
 
-
+#application.secret_key = os.urandom(24)  # Use a secure random key in production
 
 """
 This uses the data provided in the db_config.py file to intinialize and return
@@ -36,20 +37,20 @@ def queryDb(query: str):
 	finally:
 		connection.close()
 
-"""
-For now, this is serving as the landing page. 
-Prompts users to either register or log in.
-Pressing either will bring users to the about page.
-After account creation and log ins are implemented,
-buttons will take them there instead.
-"""
+
+
 @application.route("/")
 def welcome():
 	return render_template("welcome.html")
 
+@application.route("/home")
+def home():
+	return render_template("home.html")
 
 """
-about page
+This is the about page. Right now it serves as the landing page. Later this will
+need to be changed to have a different route. '@application.route("/about/")'
+for example.
 """
 @application.route("/about")
 def about():
@@ -59,5 +60,18 @@ def about():
 
 	return render_template("about.html", accountCount=accountCount)
 
-if __name__ == "__main__":
-	application.run()
+@application.route("/login")
+def login():
+	return render_template("login.html")
+
+@application.route("/login", methods=["POST"])
+def loginUser():
+	return redirect(url_for("home"))
+
+@application.route("/register")
+def register():
+	return render_template("register.html")
+
+@application.route("/register", methods=["POST"])
+def registerUser():
+	return redirect(url_for("login"))
