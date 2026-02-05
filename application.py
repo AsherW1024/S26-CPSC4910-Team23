@@ -1,10 +1,13 @@
-from flask import *
+from flask import Flask, render_template, redirect, url_for, request
+from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
 import pymysql
 from config import db_config
+import os
 
 application = Flask(__name__)
 
-
+#application.secret_key = os.urandom(24)  # Use a secure random key in production
 
 """
 This uses the data provided in the db_config.py file to intinialize and return
@@ -35,21 +38,41 @@ def queryDb(query: str):
 		print(e)
 	finally:
 		connection.close()
+	
+def paramQueryDb(query: str, params=None):
+	connection = getDbConnection()
+	try:
+		with connection.cursor() as cursor:
+			cursor.execute(query, params)
+			return cursor.fetchone()
+	except Exception as e:
+		print(e)
+	finally:
+		connection.close()
 
-"""
-For now, this is serving as the landing page. 
-Prompts users to either register or log in.
-Pressing either will bring users to the about page.
-After account creation and log ins are implemented,
-buttons will take them there instead.
-"""
+def insertDb(query: str, params=None):
+	connection = getDbConnection()
+	try:
+		with connection.cursor() as cursor:
+			cursor.execute(query, params)
+			connection.commit()
+	except Exception as e:
+		print(e)
+	finally:
+		connection.close()
+
 @application.route("/")
 def welcome():
 	return render_template("welcome.html")
 
+@application.route("/home")
+def home():
+	return render_template("home.html")
 
 """
-about page
+This is the about page. Right now it serves as the landing page. Later this will
+need to be changed to have a different route. '@application.route("/about/")'
+for example.
 """
 @application.route("/about")
 def about():
@@ -59,5 +82,50 @@ def about():
 
 	return render_template("about.html", accountCount=accountCount)
 
-if __name__ == "__main__":
-	application.run()
+@application.route("/login")
+def login():
+	return render_template("login.html")
+
+@application.route("/login", methods=["POST"])
+def loginUser():
+
+	identifier = request.form.get("identifier")
+	exists = paramQueryDb("select UserID, Password_hash from Users where Email = %s or Username = %s", (identifier, identifier))
+
+	if not exists:
+		return redirect(url_for("login"))
+
+	password = request.form.get("password")
+	hashPassword = exists["Password_hash"]
+
+	if not exists or not check_password_hash(hashPassword, password):
+		return redirect(url_for("login"))
+		
+	return redirect(url_for("home"))
+
+@application.route("/register")
+def register():
+	return render_template("register.html")
+
+@application.route("/register", methods=["POST"])
+def registerUser():
+	email = request.form.get("email")
+
+	exists = paramQueryDb("select UserID from Users where Email=%s", (email,))
+
+	if exists:
+		return redirect(url_for("login"))
+
+	name = request.form.get("name")
+	username = request.form.get("username")
+	password = request.form.get("password")
+	if not username or not password:
+		return redirect(url_for("register"))
+	hashPassword = generate_password_hash(password)
+	timeCreated = datetime.now()
+
+	insertDb(
+		"""INSERT INTO Users (Email, Name, Username, Password_hash, TimeCreated)
+		VALUES (%s, %s, %s, %s, %s)""", (email, name, username, hashPassword, timeCreated))
+
+	return redirect(url_for("login"))
