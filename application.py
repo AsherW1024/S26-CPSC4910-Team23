@@ -151,4 +151,4 @@ def profile():
 @application.route("/logout")
 def logout():
 	session.pop("UserID", None)
-	return render_template(url_for("home"), layout="nav.html") 
+	return redirect(url_for("home")) 
