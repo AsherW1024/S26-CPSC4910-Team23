@@ -61,11 +61,11 @@ def insertDb(query: str, params=None):
 	finally:
 		connection.close()
 
-@application.route("/")
-def welcome():
-	return render_template("welcome.html")
+#@application.route("/")
+#def welcome():
+#	return render_template("welcome.html")
 
-@application.route("/home")
+@application.route("/")
 def home():
 	if 'UserID' in session:
 		return render_template("home.html", layout = "activenav.html")
@@ -151,4 +151,4 @@ def profile():
 @application.route("/logout")
 def logout():
 	session.pop("UserID", None)
-	return render_template("/home.html", layout="nav.html")
+	return render_template(url_for("home"), layout="nav.html") 
