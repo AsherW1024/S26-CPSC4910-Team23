@@ -6,7 +6,6 @@ from config import db_config
 import os
 
 application = Flask(__name__)
-
 application.secret_key = os.urandom(24)  # Use a secure random key in production
 
 """
@@ -116,6 +115,12 @@ def register():
 
 @application.route("/register", methods=["POST"])
 def registerUser():
+	sponsor = False
+	if 'createOrg' in session:
+		sponsor = True
+		organization = session['createOrg']
+		session.pop("createOrg", None)
+
 	email = request.form.get("email")
 
 	exists = paramQueryDb("SELECT UserID FROM Users WHERE Email=%s", (email,))
@@ -132,11 +137,25 @@ def registerUser():
 	hashPassword = generate_password_hash(password)
 	timeCreated = datetime.now()
 
-	insertDb(
-		"""INSERT INTO Users (Email, Name, Username, Password_hash, TimeCreated)
-		VALUES (%s, %s, %s, %s, %s)""", (email, name, username, hashPassword, timeCreated))
+	print("RAW USERNAME:", repr(username))
 
-	flash("User account created please login", "created")
+	if "admin" in username.strip().lower():
+		insertDb(
+			"""INSERT INTO Admins (Email, Username, Password_hash, TimeCreated)
+			VALUES (%s, %s, %s, %s)""", (email, username, hashPassword, timeCreated))
+		flash("Admin account created please login", "created")
+	else:
+		if sponsor:
+			insertDb(
+				"""INSERT INTO Sponsors (Email, Username, Password_hash, TimeCreated, OrganizationName)
+				VALUES (%s, %s, %s, %s, %s)""", (email, username, hashPassword, timeCreated, organization))
+			flash("Sponsor account created please login", "created")
+		else:	
+			insertDb(
+				"""INSERT INTO Users (Email, Name, Username, Password_hash, TimeCreated)
+				VALUES (%s, %s, %s, %s, %s)""", (email, name, username, hashPassword, timeCreated))
+			flash("User account created please login", "created")
+
 	return redirect(url_for("login"))
 
 @application.route("/catalog")
@@ -151,4 +170,30 @@ def profile():
 @application.route("/logout")
 def logout():
 	session.pop("UserID", None)
-	return redirect(url_for("home")) 
+	return redirect(url_for("home"))
+
+@application.route("/settings")
+def settings():
+	return render_template("settings.html", layout = "activenav.html") 
+
+@application.route("/createOrg")
+def createOrganization():
+	return render_template("createOrg.html")
+	
+@application.route("/createOrg", methods = ["POST"])
+def registerOrganization():
+	orgName = request.form.get("organizationName")
+	timeCreated = datetime.now()
+
+	exists = paramQueryDb("SELECT OrganizationID FROM Organizations WHERE Name=%s", (orgName,))
+
+	if exists:
+		flash("Organization already exists", "registeredOrg")
+		return redirect(url_for("login"))
+
+	insertDb(
+			"""INSERT INTO Organizations (Name, TimeCreated)
+			VALUES (%s, %s)""", (orgName, timeCreated))
+
+	session["createOrg"] = orgName
+	return redirect(url_for("register"))
