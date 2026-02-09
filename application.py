@@ -159,14 +159,67 @@ def registerUser():
 
 	return redirect(url_for("login"))
 
+"""
+helper function used when get_products is called. This removes products that
+are not between a min and max price
+"""
+def filterByPrice(data, min, max):
+	#will hold our data filterd based on price
+	filteredData = {}
+	filteredData["products"] = []
+
+	#first check that the min and max variables are numbers if not empty
+	if min!="":
+		try:
+			float(min)
+		except Exception:
+			min = ""
+	if max!="":
+		try:
+			float(max)
+		except Exception:
+			max = ""
+
+	#no min or max value provided
+	if min=="" and max=="":
+		#no change to data
+		return data
+	#only a max value provided
+	elif min=="" and max!="" and max:
+		for product in data["products"]:
+			if product["price"] <= float(max):
+				filteredData["products"].append(product)
+		#only products under the max price		
+		return filteredData
+	#only a min value provided
+	elif min!="" and max =="":
+		for product in data["products"]:
+			if product["price"] >= float(min):
+				filteredData["products"].append(product)
+		#only products above the min price		
+		return filteredData
+	#should only be when both a max and min value are provided
+	else:
+		for product in data["products"]:
+			if product["price"] <= float(max) and product["price"] >= float(min):
+				filteredData["products"].append(product)
+		#only products between the min and max price		
+		return filteredData
+
 @application.route("/get_products", methods=["POST"])
 def get_products():
 	url = "https://dummyjson.com/products/search?limit=300&q="
 	data = request.json
 	query = data["query"]
+	minPrice = data["minPrice"]
+	maxPrice = data["maxPrice"]
 
 	result = requests.get(url+query)
 	result = result.json()
+
+	#apply price filters
+	result = filterByPrice(data=result, min=minPrice, max=maxPrice);
+
 	return jsonify(result)
 
 @application.route("/catalog")

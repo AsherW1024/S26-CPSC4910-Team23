@@ -26,6 +26,49 @@ p{
 	border-radius: 30px;
 	font-size: 2vw;
 	padding-left: 10px;
+	margin-bottom: 10px;
+}
+
+#pricing {
+	display: grid;
+	justify-content: center;
+	grid-template-columns: repeat(3, 0.1fr);
+}
+
+#filter-div {
+	background-color: none;
+}
+
+.price-div {
+	font-size: 2.5vw;
+}
+
+#filter-div input {
+	text-align: center;
+	width: 20vw;
+	font-size: 2vw;
+}
+
+#filter-button {
+	width: 20vw;
+	font-size: 2vw;
+}
+
+#filter-menu {
+	margin-top: 5px;
+	background-color: rgba(255, 219, 134, 0.882);
+	height: fit-content;
+	border-radius: 20px;
+	padding: 10px;
+	opacity: 1;
+	max-height: 300vh;
+	transition: max-height 0.5s ease,
+		opacity 0.3s ease;
+}
+
+#filter-menu.closed {
+	opacity: 0;
+	max-height: 0vh;
 }
 
 .grid {
