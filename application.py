@@ -1,9 +1,10 @@
-from flask import Flask, render_template, redirect, url_for, request, session, flash
+from flask import Flask, render_template, redirect, url_for, request, session, flash, jsonify
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 import pymysql
 from config import db_config
 import os
+import requests
 
 application = Flask(__name__)
 application.secret_key = os.urandom(24)  # Use a secure random key in production
@@ -158,9 +159,19 @@ def registerUser():
 
 	return redirect(url_for("login"))
 
+@application.route("/get_products", methods=["POST"])
+def get_products():
+	url = "https://dummyjson.com/products/search?limit=300&q="
+	data = request.json
+	query = data["query"]
+
+	result = requests.get(url+query)
+	result = result.json()
+	return jsonify(result)
+
 @application.route("/catalog")
 def catalog():
-	return render_template("catalog.html")
+	return render_template("catalog.html", layout="nav.html")
 
 @application.route("/profile")
 def profile():
