@@ -197,3 +197,9 @@ def registerOrganization():
 
 	session["createOrg"] = orgName
 	return redirect(url_for("register"))
+
+"""
+This lets us test locally. Should not execute in AWS
+"""
+if __name__ == "__main__":
+	application.run()
