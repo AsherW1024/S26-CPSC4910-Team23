@@ -5,9 +5,58 @@ import pymysql
 from config import db_config
 import os
 import requests
+from functools import wraps
+from flask import abort
 
 application = Flask(__name__)
-application.secret_key = os.urandom(24)  # Use a secure random key in production
+application.secret_key = os.environ.get("SECRET_KEY", "dev-only-change-me")  # Replace with your own secret key for production (so that admins do not randomly lose access to their accounts)
+
+"""
+This is a decorator function that checks if the user is an admin before allowing access to certain routes. 
+If the user is not an admin, it will return a 403 error. 
+To use this decorator, simply add @admin_required above the route function that you want to protect. 
+For example: @application.route("/admin", methods=["GET", "POST"]
+"""
+def admin_required(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        if session.get("role") != "admin":
+            abort(403)
+        return fn(*args, **kwargs)
+    return wrapper
+
+"""
+This is the route for the about page editing access. It queries the database for the most recent about content and displays it on the page. 
+If the user is an admin, they will see an edit button that allows them to edit the about content.
+"""
+@application.route("/about/edit")
+@admin_required
+def edit_about():
+	about = paramQueryDb("SELECT body FROM AboutContent ORDER BY id DESC LIMIT 1")
+	body = about["body"] if about else ""
+	return render_template("about_edit.html", body=body, layout="activenav.html")
+
+"""
+This is the route that handles the form submission for editing the about content. 
+It inserts the new content into the database and redirects back to the about page. 
+Only admins can access this route. 
+"""
+@application.route("/about/edit", methods=["POST"])
+@admin_required
+def save_about():
+    body = request.form.get("body", "").strip()
+
+    admin_id = session.get("UserID")
+    if not admin_id:
+        abort(403)
+
+    insertDb(
+        "INSERT INTO AboutContent (body, updated_at, updated_by_admin_id) VALUES (%s, %s, %s)",
+        (body, datetime.now(), admin_id)
+    )
+
+    flash("About page updated.", "success")
+    return redirect(url_for("about"))
 
 """
 This uses the data provided in the db_config.py file to intinialize and return
@@ -32,8 +81,7 @@ def queryDb(query: str):
 	try:
 		with connection.cursor() as cursor:
 			cursor.execute(query)
-			results = cursor.fetchall()
-		return results[0]
+			return cursor.fetchone()  # returns None if no rows match the query
 	except Exception as e:
 		print(e)
 	finally:
@@ -78,13 +126,23 @@ for example.
 """
 @application.route("/about")
 def about():
-	#query db to find out how many accounts are in accounts table
-	accountCount = queryDb("SELECT count(*), count(account_id) FROM accounts")
-	accountCount = accountCount['count(*)']
+    # safer: alias the count column so you don't depend on 'count(*)'
+    accountCountRow = queryDb("SELECT COUNT(*) AS cnt FROM accounts")
+    accountCount = accountCountRow["cnt"] if accountCountRow else 0
 
-	if 'UserID' in session:
-		return render_template("about.html", layout = "activenav.html",  accountCount=accountCount)
-	return render_template("about.html", layout = "nav.html",  accountCount=accountCount)
+    about_row = paramQueryDb("SELECT body FROM AboutContent ORDER BY id DESC LIMIT 1")
+    body = about_row["body"] if about_row else ""
+
+    is_admin = session.get("role") == "admin"
+    layout = "activenav.html" if "UserID" in session else "nav.html"
+
+    return render_template(
+        "about.html",
+        layout=layout,
+        accountCount=accountCount,
+        body=body,
+        is_admin=is_admin
+    )
 
 @application.route("/login")
 def login():
@@ -140,6 +198,11 @@ def registerUser():
 	role = (request.form.get("role") or "driver").strip().lower()
 	confirm_password = request.form.get("confirm_password")
 
+	# if role is admin and user is not admin abort with 403 error since only admin can create admin accounts. 
+	# This is a security measure to prevent non-admins from creating admin accounts.
+	if role == "admin" and session.get("role") != "admin":
+		abort(403)
+
 	if role == "sponsor":
 		sponsor = True
 
@@ -175,6 +238,7 @@ def registerUser():
 			"""INSERT INTO Admins (Email, Username, Password_hash, TimeCreated)
 			VALUES (%s, %s, %s, %s)""", (email, username, hashPassword, timeCreated))
 		flash("Admin account created please login", "created")
+		return redirect(url_for("login"))
 	else:
 		if sponsor and not organization:
 			organization = request.form.get("organizationName")	
