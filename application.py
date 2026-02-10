@@ -1,9 +1,10 @@
-from flask import Flask, render_template, redirect, url_for, request, session, flash
+from flask import Flask, render_template, redirect, url_for, request, session, flash, jsonify
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 import pymysql
 from config import db_config
 import os
+import requests
 
 application = Flask(__name__)
 application.secret_key = os.urandom(24)  # Use a secure random key in production
@@ -93,7 +94,16 @@ def login():
 def loginUser():
 
 	identifier = request.form.get("identifier")
-	exists = paramQueryDb("SELECT UserID, Password_hash FROM Users WHERE Email = %s or Username = %s", (identifier, identifier))
+	exists = paramQueryDb("SELECT UserID AS id, Password_hash, 'driver' AS role FROM Users WHERE Email=%s OR Username=%s",
+                      (identifier, identifier))
+
+	if not exists:
+		exists = paramQueryDb("SELECT AdminID AS id, Password_hash, 'admin' AS role FROM Admins WHERE Email=%s OR Username=%s",
+                          (identifier, identifier))
+
+	if not exists:
+		exists = paramQueryDb("SELECT SponsorID AS id, Password_hash, 'sponsor' AS role FROM Sponsors WHERE Email=%s OR Username=%s",
+                          (identifier, identifier))
 
 	if not exists:
 		flash("Please enter the correct credentials", "username")
@@ -106,7 +116,9 @@ def loginUser():
 		flash("Please enter the correct credentials", "password")
 		return redirect(url_for("login"))
 
-	session['UserID'] = exists['UserID']
+	session['UserID'] = exists['id']
+	session['role'] = exists['role']
+
 	return redirect(url_for("home"))
 
 @application.route("/register")
@@ -116,35 +128,59 @@ def register():
 @application.route("/register", methods=["POST"])
 def registerUser():
 	sponsor = False
+	organization = None
 	if 'createOrg' in session:
 		sponsor = True
 		organization = session['createOrg']
 		session.pop("createOrg", None)
 
 	email = request.form.get("email")
+	username = request.form.get("username") 
 
-	exists = paramQueryDb("SELECT UserID FROM Users WHERE Email=%s", (email,))
+	role = (request.form.get("role") or "driver").strip().lower()
+	confirm_password = request.form.get("confirm_password")
 
-	if exists:
+	if role == "sponsor":
+		sponsor = True
+
+
+
+	exists = paramQueryDb("SELECT UserID FROM Users WHERE Email=%s OR Username=%s", (email, username))
+	exists_admin = paramQueryDb("SELECT AdminID FROM Admins WHERE Email=%s OR Username=%s", (email, username))
+	exists_sponsor = paramQueryDb("SELECT SponsorID FROM Sponsors WHERE Email=%s OR Username=%s", (email, username))
+
+
+	if exists or exists_admin or exists_sponsor:
 		flash("User already has an account", "registered")
 		return redirect(url_for("login"))
 
 	name = request.form.get("name")
 	username = request.form.get("username")
 	password = request.form.get("password")
-	if not username or not password:
+	if not username or not password or not confirm_password:
+		flash("Missing required fields.", "registered")
 		return redirect(url_for("register"))
+	
+	if password != confirm_password:
+		flash("Passwords do not match.", "registered")
+		return redirect(url_for("register"))
+
 	hashPassword = generate_password_hash(password)
 	timeCreated = datetime.now()
 
 	print("RAW USERNAME:", repr(username))
 
-	if "admin" in username.strip().lower():
+	if role == "admin":
 		insertDb(
 			"""INSERT INTO Admins (Email, Username, Password_hash, TimeCreated)
 			VALUES (%s, %s, %s, %s)""", (email, username, hashPassword, timeCreated))
 		flash("Admin account created please login", "created")
 	else:
+		if sponsor and not organization:
+			organization = request.form.get("organizationName")	
+		if sponsor and not organization:
+			flash("Sponsors must provide an organization name.", "registered")
+			return redirect(url_for("register"))
 		if sponsor:
 			insertDb(
 				"""INSERT INTO Sponsors (Email, Username, Password_hash, TimeCreated, OrganizationName)
@@ -158,18 +194,99 @@ def registerUser():
 
 	return redirect(url_for("login"))
 
+"""
+helper function used when get_products is called. This removes products that
+are not between a min and max price
+"""
+def filterByPrice(data, min, max):
+	#will hold our data filterd based on price
+	filteredData = {}
+	filteredData["products"] = []
+
+	#first check that the min and max variables are numbers if not empty
+	if min!="":
+		try:
+			float(min)
+		except Exception:
+			min = ""
+	if max!="":
+		try:
+			float(max)
+		except Exception:
+			max = ""
+
+	#no min or max value provided
+	if min=="" and max=="":
+		#no change to data
+		return data
+	#only a max value provided
+	elif min=="" and max!="" and max:
+		for product in data["products"]:
+			if product["price"] <= float(max):
+				filteredData["products"].append(product)
+		#only products under the max price		
+		return filteredData
+	#only a min value provided
+	elif min!="" and max =="":
+		for product in data["products"]:
+			if product["price"] >= float(min):
+				filteredData["products"].append(product)
+		#only products above the min price		
+		return filteredData
+	#should only be when both a max and min value are provided
+	else:
+		for product in data["products"]:
+			if product["price"] <= float(max) and product["price"] >= float(min):
+				filteredData["products"].append(product)
+		#only products between the min and max price		
+		return filteredData
+
+@application.route("/get_products", methods=["POST"])
+def get_products():
+	url = "https://dummyjson.com/products/search?limit=300&q="
+	data = request.json
+	query = data["query"]
+	minPrice = data["minPrice"]
+	maxPrice = data["maxPrice"]
+
+	result = requests.get(url+query)
+	result = result.json()
+
+	#apply price filters
+	result = filterByPrice(data=result, min=minPrice, max=maxPrice);
+
+	return jsonify(result)
+
 @application.route("/catalog")
 def catalog():
-	return render_template("catalog.html")
+	return render_template("catalog.html", layout="nav.html")
 
 @application.route("/profile")
 def profile():
+
+	if "UserID" not in session:
+		return redirect(url_for("login"))
+	
+	
+	role = session.get("role", "driver")
+
+	if role == "admin":
+		p = paramQueryDb("SELECT Email, Username FROM Admins WHERE AdminID=%s", (session["UserID"],))
+		return render_template("profile.html", layout="activenav.html",
+                               name="Admin", username=p["Username"], email=p["Email"])
+	
+	if role == "sponsor":
+		p = paramQueryDb("SELECT Email, Username FROM Sponsors WHERE SponsorID=%s", (session["UserID"],))
+		return render_template("profile.html", layout="activenav.html",
+                               name="Sponsor", username=p["Username"], email=p["Email"])
+
 	profile = paramQueryDb("SELECT * FROM Users WHERE UserID = %s", (session["UserID"],))
 	return render_template("profile.html", layout = "activenav.html", name=profile["Name"], username=profile["Username"], email=profile["Email"])
 
 @application.route("/logout")
 def logout():
 	session.pop("UserID", None)
+	session.pop("role", None)
 	return redirect(url_for("home"))
 
 @application.route("/settings")
@@ -197,3 +314,9 @@ def registerOrganization():
 
 	session["createOrg"] = orgName
 	return redirect(url_for("register"))
+
+"""
+This lets us test locally. Should not execute in AWS
+"""
+if __name__ == "__main__":
+	application.run()

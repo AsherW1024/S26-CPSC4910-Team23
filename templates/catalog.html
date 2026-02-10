@@ -8,7 +8,26 @@
 
 {% block content %}
 	<h1>Catalog</h1>
-	<input id="search-box" type="text" class="search" placeholder="Search..." />
+	<input id="search-box" type="text" class="search product-update"placeholder="Search..." />
+	<br>
+	<div id="filter-div">
+		<button id="filter-button">Show Filters ▼</button>
+		<div id="filter-menu" class="closed">
+			<div id="pricing">
+				<div class="price-div">
+					Minimum Price
+					<br>
+					<input id="min-price" type="number" min="0" class="product-update">
+				</div>
+				<p id="dash">-</p>
+				<div class="price-div">
+					Maximum Price
+					<br>
+					<input id="max-price" type="number" min="0" class="product-update">
+				</div>
+			</div>
+		</div>
+	</div>
 	<div class="grid"></div>
 	<script src="/static/js/catalog.js"></script>
 {% endblock %}

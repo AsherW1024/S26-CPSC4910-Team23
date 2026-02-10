@@ -23,6 +23,19 @@
                     </div>
                 </div>
                 <div class="field">
+                    <label class="label">Account Type*</label>
+                    <div class="control">
+                        <div class="select">
+                        <select name="role" required>
+                            <option value="driver">Driver</option>
+                            <option value="sponsor">Sponsor</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="field">
                     <label class="label">Email*</label>
                     <div class="control has-icons-left">
                         <input class="input" type="email" name="email" placeholder="Email input" pattern=".{1,80}" required>
@@ -59,6 +72,18 @@
                     </div>
                 </div>
                 <div class="field">
+                    <label class="label">Confirm Password*</label>
+                    <div class="control has-icons-left">
+                        <input class="input" type="password" name="confirm_password" placeholder="Confirm Password" pattern=".{8,128}" required>
+                        <span class="icon is-small is-left">
+                        <i class="fas fa-lock"></i>
+                        </span>
+                        <span class="error">
+                        Passwords must match
+                        </span>
+                    </div>
+                </div>
+                <div class="field">
                     <label class="label">Organization*</label>
                     <div class="control">
                         <div class="select">
@@ -69,6 +94,7 @@
                         </div>
                     </div>
                 </div>
+                
                 <div class="field">
                     <label class="label">Organization Name</label>
                     <div class="control">
