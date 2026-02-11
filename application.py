@@ -1,5 +1,5 @@
 from flask import Flask, render_template, redirect, url_for, request, session, flash, jsonify
-from datetime import datetime
+from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 import pymysql
 from config import db_config
@@ -174,26 +174,53 @@ def registerOrganization():
 #Logging in and out 
 @application.route("/login")
 def login():
+	session.setdefault('attempts', 5)
+	if 'lockoutTime' in session:
+		lockout = datetime.fromisoformat(session.get('lockoutTime'))
+		now = datetime.utcnow()
+		if now < lockout:
+			session['attempts'] = 5
+			remainingTime = lockout - now
+			minutesRemaining = int(remainingTime.total_seconds() // 60) + 1
+			flash("Too many failed attempts. Locked for %d minutes." % minutesRemaining, "failedAttempts")
+			return render_template("login.html")
+		else:
+			session.pop('lockoutTime', None)
 	return render_template("login.html")
 
 @application.route("/login", methods=["POST"])
 def loginUser():
+
+	if session['attempts'] <= 0:
+		session['lockoutTime'] = (datetime.utcnow() + timedelta(minutes=15)).isoformat()
+
+	if 'lockoutTime' in session:
+		lockout = datetime.fromisoformat(session.get('lockoutTime'))
+		now = datetime.utcnow()
+		if now < lockout:
+			session['attempts'] = 5
+			return redirect(url_for("login"))
+		else:
+			session.pop('lockoutTime', None)
 
 	identifier = request.form.get("identifier")
 	exists = paramQueryDb("SELECT UserID AS id, Password_hash, UserType FROM Users WHERE Email=%s OR Username=%s", 
 		(identifier, identifier))
 
 	if not exists:
-		flash("Please enter the correct credentials", "username")
+		session['attempts'] -= 1
+		flash("Please enter the correct credentials, Attempts left %d of 5" % (session['attempts'] + 1), "username")
 		return redirect(url_for("login"))
 
 	password = request.form.get("password")
 	hashPassword = exists["Password_hash"]
 
 	if not exists or not check_password_hash(hashPassword, password):
-		flash("Please enter the correct credentials", "password")
+		session['attempts'] -= 1
+		flash("Please enter the correct credentials, Attempts left %d of 5" % (session['attempts'] + 1), "password")
 		return redirect(url_for("login"))
 
+	session.pop('attempts', None)
 	session['UserID'] = exists['id']
 	session['role'] = exists['UserType']
 
