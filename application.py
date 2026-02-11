@@ -61,10 +61,151 @@ def insertDb(query: str, params=None):
 	finally:
 		connection.close()
 
-#@application.route("/")
-#def welcome():
-#	return render_template("welcome.html")
+#Creating accounts and organizations
+@application.route("/register")
+def register():
+	return render_template("register.html")
 
+@application.route("/sponsorRegister")
+def sRegister():
+	return render_template("sponsorRegister.html")
+
+@application.route("/register", methods=["POST"])
+def registerUser():
+	sponsor = False
+	organization = None
+	if 'createOrg' in session:
+		sponsor = True
+		organization = session['createOrg']
+		session.pop("createOrg", None)
+
+	email = request.form.get("email")
+	username = request.form.get("username") 
+
+	confirm_password = request.form.get("confirm_password")
+
+	exists = paramQueryDb("SELECT UserID FROM Users WHERE Email=%s OR Username=%s", 
+		(email, username))
+
+	if exists:
+		flash("User already has an account", "registered")
+		return redirect(url_for("login"))
+
+	name = request.form.get("name")
+	username = request.form.get("username")
+	password = request.form.get("password")
+	if not username or not password or not confirm_password:
+		flash("Missing required fields.", "missing")
+		if sponsor:
+			return redirect(url_for("sRegister"))
+		else:	
+			return redirect(url_for("register"))
+	
+	if password != confirm_password:
+		flash("Passwords do not match.", "mismatch")
+		if sponsor:
+			return redirect(url_for("sRegister"))
+		else:	
+			return redirect(url_for("register"))
+
+	hashPassword = generate_password_hash(password)
+	timeCreated = datetime.now()
+	adminCount = queryDb("SELECT COUNT(*) as count FROM Users WHERE UserType = 'a'")
+	if "admin" in username.strip().lower() and adminCount['count'] == 0:
+		insertDb(
+			"""INSERT INTO Users (Email, Username, Password_hash, TimeCreated, UserType)
+			VALUES (%s, %s, %s, %s, %s)""", (email, username, hashPassword, timeCreated, "a"))
+		newUser = paramQueryDb("SELECT UserID FROM Users WHERE Email=%s OR Username=%s", 
+			(email, username))
+		insertDb(
+			"""INSERT INTO Admins (AdminID, Name)
+			VALUES (%s, %s)""", (newUser['UserID'], name))
+		flash("Admin account created please login", "created")
+	else:
+		if not sponsor and not organization:
+			organization = request.form.get("organizationName")	
+		if sponsor:
+			insertDb(
+				"""INSERT INTO Users (Email, Username, Password_hash, TimeCreated, UserType)
+				VALUES (%s, %s, %s, %s, %s)""", (email, username, hashPassword, timeCreated, "s"))
+			newUser = paramQueryDb("SELECT UserID FROM Users WHERE Email=%s OR Username=%s", 
+				(email, username))
+			insertDb(
+				"""INSERT INTO Sponsors (SponsorID, Name, OrganizationName)
+				VALUES (%s, %s, %s)""", (newUser['UserID'], name, organization))
+			flash("Sponsor account created please login", "created")
+		else:	
+			insertDb(
+				"""INSERT INTO Users (Email, Username, Password_hash, TimeCreated, UserType)
+				VALUES (%s, %s, %s, %s, %s)""", (email, username, hashPassword, timeCreated, "d"))
+			newUser = paramQueryDb("SELECT UserID FROM Users WHERE Email=%s OR Username=%s", 
+				(email, username))
+			insertDb(
+				"""INSERT INTO Drivers (DriverID, Name, OrganizationName)
+				VALUES (%s, %s, %s)""", (newUser['UserID'], name, organization))
+			flash("User account created please login", "created")
+
+	return redirect(url_for("login"))
+
+@application.route("/createOrg")
+def createOrganization():
+	return render_template("createOrg.html")
+	
+@application.route("/createOrg", methods = ["POST"])
+def registerOrganization():
+	orgName = request.form.get("organizationName")
+	timeCreated = datetime.now()
+
+	exists = paramQueryDb("SELECT OrganizationID FROM Organizations WHERE Name=%s", 
+		(orgName,))
+
+	if exists:
+		flash("Organization already exists", "registeredOrg")
+		return redirect(url_for("login"))
+
+	insertDb(
+			"""INSERT INTO Organizations (Name, TimeCreated)
+			VALUES (%s, %s)""", (orgName, timeCreated))
+
+	session["createOrg"] = orgName
+	return redirect(url_for("sRegister"))
+
+
+#Logging in and out 
+@application.route("/login")
+def login():
+	return render_template("login.html")
+
+@application.route("/login", methods=["POST"])
+def loginUser():
+
+	identifier = request.form.get("identifier")
+	exists = paramQueryDb("SELECT UserID AS id, Password_hash, UserType FROM Users WHERE Email=%s OR Username=%s", 
+		(identifier, identifier))
+
+	if not exists:
+		flash("Please enter the correct credentials", "username")
+		return redirect(url_for("login"))
+
+	password = request.form.get("password")
+	hashPassword = exists["Password_hash"]
+
+	if not exists or not check_password_hash(hashPassword, password):
+		flash("Please enter the correct credentials", "password")
+		return redirect(url_for("login"))
+
+	session['UserID'] = exists['id']
+	session['role'] = exists['UserType']
+
+	return redirect(url_for("home"))
+
+@application.route("/logout")
+def logout():
+	session.pop("UserID", None)
+	return redirect(url_for("home"))
+
+
+#The different website pages
 @application.route("/")
 def home():
 	if 'UserID' in session:
@@ -79,120 +220,84 @@ for example.
 @application.route("/about")
 def about():
 	#query db to find out how many accounts are in accounts table
-	accountCount = queryDb("SELECT count(*), count(account_id) FROM accounts")
-	accountCount = accountCount['count(*)']
+	aboutInfo = queryDb("SELECT TeamNum, VersionNum, ReleaseDate, ProductName, ProductDescription FROM Admins WHERE AdminID = 1")
 
 	if 'UserID' in session:
-		return render_template("about.html", layout = "activenav.html",  accountCount=accountCount)
-	return render_template("about.html", layout = "nav.html",  accountCount=accountCount)
+		if session['role'] == "a":
+			return render_template("adminAbout.html", layout = "activenav.html", Team=aboutInfo['TeamNum'], Version=aboutInfo['VersionNum'], 
+			Release=aboutInfo['ReleaseDate'], Name=aboutInfo['ProductName'], Description=aboutInfo['ProductDescription'])
+		return render_template("about.html", layout = "activenav.html", Team=aboutInfo['TeamNum'], Version=aboutInfo['VersionNum'], 
+			Release=aboutInfo['ReleaseDate'], Name=aboutInfo['ProductName'], Description=aboutInfo['ProductDescription'])
+	return render_template("about.html", layout = "nav.html", Team=aboutInfo['TeamNum'], Version=aboutInfo['VersionNum'], 
+		Release=aboutInfo['ReleaseDate'], Name=aboutInfo['ProductName'], Description=aboutInfo['ProductDescription'])
 
-@application.route("/login")
-def login():
-	return render_template("login.html")
+@application.route("/about/edit")
+def editAbout():
+	return render_template("editAbout.html", layout="activenav.html")
 
-@application.route("/login", methods=["POST"])
-def loginUser():
-
-	identifier = request.form.get("identifier")
-	exists = paramQueryDb("SELECT UserID AS id, Password_hash, 'driver' AS role FROM Users WHERE Email=%s OR Username=%s",
-                      (identifier, identifier))
-
-	if not exists:
-		exists = paramQueryDb("SELECT AdminID AS id, Password_hash, 'admin' AS role FROM Admins WHERE Email=%s OR Username=%s",
-                          (identifier, identifier))
-
-	if not exists:
-		exists = paramQueryDb("SELECT SponsorID AS id, Password_hash, 'sponsor' AS role FROM Sponsors WHERE Email=%s OR Username=%s",
-                          (identifier, identifier))
-
-	if not exists:
-		flash("Please enter the correct credentials", "username")
-		return redirect(url_for("login"))
-
-	password = request.form.get("password")
-	hashPassword = exists["Password_hash"]
-
-	if not exists or not check_password_hash(hashPassword, password):
-		flash("Please enter the correct credentials", "password")
-		return redirect(url_for("login"))
-
-	session['UserID'] = exists['id']
-	session['role'] = exists['role']
-
-	return redirect(url_for("home"))
-
-@application.route("/register")
-def register():
-	return render_template("register.html")
-
-@application.route("/register", methods=["POST"])
-def registerUser():
-	sponsor = False
-	organization = None
-	if 'createOrg' in session:
-		sponsor = True
-		organization = session['createOrg']
-		session.pop("createOrg", None)
-
-	email = request.form.get("email")
-	username = request.form.get("username") 
-
-	role = (request.form.get("role") or "driver").strip().lower()
-	confirm_password = request.form.get("confirm_password")
-
-	if role == "sponsor":
-		sponsor = True
-
-
-
-	exists = paramQueryDb("SELECT UserID FROM Users WHERE Email=%s OR Username=%s", (email, username))
-	exists_admin = paramQueryDb("SELECT AdminID FROM Admins WHERE Email=%s OR Username=%s", (email, username))
-	exists_sponsor = paramQueryDb("SELECT SponsorID FROM Sponsors WHERE Email=%s OR Username=%s", (email, username))
-
-
-	if exists or exists_admin or exists_sponsor:
-		flash("User already has an account", "registered")
-		return redirect(url_for("login"))
-
+@application.route("/about/edit", methods=["POST"])
+def registerAboutEdits():
+	team = request.form.get("team")
+	version = request.form.get("version")
+	release = request.form.get("release")
 	name = request.form.get("name")
-	username = request.form.get("username")
-	password = request.form.get("password")
-	if not username or not password or not confirm_password:
-		flash("Missing required fields.", "registered")
-		return redirect(url_for("register"))
+	description = request.form.get("description")
+
+	update = []
+	identifier = []
+
+	if team:
+		identifier.append("TeamNum= %s")
+		update.append(team)
+	if version:
+		identifier.append("VersionNum = %s")
+		update.append(version)
+	if release:
+		identifier.append("ReleaseDate = %s")
+		update.append(release)
+	if name:
+		identifier.append("ProductName = %s")
+		update.append(name)
+	if description:
+		identifier.append("ProductDescription = %s")
+		update.append(description)
+
+	insertDb(
+		f"""UPDATE Admins SET {",".join(identifier)} WHERE AdminID = 1""", update)
+
+	return redirect(url_for("about"))
+
+
+@application.route("/profile")
+def profile():
+
+	if "UserID" not in session:
+		return redirect(url_for("login"))
+
+	accountType = paramQueryDb("SELECT UserType FROM Users WHERE UserID = %s", 
+		(session["UserID"],))
+	if session["role"] == "a":
+		profile = paramQueryDb("SELECT Name, Email, Username FROM Users u JOIN Admins a ON u.UserID = a.AdminID WHERE u.UserID = %s", 
+			(session["UserID"],))
+	elif session["role"] == "s":
+		profile = paramQueryDb("SELECT Name, Email, Username FROM Users u JOIN Sponsors s ON u.UserID = s.SponsorID WHERE u.UserID = %s", 
+			(session["UserID"],))
+	elif session["role"] == "d":
+		profile = paramQueryDb("SELECT Name, Email, Username FROM Users u JOIN Drivers d ON u.UserID = d.DriverID WHERE u.UserID = %s", 
+			(session["UserID"],))
 	
-	if password != confirm_password:
-		flash("Passwords do not match.", "registered")
-		return redirect(url_for("register"))
+	return render_template("profile.html", layout = "activenav.html", 
+		name=profile["Name"], username=profile["Username"], email=profile["Email"])
 
-	hashPassword = generate_password_hash(password)
-	timeCreated = datetime.now()
+@application.route("/settings")
+def settings():
+	return render_template("settings.html", layout = "activenav.html") 
 
-	print("RAW USERNAME:", repr(username))
 
-	if role == "admin":
-		insertDb(
-			"""INSERT INTO Admins (Email, Username, Password_hash, TimeCreated)
-			VALUES (%s, %s, %s, %s)""", (email, username, hashPassword, timeCreated))
-		flash("Admin account created please login", "created")
-	else:
-		if sponsor and not organization:
-			organization = request.form.get("organizationName")	
-		if sponsor and not organization:
-			flash("Sponsors must provide an organization name.", "registered")
-			return redirect(url_for("register"))
-		if sponsor:
-			insertDb(
-				"""INSERT INTO Sponsors (Email, Username, Password_hash, TimeCreated, OrganizationName)
-				VALUES (%s, %s, %s, %s, %s)""", (email, username, hashPassword, timeCreated, organization))
-			flash("Sponsor account created please login", "created")
-		else:	
-			insertDb(
-				"""INSERT INTO Users (Email, Name, Username, Password_hash, TimeCreated)
-				VALUES (%s, %s, %s, %s, %s)""", (email, name, username, hashPassword, timeCreated))
-			flash("User account created please login", "created")
-
-	return redirect(url_for("login"))
+#Catalog and filtering
+@application.route("/catalog")
+def catalog():
+	return render_template("catalog.html", layout="nav.html")
 
 """
 helper function used when get_products is called. This removes products that
@@ -253,67 +358,9 @@ def get_products():
 	result = result.json()
 
 	#apply price filters
-	result = filterByPrice(data=result, min=minPrice, max=maxPrice);
+	result = filterByPrice(data=result, min=minPrice, max=maxPrice)
 
 	return jsonify(result)
-
-@application.route("/catalog")
-def catalog():
-	return render_template("catalog.html", layout="nav.html")
-
-@application.route("/profile")
-def profile():
-
-	if "UserID" not in session:
-		return redirect(url_for("login"))
-	
-	
-	role = session.get("role", "driver")
-
-	if role == "admin":
-		p = paramQueryDb("SELECT Email, Username FROM Admins WHERE AdminID=%s", (session["UserID"],))
-		return render_template("profile.html", layout="activenav.html",
-                               name="Admin", username=p["Username"], email=p["Email"])
-	
-	if role == "sponsor":
-		p = paramQueryDb("SELECT Email, Username FROM Sponsors WHERE SponsorID=%s", (session["UserID"],))
-		return render_template("profile.html", layout="activenav.html",
-                               name="Sponsor", username=p["Username"], email=p["Email"])
-
-	profile = paramQueryDb("SELECT * FROM Users WHERE UserID = %s", (session["UserID"],))
-	return render_template("profile.html", layout = "activenav.html", name=profile["Name"], username=profile["Username"], email=profile["Email"])
-
-@application.route("/logout")
-def logout():
-	session.pop("UserID", None)
-	session.pop("role", None)
-	return redirect(url_for("home"))
-
-@application.route("/settings")
-def settings():
-	return render_template("settings.html", layout = "activenav.html") 
-
-@application.route("/createOrg")
-def createOrganization():
-	return render_template("createOrg.html")
-	
-@application.route("/createOrg", methods = ["POST"])
-def registerOrganization():
-	orgName = request.form.get("organizationName")
-	timeCreated = datetime.now()
-
-	exists = paramQueryDb("SELECT OrganizationID FROM Organizations WHERE Name=%s", (orgName,))
-
-	if exists:
-		flash("Organization already exists", "registeredOrg")
-		return redirect(url_for("login"))
-
-	insertDb(
-			"""INSERT INTO Organizations (Name, TimeCreated)
-			VALUES (%s, %s)""", (orgName, timeCreated))
-
-	session["createOrg"] = orgName
-	return redirect(url_for("register"))
 
 """
 This lets us test locally. Should not execute in AWS
