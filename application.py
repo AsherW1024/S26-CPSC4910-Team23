@@ -297,6 +297,8 @@ def settings():
 #Catalog and filtering
 @application.route("/catalog")
 def catalog():
+	if 'UserID' in session:
+		return render_template("catalog.html", layout="activenav.html")
 	return render_template("catalog.html", layout="nav.html")
 
 """
