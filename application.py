@@ -231,6 +231,13 @@ def loginUser():
 	session['UserID'] = exists['id']
 	session['role'] = exists['UserType']
 
+	if exists['UserType'] == 'a':
+		flash("Welcome Admin, we appreciate your visit to our website!", "admin")
+	elif exists['UserType'] == 's':
+		flash("Welcome Sponsor, we appreciate your visit to our website!", "sponsor")
+	elif exists['UserType'] == 'd':
+		flash("Welcome Driver, we appreciate your visit to our website!", "driver")
+
 	return redirect(url_for("home"))
 
 @application.route("/logout")
