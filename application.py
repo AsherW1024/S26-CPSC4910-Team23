@@ -8,6 +8,7 @@ import requests
 
 application = Flask(__name__)
 application.secret_key = os.urandom(24)  # Use a secure random key in production
+application.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=1)
 
 """
 This uses the data provided in the db_config.py file to intinialize and return
@@ -219,6 +220,12 @@ def loginUser():
 		session['attempts'] -= 1
 		flash("Please enter the correct credentials, Attempts left %d of 5" % (session['attempts'] + 1), "password")
 		return redirect(url_for("login"))
+
+	remember = request.form.get("remember")
+	if remember:
+		session.permanent = True
+	else:
+		session.permanent = False
 
 	session.pop('attempts', None)
 	session['UserID'] = exists['id']
