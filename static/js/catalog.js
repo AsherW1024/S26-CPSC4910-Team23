@@ -73,14 +73,12 @@ function toggleMenu() {
 	let filterMenu = document.getElementById("filter-menu");
 	let filterButton = document.getElementById("filter-button");
 	if (filterMenu.classList.contains("closed")) {
-		//filterMenu.removeAttribute("hidden");
 		filterMenu.classList.toggle("closed")
-		filterButton.innerText = "Hide Filters ▲";
+		filterButton.innerText = "Sorting & Filters ▲";
 	}
 	else {
-		//filterMenu.setAttribute("hidden", "");
 		filterMenu.classList.toggle("closed");
-		filterButton.innerText = "Show Filters ▼";
+		filterButton.innerText = "Sorting & Filters ▼";
 	}
 }
 
