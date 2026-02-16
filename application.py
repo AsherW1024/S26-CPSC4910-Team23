@@ -345,14 +345,15 @@ def registerProfileEdits():
 	identifier = []
 
 	if Username:
-		identifier.append("VersionNum = %s")
+		identifier.append("Username = %s")
 		update.append(Username)
 	if Email:
-		identifier.append("ReleaseDate = %s")
+		identifier.append("Email = %s")
 		update.append(Email)
 	if Password:
-		identifier.append("ProductName = %s")
-		update.append(Password)
+		identifier.append("Password_hash = %s")
+		hashedPassword = generate_password_hash(Password)
+		update.append(hashedPassword)
 
 	accountType = paramQueryDb("SELECT UserType FROM Users WHERE UserID = %s", 
 		(session["UserID"],))
@@ -360,21 +361,21 @@ def registerProfileEdits():
 	if session["role"] == "a":
 		insertDb(
 		f"""UPDATE Users SET {",".join(identifier)} WHERE UserID = %s""", update + [session['UserID']])
-		if name:
+		if Name:
 			insertDb(
-			f"""UPDATE Admins SET Name = %s WHERE AdminID = %s""", [name] + [session['UserID']])
+			f"""UPDATE Admins SET Name = %s WHERE AdminID = %s""", [Name] + [session['UserID']])
 	elif session["role"] == "s":
 		insertDb(
 		f"""UPDATE Users SET {",".join(identifier)} WHERE UserID = %s""", update + [session['UserID']])
-		if name:
+		if Name:
 			insertDb(
-			f"""UPDATE Sponsors SET Name = %s WHERE SponsorID = %s""", [name] + [session['UserID']])
+			f"""UPDATE Sponsors SET Name = %s WHERE SponsorID = %s""", [Name] + [session['UserID']])
 	elif session["role"] == "d":
 		insertDb(
 		f"""UPDATE Users SET {",".join(identifier)} WHERE UserID = %s""", update + [session['UserID']])
-		if name:
+		if Name:
 			insertDb(
-			f"""UPDATE Drivers SET Name = %s WHERE DriverID = %s""", [name] + [session['UserID']])
+			f"""UPDATE Drivers SET Name = %s WHERE DriverID = %s""", [Name] + [session['UserID']])
 
 	return redirect(url_for("profile"))
 
