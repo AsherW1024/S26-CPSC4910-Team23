@@ -27,3 +27,56 @@
 .failedAttempts {
     color: red;
 }
+
+/* ===== Auth page layout ===== */
+.container.is-max-desktop.mt-6 {
+    max-width: 720px;
+    margin-top: 2.5rem;
+}
+
+/* Keep form card clean and consistent */
+.container.is-max-desktop.mt-6 .box {
+    border-radius: 14px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+}
+
+/* ===== Back button ===== */
+.back-button-row {
+    margin-bottom: 1rem;
+}
+
+.back-button {
+    border-radius: 10px;
+    font-weight: 600;
+    padding: 0.45rem 0.85rem;
+}
+
+.back-button:hover {
+    transform: translateY(-1px);
+}
+
+/* ===== Flash messages ===== */
+.flashes {
+    margin: 0.75rem 0 1rem 0;
+    padding: 0;
+    list-style: none;
+}
+
+/* Error / warning style for all current categories */
+.username,
+.password,
+.registered,
+.registeredOrg,
+.missing,
+.mismatch {
+    color: #d62828;
+    font-weight: 600;
+    margin: 0.25rem 0;
+}
+
+/* Success style */
+.created {
+    color: #2a9d8f;
+    font-weight: 600;
+    margin: 0.25rem 0;
+}

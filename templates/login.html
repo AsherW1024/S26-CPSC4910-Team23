@@ -8,55 +8,69 @@
 	<title>Login</title>
 </head>
 <body>
-    <div>
-        <h2 class="title is-2">Login</h2>
-        <h5 class="title is-5">Please fill in your email/username and password.</h5>
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <ul class=flashes>
-                {% for category, message in messages %}
-                    {% if category in ["password", "username", "created", "registered", "registeredOrg", "failedAttempts"] %}
-                        <div class="{{ category }}">{{ message }}</div>
-                    {% endif %}
-                {% endfor %}
-                </ul>
-            {% endif %}
-        {% endwith %}
-    </div>
-    <div class="box">
-        <form method="POST" action="/login">
-            <div class="field">
-                <label class="label">Username/Email</label>
-                <div class="control has-icons-left">
-                    <input class="input" type="text" name="identifier" placeholder="Username/Email input" pattern=".{4,80}" required>
-                    <span class="icon is-small is-left">
-                        <i class="fas fa-user"></i>
-                    </span>
-                    <span class="error">
-                        Please enter a valid username or email
-                    </span>
+    <div class="container is-max-desktop mt-6">
+        <!-- Back button: go to previous page, fallback to /home if no referrer -->
+        <div class="back-button-row">
+            <button type="button"
+                    class="button is-light back-button"
+                    onclick="if (document.referrer) { window.history.back(); } else { window.location.href='/'; }">
+            </button>
+        </div>
+
+        <div>
+            <h2 class="title is-2">Login</h2>
+            <h5 class="title is-5">Please fill in your email/username and password.</h5>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <ul class=flashes>
+                    {% for category, message in messages %}
+                        {% if category in ["password", "username", "created", "registered", "registeredOrg"] %}
+                            <div class="{{ category }}">{{ message }}</div>
+                        {% endif %}
+                    {% endfor %}
+                    </ul>
+                {% endif %}
+            {% endwith %}
+        </div>
+
+        <div class="box">
+            <form method="POST" action="/login">
+                <div class="field">
+                    <label class="label">Username/Email</label>
+                    <div class="control has-icons-left">
+                        <input class="input" type="text" name="identifier" placeholder="Username/Email input" pattern=".{4,80}" required>
+                        <span class="icon is-small is-left">
+                            <i class="fas fa-user"></i>
+                        </span>
+                        <span class="error">
+                            Please enter a valid username or email
+                        </span>
+                    </div>
                 </div>
-            </div>
-            <div class="field">
-                <label class="label">Password</label>
-                <div class="control has-icons-left">
-                    <input class="input" type="password" name="password" placeholder="Password input" pattern=".{8,128}" required>
-                    <span class="icon is-small is-left">
-                        <i class="fas fa-lock"></i>
-                    </span>
-                    <span class="error">
-                        Please enter digits or letters with a minimum of 8 characters
-                    </span>
+
+                <div class="field">
+                    <label class="label">Password</label>
+                    <div class="control has-icons-left">
+                        <input class="input" type="password" name="password" placeholder="Password input" pattern=".{8,128}" required>
+                        <span class="icon is-small is-left">
+                            <i class="fas fa-lock"></i>
+                        </span>
+                        <span class="error">
+                            Please enter digits or letters with a minimum of 8 characters
+                        </span>
+                    </div>
                 </div>
-            </div>
-            <div class="field">
-                <label class="checkbox"> 
-                    <input type="checkbox" name="remember">
-                    Remember me
-                </label>
-            </div>
-            <button class="button is-block is-info is-large is-fullwidth">Login</button>
-        </form>
+
+                <div class="field">
+                    <label class="checkbox">
+                        <input type="checkbox" name="remember">
+                        Remember me
+                    </label>
+                </div>
+
+                <button class="button is-block is-info is-large is-fullwidth">Login</button>
+            </form>
+        </div>
     </div>
 </body>
 </html>

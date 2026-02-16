@@ -1,2 +1,4 @@
-config/
-tempCodeRunnerFile.py
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
