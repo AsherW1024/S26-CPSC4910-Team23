@@ -1,6 +1,7 @@
 //add event listeners
 document.querySelectorAll('.product-update').forEach(box => box.addEventListener("input", search));
 document.getElementById("filter-button").addEventListener("click", toggleMenu);
+document.getElementById("category").addEventListener("input", search)
 
 //store all product data for the page for when we expand to show more detail
 let pageProductData;
@@ -14,6 +15,8 @@ async function queryProducts() {
 	let minPrice = minPriceBox.value;
 	let maxPriceBox = document.getElementById("max-price");
 	let maxPrice = maxPriceBox.value;
+	let categoryBox = document.getElementById("category");
+	let category = categoryBox.value;
 
 	let response = await fetch ("/get_products", {
 		method: 'POST',
@@ -23,7 +26,8 @@ async function queryProducts() {
 		body: JSON.stringify({
 			query: query,
 			minPrice: minPrice,
-			maxPrice: maxPrice
+			maxPrice: maxPrice,
+			category: category
 		})
 	});
 	let data = await response.json();
@@ -64,7 +68,6 @@ async function queryProducts() {
 //as user types out their search
 let searchTimer;
 function search() {
-	console.log("fired");
 	clearTimeout(searchTimer);
 	searchTimer = setTimeout(()=>queryProducts(), 400);
 }

@@ -73,22 +73,9 @@ p{
 
 #category-div{
 	padding-top: 2px;
-	background-color: rgba(182, 201, 255, 0.858);
-	padding-bottom: 10px;
 }
-#category-selection {
-	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-	gap: 1vw 1vh;
-}
-#category-selection label {
-	display: flex;
-	gap: 0;
-	align-items: center;
+#category{
 	font-size: 2vw;
-}
-#category-selection label input {
-	width: 6vw;
 }
 
 .grid {

@@ -389,6 +389,20 @@ def filterByPrice(data, min, max):
 		#only products between the min and max price		
 		return filteredData
 
+"""helper function for get_products to remove products not in the given category"""
+def filterByCategory(data, category):
+	#will hold our data filterd based on category
+	filteredData = {}
+	filteredData["products"] = []
+
+	if category == "":
+		return data
+	else:
+		for product in data["products"]:
+			if product["category"] == category:
+				filteredData["products"].append(product)
+		return filteredData
+
 @application.route("/get_products", methods=["POST"])
 def get_products():
 	url = "https://dummyjson.com/products/search?limit=300&q="
@@ -396,9 +410,13 @@ def get_products():
 	query = data["query"]
 	minPrice = data["minPrice"]
 	maxPrice = data["maxPrice"]
+	category = data["category"]
 
 	result = requests.get(url+query)
 	result = result.json()
+
+	#appy category filter
+	result = filterByCategory(data=result, category=category)
 
 	#apply price filters
 	result = filterByPrice(data=result, min=minPrice, max=maxPrice)
