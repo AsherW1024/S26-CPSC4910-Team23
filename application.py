@@ -330,6 +330,55 @@ def profile():
 	return render_template("profile.html", layout = "activenav.html", 
 		name=profile["Name"], username=profile["Username"], email=profile["Email"])
 
+@application.route("/profile/edit")
+def editProfile():
+	return render_template("editProfile.html")
+
+@application.route("/profile/edit", methods=["POST"])
+def registerProfileEdits():
+	Name = request.form.get("name")
+	Username = request.form.get("username")
+	Email = request.form.get("email")
+	Password = request.form.get("password")
+
+	update = []
+	identifier = []
+
+	if Username:
+		identifier.append("Username = %s")
+		update.append(Username)
+	if Email:
+		identifier.append("Email = %s")
+		update.append(Email)
+	if Password:
+		identifier.append("Password_hash = %s")
+		hashedPassword = generate_password_hash(Password)
+		update.append(hashedPassword)
+
+	accountType = paramQueryDb("SELECT UserType FROM Users WHERE UserID = %s", 
+		(session["UserID"],))
+
+	if session["role"] == "a":
+		insertDb(
+		f"""UPDATE Users SET {",".join(identifier)} WHERE UserID = %s""", update + [session['UserID']])
+		if Name:
+			insertDb(
+			f"""UPDATE Admins SET Name = %s WHERE AdminID = %s""", [Name] + [session['UserID']])
+	elif session["role"] == "s":
+		insertDb(
+		f"""UPDATE Users SET {",".join(identifier)} WHERE UserID = %s""", update + [session['UserID']])
+		if Name:
+			insertDb(
+			f"""UPDATE Sponsors SET Name = %s WHERE SponsorID = %s""", [Name] + [session['UserID']])
+	elif session["role"] == "d":
+		insertDb(
+		f"""UPDATE Users SET {",".join(identifier)} WHERE UserID = %s""", update + [session['UserID']])
+		if Name:
+			insertDb(
+			f"""UPDATE Drivers SET Name = %s WHERE DriverID = %s""", [Name] + [session['UserID']])
+
+	return redirect(url_for("profile"))
+
 @application.route("/settings")
 def settings():
 	return render_template("settings.html", layout = "activenav.html") 

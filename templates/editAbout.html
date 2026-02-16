@@ -1,4 +1,14 @@
-<div>
+{% extends "activenav.html" %}
+
+{% block title %}About us{% endblock %}
+
+{% block page_css %}
+<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.2/css/bulma.min.css">
+<link rel="stylesheet" type="text/css" href="/static/css/form.css">
+{% endblock %}
+
+{% block content %}
+    <div class="container is-max-desktop mt-6">
         <div class="box">
             <form method="POST" action="/about/edit">
                 <div class="field">
@@ -6,7 +16,7 @@
                     <div class="control">
                         <input class="input" type="text" name="team" placeholder="Team Number input" pattern="[0-9]{1,2}">
                         <span class="error">
-                            Please enter one number as the team number
+                            Please enter one to two digits as the team number
                         </span>
                     </div>
                 </div>
@@ -15,7 +25,7 @@
                     <div class="control">
                         <input class="input" type="text" name="version" placeholder="Version Number input" pattern="[0-9]{1,2}">
                         <span class="error">
-                            Please enter one number as the version number
+                            Please enter one to two digits as the version number
                         </span>
                     </div>
                 </div>
@@ -24,7 +34,7 @@
                     <div class="control">
                         <input class="input" type="text" name="release" placeholder="Release Date input" pattern=".{6, 45}">
                         <span class="error">
-                            Please enter digits seperated by slashes with a minimum of 8 characters
+                            Please enter digits seperated by slashes with a minimum of 6 characters
                         </span>
                     </div>
                 </div>
@@ -40,17 +50,14 @@
                 <div class="field">
                     <label class="label">Product Description</label>
                     <div class="control">
-                        <div class="select">
-                            <input class="input" type="text" name="description" placeholder="Product Description input" pattern=".{1,256}">
-                            <span class="error">
-                                Please enter a valid product description
-                            </span>
-                        </div>
+                        <input class="input" type="text" name="description" placeholder="Product Description input" pattern=".{1,256}">
+                        <span class="error">
+                            Please enter a valid product description
+                        </span>
                     </div>
                 </div>
                 <button class="button is-block is-info is-large is-fullwidth">Register</button>
             </form>
         </div>
     </div>
-</body>
-</html>
+{% endblock %}

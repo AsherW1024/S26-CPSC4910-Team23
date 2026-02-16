@@ -12,8 +12,9 @@
         <!-- Back button: return to previous page, fallback to /home -->
         <div class="back-button-row">
             <button type="button"
-                    class="button is-light back-button"
-                    onclick="if (document.referrer) { window.history.back(); } else { window.location.href='/home'; }">
+                class="button is-light back-button"
+                onclick="if (document.referrer) { window.history.back(); } else { window.location.href='/home'; }">
+                <i class="fas fa-arrow-left"></i>
             </button>
         </div>
 
@@ -40,7 +41,10 @@
                     <div class="field">
                         <label class="label">Name</label>
                         <div class="control">
-                            <input class="input" type="text" name="name" placeholder="Name input">
+                            <input class="input" type="text" name="name" placeholder="Name input" pattern="[a-zA-Z ]{1,80}">
+                            <span class="error">
+                                Please enter letters with a minimum of 1 letter
+                            </span>
                         </div>
                     </div>
                     <div class="field">
