@@ -3,11 +3,14 @@
 {% block title %}Profile{% endblock %}
 
 {% block page_css %}
-<link rel="stylesheet" type="text/css" href="static/css/profile.css">
+<link rel="stylesheet" type="text/css" href="/static/css/profile.css">
 {% endblock %}
 
 {% block content %}
 <h1>Profile</h1>
+<a href="/profile/edit">
+	<button class="button">Edit Profile</button>
+</a>
 <p>{{name}}</p>
 <br>
 <p>{{username}}</p>

@@ -1,0 +1,62 @@
+{% extends "activenav.html" %}
+
+{% block title %}Profile{% endblock %}
+
+{% block page_css %}
+<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.2/css/bulma.min.css">
+<link rel="stylesheet" type="text/css" href="/static/css/form.css">
+{% endblock %}
+
+{% block content %}
+    <div class="box">
+        <h1>Please fill in all options that you would like to update.</h1>
+        <form method="POST" action="/profile/edit">
+            <div class="field">
+                <label class="label">Name</label>
+                <div class="control">
+                    <input class="input" type="text" name="name" placeholder="Name input" pattern="[a-zA-Z ]{1,80}">
+                    <span class="error">
+                        Please enter letters with a minimum of one character
+                    </span>
+                </div>
+            </div>
+            <div class="field">
+                <label class="label">Email</label>
+                <div class="control has-icons-left">
+                    <input class="input" type="email" name="email" placeholder="Email input" pattern=".{1,80}">
+                    <span class="icon is-small is-left">
+                        <i class="fas fa-envelope"></i>
+                    </span>
+                    <span class="error">
+                        Please enter a valid email
+                    </span>
+                </div>
+            </div>
+            <div class="field">
+                <label class="label">Username</label>
+                <div class="control has-icons-left">
+                    <input class="input" type="text" name="username" placeholder="Username input" pattern=".{4,80}">
+                    <span class="icon is-small is-left">
+                        <i class="fas fa-user"></i>
+                    </span>
+                    <span class="error">
+                        Please enter letters or digits with a minimum of 4 characters
+                    </span>
+                </div>
+            </div>
+            <div class="field">
+                <label class="label">Password</label>
+                <div class="control has-icons-left">
+                    <input class="input" type="password" name="password" placeholder="Password input" pattern=".{8,128}">
+                    <span class="icon is-small is-left">
+                        <i class="fas fa-lock"></i>
+                    </span>
+                    <span class="error">
+                        Please enter digits or letters with a minimum of 8 characters
+                    </span>
+                </div>
+            </div>
+            <button class="button is-block is-info is-large is-fullwidth">Register</button>
+        </form>
+    </div>
+{% endblock %}
