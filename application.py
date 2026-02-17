@@ -235,13 +235,8 @@ def loginUser():
 			session.pop('lockoutTime', None)
 
 	identifier = request.form.get("identifier")
-	exists = paramQueryDb("SELECT UserID AS id, Password_hash, UserType FROM Users WHERE Email=%s OR Username=%s", 
+	exists = paramQueryDb("SELECT UserID AS id, Username, Password_hash, UserType FROM Users WHERE Email=%s OR Username=%s", 
 		(identifier, identifier))
-
-	if not exists:
-		session['attempts'] -= 1
-		flash("Please enter the correct credentials, Attempts left %d of 5" % (session['attempts'] + 1), "username")
-		return redirect(url_for("login"))
 
 	password = request.form.get("password")
 	hashPassword = exists["Password_hash"]
@@ -249,6 +244,9 @@ def loginUser():
 	if not exists or not check_password_hash(hashPassword, password):
 		session['attempts'] -= 1
 		flash("Please enter the correct credentials, Attempts left %d of 5" % (session['attempts'] + 1), "password")
+		insertDb(
+            """INSERT INTO Logins (LoginDate, LoginUser, LoginResult)
+            VALUES (%s, %s, %s)""", (datetime.now(), identifier, False))
 		return redirect(url_for("login"))
 
 	remember = request.form.get("remember")
@@ -260,6 +258,9 @@ def loginUser():
 	session.pop('attempts', None)
 	session['UserID'] = exists['id']
 	session['role'] = exists['UserType']
+	insertDb(
+        """INSERT INTO Logins (LoginDate, LoginUser, LoginResult)
+        VALUES (%s, %s, %s) """, (datetime.now(), exists['Username'], True))
 
 	if exists['UserType'] == 'a':
 		flash("Welcome Admin, we appreciate your visit to our website!", "admin")
@@ -288,6 +289,15 @@ def require_admin():
 		return redirect(url_for("login"))
 	if session.get("role") != "a":
 		flash("Admins only.", "auth")
+		return redirect(url_for("home"))
+	return None
+
+def require_sponsor():
+	if "UserID" not in session:
+		flash("Please login first.", "auth")
+		return redirect(url_for("login"))
+	if session.get("role") != "s":
+		flash("Sponsors only.", "auth")
 		return redirect(url_for("home"))
 	return None
 
@@ -456,6 +466,86 @@ def admin_driver_edit_post(driver_id):
 	flash("Driver profile updated.", "success")
 	return redirect(url_for("admin_driver_list"))
 
+@application.route("/sponsor/drivers")
+def sponsor_driver_list():
+	guard = require_sponsor()
+	if guard:
+		return guard
+
+	q = request.args.get("q", "").strip()
+	like = f"%{q}%"
+
+	if q:
+		drivers = selectDb("""
+			SELECT u.UserID, d.Name, u.Email, u.Username, d.OrganizationName
+			FROM Users u
+			JOIN Drivers d ON u.UserID = d.DriverID
+			WHERE u.UserType='d'
+			  AND (d.Name LIKE %s OR u.Email LIKE %s OR u.Username LIKE %s OR d.OrganizationName LIKE %s)
+			ORDER BY d.Name
+			LIMIT 50
+		""", (like, like, like, like))
+	else:
+		drivers = selectDb("""
+			SELECT u.UserID, d.Name, u.Email, u.Username, d.OrganizationName
+			FROM Users u
+			JOIN Drivers d ON u.UserID = d.DriverID
+			WHERE u.UserType='d'
+			ORDER BY d.Name
+			LIMIT 50
+		""")
+
+	return render_template("sponsor_driver_list.html", layout="activenav.html", drivers=drivers, q=q)
+
+@application.route("/sponsor/drivers/<int:driver_id>/edit")
+def sponsor_driver_edit(driver_id):
+	guard = require_sponsor()
+	if guard:
+		return guard
+
+	driver = paramQueryDb("""
+		SELECT u.UserID, d.Name, u.Email, u.Username, d.OrganizationName
+		FROM Users u
+		JOIN Drivers d ON u.UserID = d.DriverID
+		WHERE u.UserID=%s AND u.UserType='d'
+	""", (driver_id,))
+
+	if not driver:
+		flash("Driver not found.", "notfound")
+		return redirect(url_for("admin_driver_list"))
+
+	return render_template("sponsor_driver_edit.html", layout="activenav.html", driver=driver)
+
+
+@application.route("/sponsor/drivers/<int:driver_id>/edit", methods=["POST"])
+def sponsor_driver_edit_post(driver_id):
+	guard = require_sponsor()
+	if guard:
+		return guard
+
+	name = request.form.get("name", "").strip()
+	email = request.form.get("email", "").strip()
+	username = request.form.get("username", "").strip()
+	org = request.form.get("organization", "").strip()
+
+	if not name or not email or not username or not org:
+		flash("All fields are required.", "validation")
+		return redirect(url_for("admin_driver_edit", driver_id=driver_id))
+
+	conflict = paramQueryDb("""
+		SELECT UserID FROM Users
+		WHERE (Email=%s OR Username=%s) AND UserID<>%s
+	""", (email, username, driver_id))
+
+	if conflict:
+		flash("Email or username already in use.", "validation")
+		return redirect(url_for("admin_driver_edit", driver_id=driver_id))
+
+	insertDb("UPDATE Users SET Email=%s, Username=%s WHERE UserID=%s", (email, username, driver_id))
+	insertDb("UPDATE Drivers SET Name=%s, OrganizationName=%s WHERE DriverID=%s", (name, org, driver_id))
+
+	flash("Driver profile updated.", "success")
+	return redirect(url_for("sponsor_driver_list"))
 
 #The different website pages
 @application.route("/")
