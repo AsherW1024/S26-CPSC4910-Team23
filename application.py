@@ -29,8 +29,9 @@ This function is simplifiy the process of making db quries. Just provide the que
 as a string, and the function will return the result as a dictionary.
 """
 def queryDb(query: str):
-	connection = getDbConnection()
+	connection = None
 	try:
+		connection = getDbConnection()
 		with connection.cursor() as cursor:
 			cursor.execute(query)
 			results = cursor.fetchall()
@@ -39,11 +40,13 @@ def queryDb(query: str):
 		print(e)
 		return None
 	finally:
-		connection.close()
+		if connection:
+			connection.close()
 	
 def paramQueryDb(query: str, params=None):
-	connection = getDbConnection()
+	connection = None
 	try:
+		connection = getDbConnection()
 		with connection.cursor() as cursor:
 			cursor.execute(query, params)
 			return cursor.fetchone()
@@ -51,18 +54,21 @@ def paramQueryDb(query: str, params=None):
 		print(e)
 		return None
 	finally:
-		connection.close()
+		if connection:
+			connection.close()
 
 def insertDb(query: str, params=None):
-	connection = getDbConnection()
+	connection = None
 	try:
+		connection = getDbConnection()
 		with connection.cursor() as cursor:
 			cursor.execute(query, params)
 			connection.commit()
 	except Exception as e:
 		print(e)
 	finally:
-		connection.close()
+		if connection:
+			connection.close()
 
 """
 Helper function that is similar to queryDb but returns all results instead of just the first one
@@ -70,8 +76,9 @@ used for queries that return multiple rows such as the product search.
 Returns a list of dictionaries instead of just a single dictionary
 """
 def selectDb(query: str, params=None):
-	connection = getDbConnection()
+	connection = None
 	try:
+		connection = getDbConnection()
 		with connection.cursor() as cursor:
 			cursor.execute(query, params)
 			return cursor.fetchall()
@@ -79,7 +86,8 @@ def selectDb(query: str, params=None):
 		print(e)
 		return []
 	finally:
-		connection.close()
+		if connection:
+			connection.close()
 
 
 #Creating accounts and organizations
@@ -131,7 +139,7 @@ def registerUser():
 
 	hashPassword = generate_password_hash(password)
 	timeCreated = datetime.now()
-	adminCount = queryDb("SELECT COUNT(*) as count FROM Users WHERE UserType = 'a'")
+	adminCount = queryDb("SELECT COUNT(*) as count FROM Users WHERE UserType = 'a'") or {"count": 0}
 	if "admin" in username.strip().lower() and adminCount['count'] == 0:
 		insertDb(
 			"""INSERT INTO Users (Email, Username, Password_hash, TimeCreated, UserType)
@@ -211,6 +219,8 @@ def login():
 
 @application.route("/login", methods=["POST"])
 def loginUser():
+
+	session.setdefault("attempts", 5)
 
 	if session['attempts'] <= 0:
 		session['lockoutTime'] = (datetime.utcnow() + timedelta(minutes=15)).isoformat()
