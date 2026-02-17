@@ -23,6 +23,10 @@
                 <div class="dropdown-content">
                     <a href="/profile">Profile</a>
                     <a href="/settings">Settings</a>
+                    {% if session.get('role') == 'a' %}
+                        <a href="/admin/sponsors">Admin: Sponsors</a>
+                        <a href="/admin/drivers">Admin: Drivers</a>
+                    {% endif %}
                     <a href="/logout">Logout</a>
                 </div>
             </div>

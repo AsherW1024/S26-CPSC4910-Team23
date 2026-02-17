@@ -34,9 +34,10 @@ def queryDb(query: str):
 		with connection.cursor() as cursor:
 			cursor.execute(query)
 			results = cursor.fetchall()
-		return results[0]
+		return results[0] if results else None
 	except Exception as e:
 		print(e)
+		return None
 	finally:
 		connection.close()
 	
@@ -48,6 +49,7 @@ def paramQueryDb(query: str, params=None):
 			return cursor.fetchone()
 	except Exception as e:
 		print(e)
+		return None
 	finally:
 		connection.close()
 
@@ -61,6 +63,24 @@ def insertDb(query: str, params=None):
 		print(e)
 	finally:
 		connection.close()
+
+"""
+Helper function that is similar to queryDb but returns all results instead of just the first one
+used for queries that return multiple rows such as the product search. 
+Returns a list of dictionaries instead of just a single dictionary
+"""
+def selectDb(query: str, params=None):
+	connection = getDbConnection()
+	try:
+		with connection.cursor() as cursor:
+			cursor.execute(query, params)
+			return cursor.fetchall()
+	except Exception as e:
+		print(e)
+		return []
+	finally:
+		connection.close()
+
 
 #Creating accounts and organizations
 @application.route("/register")
@@ -243,7 +263,188 @@ def loginUser():
 @application.route("/logout")
 def logout():
 	session.pop("UserID", None)
+	session.pop("role", None)
+	session.pop("attempts", None)
+	session.pop("lockoutTime", None)
 	return redirect(url_for("home"))
+
+"""
+Check if the user is an admin and logged in. 
+If not, redirect to the login page with a flash message.
+"""
+def require_admin():
+	if "UserID" not in session:
+		flash("Please login first.", "auth")
+		return redirect(url_for("login"))
+	if session.get("role") != "a":
+		flash("Admins only.", "auth")
+		return redirect(url_for("home"))
+	return None
+
+@application.route("/admin/sponsors")
+def admin_sponsor_list():
+	guard = require_admin()
+	if guard: 
+		return guard
+
+	q = request.args.get("q", "").strip()
+	like = f"%{q}%"
+
+	if q:
+		sponsors = selectDb("""
+			SELECT u.UserID, s.Name, u.Email, u.Username, s.OrganizationName
+			FROM Users u
+			JOIN Sponsors s ON u.UserID = s.SponsorID
+			WHERE u.UserType='s'
+			  AND (s.Name LIKE %s OR u.Email LIKE %s OR u.Username LIKE %s OR s.OrganizationName LIKE %s)
+			ORDER BY s.Name
+			LIMIT 50
+		""", (like, like, like, like))
+	else:
+		sponsors = selectDb("""
+			SELECT u.UserID, s.Name, u.Email, u.Username, s.OrganizationName
+			FROM Users u
+			JOIN Sponsors s ON u.UserID = s.SponsorID
+			WHERE u.UserType='s'
+			ORDER BY s.Name
+			LIMIT 50
+		""")
+
+	return render_template("admin_sponsor_list.html", layout="activenav.html", sponsors=sponsors, q=q)
+
+@application.route("/admin/sponsors/<int:sponsor_id>/edit")
+def admin_sponsor_edit(sponsor_id):
+	guard = require_admin()
+	if guard:
+		return guard
+
+	sponsor = paramQueryDb("""
+		SELECT u.UserID, s.Name, u.Email, u.Username, s.OrganizationName
+		FROM Users u
+		JOIN Sponsors s ON u.UserID = s.SponsorID
+		WHERE u.UserID=%s AND u.UserType='s'
+	""", (sponsor_id,))
+
+	if not sponsor:
+		flash("Sponsor not found.", "notfound")
+		return redirect(url_for("admin_sponsor_list"))
+
+	return render_template("admin_sponsor_edit.html", layout="activenav.html", sponsor=sponsor)
+
+
+@application.route("/admin/sponsors/<int:sponsor_id>/edit", methods=["POST"])
+def admin_sponsor_edit_post(sponsor_id):
+	guard = require_admin()
+	if guard:
+		return guard
+
+	name = request.form.get("name", "").strip()
+	email = request.form.get("email", "").strip()
+	username = request.form.get("username", "").strip()
+	org = request.form.get("organization", "").strip()
+
+	# basic required validation
+	if not name or not email or not username or not org:
+		flash("All fields are required.", "validation")
+		return redirect(url_for("admin_sponsor_edit", sponsor_id=sponsor_id))
+
+	# uniqueness check for email/username (excluding this user)
+	conflict = paramQueryDb("""
+		SELECT UserID FROM Users
+		WHERE (Email=%s OR Username=%s) AND UserID<>%s
+	""", (email, username, sponsor_id))
+
+	if conflict:
+		flash("Email or username already in use.", "validation")
+		return redirect(url_for("admin_sponsor_edit", sponsor_id=sponsor_id))
+
+	# update Users + Sponsors
+	insertDb("UPDATE Users SET Email=%s, Username=%s WHERE UserID=%s", (email, username, sponsor_id))
+	insertDb("UPDATE Sponsors SET Name=%s, OrganizationName=%s WHERE SponsorID=%s", (name, org, sponsor_id))
+
+	flash("Sponsor profile updated.", "success")
+	return redirect(url_for("admin_sponsor_list"))
+
+@application.route("/admin/drivers")
+def admin_driver_list():
+	guard = require_admin()
+	if guard:
+		return guard
+
+	q = request.args.get("q", "").strip()
+	like = f"%{q}%"
+
+	if q:
+		drivers = selectDb("""
+			SELECT u.UserID, d.Name, u.Email, u.Username, d.OrganizationName
+			FROM Users u
+			JOIN Drivers d ON u.UserID = d.DriverID
+			WHERE u.UserType='d'
+			  AND (d.Name LIKE %s OR u.Email LIKE %s OR u.Username LIKE %s OR d.OrganizationName LIKE %s)
+			ORDER BY d.Name
+			LIMIT 50
+		""", (like, like, like, like))
+	else:
+		drivers = selectDb("""
+			SELECT u.UserID, d.Name, u.Email, u.Username, d.OrganizationName
+			FROM Users u
+			JOIN Drivers d ON u.UserID = d.DriverID
+			WHERE u.UserType='d'
+			ORDER BY d.Name
+			LIMIT 50
+		""")
+
+	return render_template("admin_driver_list.html", layout="activenav.html", drivers=drivers, q=q)
+
+@application.route("/admin/drivers/<int:driver_id>/edit")
+def admin_driver_edit(driver_id):
+	guard = require_admin()
+	if guard:
+		return guard
+
+	driver = paramQueryDb("""
+		SELECT u.UserID, d.Name, u.Email, u.Username, d.OrganizationName
+		FROM Users u
+		JOIN Drivers d ON u.UserID = d.DriverID
+		WHERE u.UserID=%s AND u.UserType='d'
+	""", (driver_id,))
+
+	if not driver:
+		flash("Driver not found.", "notfound")
+		return redirect(url_for("admin_driver_list"))
+
+	return render_template("admin_driver_edit.html", layout="activenav.html", driver=driver)
+
+
+@application.route("/admin/drivers/<int:driver_id>/edit", methods=["POST"])
+def admin_driver_edit_post(driver_id):
+	guard = require_admin()
+	if guard:
+		return guard
+
+	name = request.form.get("name", "").strip()
+	email = request.form.get("email", "").strip()
+	username = request.form.get("username", "").strip()
+	org = request.form.get("organization", "").strip()
+
+	if not name or not email or not username or not org:
+		flash("All fields are required.", "validation")
+		return redirect(url_for("admin_driver_edit", driver_id=driver_id))
+
+	conflict = paramQueryDb("""
+		SELECT UserID FROM Users
+		WHERE (Email=%s OR Username=%s) AND UserID<>%s
+	""", (email, username, driver_id))
+
+	if conflict:
+		flash("Email or username already in use.", "validation")
+		return redirect(url_for("admin_driver_edit", driver_id=driver_id))
+
+	insertDb("UPDATE Users SET Email=%s, Username=%s WHERE UserID=%s", (email, username, driver_id))
+	insertDb("UPDATE Drivers SET Name=%s, OrganizationName=%s WHERE DriverID=%s", (name, org, driver_id))
+
+	flash("Driver profile updated.", "success")
+	return redirect(url_for("admin_driver_list"))
 
 
 #The different website pages
@@ -263,6 +464,10 @@ def about():
 	#query db to find out how many accounts are in accounts table
 	aboutInfo = queryDb("SELECT TeamNum, VersionNum, ReleaseDate, ProductName, ProductDescription FROM Admins WHERE AdminID = 1")
 
+	if not aboutInfo:
+		flash("About info missing (Admins.AdminID=1).", "notfound")
+		aboutInfo = {"TeamNum":"","VersionNum":"","ReleaseDate":"","ProductName":"","ProductDescription":""}
+	
 	if 'UserID' in session:
 		if session['role'] == "a":
 			return render_template("adminAbout.html", layout = "activenav.html", Team=aboutInfo['TeamNum'], Version=aboutInfo['VersionNum'], 
@@ -274,10 +479,17 @@ def about():
 
 @application.route("/about/edit")
 def editAbout():
+	guard = require_admin()
+	if guard:
+		return guard
 	return render_template("editAbout.html", layout="activenav.html")
 
 @application.route("/about/edit", methods=["POST"])
 def registerAboutEdits():
+	guard = require_admin()
+	if guard:
+		return guard
+	
 	team = request.form.get("team")
 	version = request.form.get("version")
 	release = request.form.get("release")
@@ -302,6 +514,10 @@ def registerAboutEdits():
 	if description:
 		identifier.append("ProductDescription = %s")
 		update.append(description)
+
+	if not identifier:
+		flash("No fields were provided to update.", "validation")
+		return redirect(url_for("editAbout"))
 
 	insertDb(
 		f"""UPDATE Admins SET {",".join(identifier)} WHERE AdminID = 1""", update)
