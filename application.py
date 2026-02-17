@@ -238,6 +238,14 @@ def loginUser():
 	exists = paramQueryDb("SELECT UserID AS id, Username, Password_hash, UserType FROM Users WHERE Email=%s OR Username=%s", 
 		(identifier, identifier))
 
+	if not exists:
+		session['attempts'] -= 1
+		flash("Please enter the correct credentials, Attempts left %d of 5" % (session['attempts'] + 1), "password")
+		insertDb(
+            """INSERT INTO Logins (LoginDate, LoginUser, LoginResult)
+            VALUES (%s, %s, %s)""", (datetime.now(), "", False))
+		return redirect(url_for("login"))
+
 	password = request.form.get("password")
 	hashPassword = exists["Password_hash"]
 
