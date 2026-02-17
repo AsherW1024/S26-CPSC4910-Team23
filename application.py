@@ -208,12 +208,12 @@ def login():
 		lockout = datetime.fromisoformat(session.get('lockoutTime'))
 		now = datetime.utcnow()
 		if now < lockout:
-			session['attempts'] = 5
 			remainingTime = lockout - now
 			minutesRemaining = int(remainingTime.total_seconds() // 60) + 1
 			flash("Too many failed attempts. Locked for %d minutes." % minutesRemaining, "failedAttempts")
 			return render_template("login.html")
 		else:
+			session['attempts'] = 5
 			session.pop('lockoutTime', None)
 	return render_template("login.html")
 
@@ -229,7 +229,6 @@ def loginUser():
 		lockout = datetime.fromisoformat(session.get('lockoutTime'))
 		now = datetime.utcnow()
 		if now < lockout:
-			session['attempts'] = 5
 			return redirect(url_for("login"))
 		else:
 			session.pop('lockoutTime', None)
@@ -240,7 +239,7 @@ def loginUser():
 
 	if not exists:
 		session['attempts'] -= 1
-		flash("Please enter the correct credentials, Attempts left %d of 5" % (session['attempts'] + 1), "password")
+		flash("Please enter the correct credentials, Attempts left %d of 5" % (session['attempts'] + 1), "username")
 		insertDb(
             """INSERT INTO Logins (LoginDate, LoginUser, LoginResult)
             VALUES (%s, %s, %s)""", (datetime.now(), "", False))
@@ -249,7 +248,7 @@ def loginUser():
 	password = request.form.get("password")
 	hashPassword = exists["Password_hash"]
 
-	if not exists or not check_password_hash(hashPassword, password):
+	if not check_password_hash(hashPassword, password):
 		session['attempts'] -= 1
 		flash("Please enter the correct credentials, Attempts left %d of 5" % (session['attempts'] + 1), "password")
 		insertDb(
@@ -274,8 +273,13 @@ def loginUser():
 		flash("Welcome Admin, we appreciate your visit to our website!", "admin")
 	elif exists['UserType'] == 's':
 		flash("Welcome Sponsor, we appreciate your visit to our website!", "sponsor")
+		userOrg = paramQueryDb("SELECT OrganizationName FROM Sponsors WHERE SponsorID = %s", (exists['id']))
+		session['Organization'] = userOrg['OrganizationName']
 	elif exists['UserType'] == 'd':
 		flash("Welcome Driver, we appreciate your visit to our website!", "driver")
+		userOrg = paramQueryDb("SELECT OrganizationName FROM Drivers WHERE SponsorID = %s", (exists['id']))
+		if userOrg:	
+			session['Organization'] = userOrg['OrganizationName']
 
 	return redirect(url_for("home"))
 

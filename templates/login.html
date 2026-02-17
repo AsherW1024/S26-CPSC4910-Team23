@@ -25,7 +25,7 @@
                 {% if messages %}
                     <ul class=flashes>
                     {% for category, message in messages %}
-                        {% if category in ["password", "username", "created", "registered", "registeredOrg"] %}
+                        {% if category in ["password", "username", "created", "registered", "registeredOrg", "failedAttempts"] %}
                             <div class="{{ category }}">{{ message }}</div>
                         {% endif %}
                     {% endfor %}
