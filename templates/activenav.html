@@ -17,6 +17,21 @@
             <a href="/catalog"> Catalog </a>
         </div>
         <div class="nav-right">
+            {% if session.get('role') == 'a' or session.get('role') == 's' %}
+            <div class="dropdown">
+                <button class="dropbtn" type="button">Create Account</button>
+                <div class="dropdown-content">
+                    {% if session.get('role') == 'a' %}
+                        <a href="/adminRegister">Admin</a>
+                        <a href="/sponsorOrgRegister">Sponsor</a>
+                        <a href="/register">Driver</a>
+                    {% elif session.get('role') == 's' %}
+                        <a href="/sponsorRegister">Sponsor</a>
+                        <a href="/register">Driver</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
             <div class="dropdown">
                 <button class="icon-user dropbtn" type="button">
                     <i class="fa fa-user fa-1x"></i>
