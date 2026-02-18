@@ -93,11 +93,16 @@ def selectDb(query: str, params=None):
 #Creating accounts and organizations
 @application.route("/register")
 def register():
-	return render_template("register.html")
+	return render_template("register.html", accountType="Driver")
 
 @application.route("/sponsorRegister")
 def sRegister():
-	return render_template("sponsorRegister.html")
+	flash("Sponsor", "accountType")
+	return render_template("register.html", accountType="Sponsor")
+
+@application.route("/adminRegister")
+def aRegister():
+	return render_template("registerAdmin.html")
 
 @application.route("/register", methods=["POST"])
 def registerUser():
@@ -151,14 +156,18 @@ def registerUser():
 			VALUES (%s, %s)""", (newUser['UserID'], name))
 		flash("Admin account created please login", "created")
 	else:
-		if not sponsor and not organization:
+		if not organization:
 			organization = request.form.get("organizationName")	
+		orgExists = paramQueryDb("SELECT OrganizationID FROM Organizations WHERE Name = %s", (organization))
 		if sponsor:
+			if not orgExists:
+				flash("The organization you entered doesn't exist, please enter a valid organization", "invalid")
+				return redirect("sRegister")
 			insertDb(
 				"""INSERT INTO Users (Email, Username, Password_hash, TimeCreated, UserType)
 				VALUES (%s, %s, %s, %s, %s)""", (email, username, hashPassword, timeCreated, "s"))
 			newUser = paramQueryDb("SELECT UserID FROM Users WHERE Email=%s OR Username=%s", 
-				(email, username))
+				(email, username))		
 			insertDb(
 				"""INSERT INTO Sponsors (SponsorID, Name, OrganizationName)
 				VALUES (%s, %s, %s)""", (newUser['UserID'], name, organization))
