@@ -97,12 +97,11 @@ def register():
 
 @application.route("/sponsorRegister")
 def sRegister():
-	flash("Sponsor", "accountType")
 	return render_template("register.html", accountType="Sponsor")
 
 @application.route("/adminRegister")
 def aRegister():
-	return render_template("registerAdmin.html")
+	return render_template("register.html", accountType="Admin")
 
 @application.route("/register", methods=["POST"])
 def registerUser():
@@ -372,7 +371,6 @@ def admin_sponsor_edit(sponsor_id):
 
 	return render_template("admin_sponsor_edit.html", layout="activenav.html", sponsor=sponsor)
 
-
 @application.route("/admin/sponsors/<int:sponsor_id>/edit", methods=["POST"])
 def admin_sponsor_edit_post(sponsor_id):
 	guard = require_admin()
@@ -456,7 +454,6 @@ def admin_driver_edit(driver_id):
 
 	return render_template("admin_driver_edit.html", layout="activenav.html", driver=driver)
 
-
 @application.route("/admin/drivers/<int:driver_id>/edit", methods=["POST"])
 def admin_driver_edit_post(driver_id):
 	guard = require_admin()
@@ -536,7 +533,6 @@ def sponsor_driver_edit(driver_id):
 		return redirect(url_for("admin_driver_list"))
 
 	return render_template("sponsor_driver_edit.html", layout="activenav.html", driver=driver)
-
 
 @application.route("/sponsor/drivers/<int:driver_id>/edit", methods=["POST"])
 def sponsor_driver_edit_post(driver_id):
@@ -644,7 +640,6 @@ def registerAboutEdits():
 		f"""UPDATE Admins SET {",".join(identifier)} WHERE AdminID = 1""", update)
 
 	return redirect(url_for("about"))
-
 
 @application.route("/profile")
 def profile():
