@@ -94,6 +94,7 @@
                             </span>
                         </div>
                     </div>
+                    {% if accountType == "Driver" or accountType == "Sponsor" %}
                     <div class="field">
                         {% if accountType == "Driver"%}
                             <label class="label">Organization Name</label>
@@ -104,6 +105,7 @@
                             <input class="input" type="text" name="organizationName" placeholder="Organization Name input" {% if accountType == "Sponsor" %}required{% endif %}>
                         </div>
                     </div>
+                    {% endif %}
                     <button class="button is-block is-info is-large is-fullwidth">Register</button>
                 </form>
             </div>
