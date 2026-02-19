@@ -727,10 +727,15 @@ def point_value():
 		orgName = paramQueryDb(query="SELECT OrganizationName FROM Sponsors WHERE SponsorID=%s", params=(session["UserID"]))["OrganizationName"]
 		orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName))["OrganizationID"]
 
-		#get point value
-		#pointVal = paramQueryDb(query="SELECT PointValue FROM Point_Values WHERE OrgID=%s")["PointValue"]
+		#provide current point value found in db
+		#later can remove try catch when point value is set on org creation
+		try:
+			pointVal = paramQueryDb(query="SELECT PointValue FROM Point_Values WHERE OrgID=%s", params=(orgID))["PointValue"]
+		except Exception as e:
+			print(e)
+			pointVal = 1.00
 
-		return render_template("point_value.html", layout="activenav.html", current_point_value=1)
+		return render_template("point_value.html", layout="activenav.html", current_point_value=pointVal)
 	return redirect(url_for("home"))
 
 @application.route("/point_value", methods=["POST"])
@@ -738,6 +743,8 @@ def change_point_value():
 	if 'UserID' in session and session["role"]=="s":
 		try:
 			newPointVal = request.get_json()["newPointVal"]
+			newPointVal = float(newPointVal)
+			newPointVal = round(newPointVal, 2)
 
 			#get org info from db
 			orgName = paramQueryDb(query="SELECT OrganizationName FROM Sponsors WHERE SponsorID=%s", params=(session["UserID"]))["OrganizationName"]
@@ -752,7 +759,8 @@ def change_point_value():
 		except Exception as e:
 			print(e)
 			return jsonify({
-				"message": "Error changing value"
+				"message": "Error changing value",
+				"newPointVal": ""
 			}), 400
 
 #Catalog and filtering

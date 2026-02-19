@@ -20,8 +20,11 @@ function pointValueRequest() {
 			newPointVal: newPointVal
 		})
 	})
-	.then(response => response.text())
-	.then(data => console.log(data));
+	.then(response => response.json())
+	.then(data => {
+		let error_message = data.message;
+		let new_val = data.newPointVal;
+	});
 }
 
 //hide or unhide point change menu
