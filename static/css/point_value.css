@@ -65,3 +65,9 @@ h2 {
 	margin-top: 20px;
 	font-size: 2vw;
 }
+
+
+#error-message {
+	font-size: 2vw;
+	margin-top: 15px;
+}

@@ -745,7 +745,7 @@ def change_point_value():
 			orgName = paramQueryDb(query="SELECT OrganizationName FROM Sponsors WHERE SponsorID=%s", params=(session["UserID"]))["OrganizationName"]
 			orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName))["OrganizationID"]
 
-			insertDb(query="INSERT INTO Point_Values (OrgID, PointValue) VALUES(%s, %s)", params=(orgID, newPointVal))
+			insertDb(query="UPDATE Point_Values SET OrgID=%s, PointValue=%s", params=(orgID, newPointVal))
 
 			return jsonify({
 				"message": "Success",

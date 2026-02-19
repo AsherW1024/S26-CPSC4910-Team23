@@ -2,6 +2,8 @@
 let submitButton = document.getElementById("point-value-submit");
 let dropdownButton = document.getElementById("change-points-dropdown");
 let controlMenu = document.getElementById("point-value-control");
+let errorMessageEl = document.getElementById("error-message");
+let pointValueEl = document.getElementById("current-point-value");
 
 //dropdown button state
 let controlsHidden = true;
@@ -24,6 +26,14 @@ function pointValueRequest() {
 	.then(data => {
 		let error_message = data.message;
 		let new_val = data.newPointVal;
+
+		errorMessageEl.innerText = error_message;
+		errorMessageEl.hidden = false;
+		errorMessageEl.style.color = "darkred";
+		if (new_val!="") {
+			pointValueEl.innerText = `$${new_val}`;
+			errorMessageEl.style.color = "green";
+		}
 	});
 }
 
