@@ -15,6 +15,9 @@
             <a href="/"> Home </a>	
             <a href="/about"> About us </a>
             <a href="/catalog"> Catalog </a>
+            {% if session.get('role') == 's' %}
+            <a href="/point_value">Org Point Value</a>
+            {% endif %}
         </div>
         <div class="nav-right">
             {% if session.get('role') == 'a' or session.get('role') == 's' %}
@@ -44,7 +47,6 @@
                         <a href="/admin/drivers">Admin: Drivers</a>
                     {% elif session.get('role') == 's' %}
                         <a href="/sponsor/drivers">Sponsor: Drivers</a>
-                        <a href="/point_value">Org Point Value</a>
                     {% endif %}
                     <a href="/logout">Logout</a>
                 </div>
