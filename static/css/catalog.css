@@ -117,13 +117,15 @@ p{
 #popup-content-div {
 	height: 80vh;
 	overflow-y: auto;
-	max-width: 95%;
+	max-width: 100%;
 	justify-content: center;
 	padding-left: 5%;
 	padding-right: 5%;
 }
 #popup-content-div div{
 	display: block;
+	margin-top: 20px;
+	margin-bottom: 20px;
 }
 
 #popup-close {
@@ -136,10 +138,10 @@ p{
 	top: 13%;
 	right: 13%;
 	font-size: 2em;
-	padding-left: 10px;
-	padding-right: 10px;
-	padding-top: 5px;
-	padding-bottom: 5px;
+	padding-left: 11px;
+	padding-right: 11px;
+	padding-top: 0px;
+	padding-bottom: 0px;
 }
 
 .side-by-side {
@@ -155,6 +157,7 @@ p{
 
 #popup-content-div h3{
 	font-size: 2.5vw;
+	font-weight: bold;
 }
 #popup-content-div h2{
 	font-size: 4vw;
@@ -171,4 +174,8 @@ p{
 #popup-images img{
 	max-width: 80%;
 	height: auto;
+}
+
+#popup-dimensions div {
+	margin: 0;
 }
