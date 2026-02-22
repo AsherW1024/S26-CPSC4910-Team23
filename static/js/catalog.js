@@ -6,6 +6,17 @@ document.getElementById("category").addEventListener("input", search)
 //store all product data for the page for when we expand to show more detail
 let pageProductData;
 
+//find the value for each point
+let pointValue;
+fetch("/point_value")
+.then(response => response.json())
+.then(data => {
+	pointValue = data.pointValue;
+})
+.catch(error => {
+	console.log("Error:", error);
+});
+
 //make api request in the backend for products
 //update screen with results
 async function queryProducts() {

@@ -712,8 +712,8 @@ def registerProfileEdits():
 def settings():
 	return render_template("settings.html", layout = "activenav.html") 
 
-@application.route("/point_value")
-def point_value():
+@application.route("/org_point_value")
+def pointValueScreen():
 	if 'UserID' in session and session["role"]=="s":
 		#get org info from db
 		orgName = paramQueryDb(query="SELECT OrganizationName FROM Sponsors WHERE SponsorID=%s", params=(session["UserID"]))["OrganizationName"]
@@ -731,7 +731,7 @@ def point_value():
 	return redirect(url_for("home"))
 
 @application.route("/point_value", methods=["POST"])
-def change_point_value():
+def changePointValue():
 	if 'UserID' in session and session["role"]=="s":
 		try:
 			newPointVal = request.get_json()["newPointVal"]
@@ -754,6 +754,40 @@ def change_point_value():
 				"message": "Error changing value",
 				"newPointVal": ""
 			}), 400
+	#no userID in session or not a sponsor
+	return jsonify({
+		"message": "Error changing value",
+		"newPointVal": ""
+	}), 400
+		
+@application.route("/point_value", methods=["GET"])
+def getPointValue():
+	if 'UserID' in session:
+		try:
+			#get org info from db
+			orgName = paramQueryDb(query="SELECT OrganizationName FROM Sponsors WHERE SponsorID=%s", params=(session["UserID"]))["OrganizationName"]
+			orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName))["OrganizationID"]
+
+			#get point value tied to org
+			point_value = paramQueryDb(query="SELECT PointValue FROM Point_Values WHERE OrgID=%s", params=(orgID))["PointValue"]
+
+			#return point value
+			return jsonify({
+				"message": "Success",
+				"pointVal": point_value
+			}), 200
+		except Exception as e:
+			print(e)
+			return jsonify({
+				"message": "Error retrieving point value",
+				"pointVal": ""
+			}), 400
+
+	#no userID in session
+	return jsonify({
+		"message": "User not signed in",
+		"pointVal": ""
+	}), 400
 
 #Catalog and filtering
 @application.route("/catalog")
