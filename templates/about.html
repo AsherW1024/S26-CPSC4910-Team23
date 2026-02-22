@@ -8,6 +8,11 @@
 
 {% block content %}
 	<h1>About</h1>
+	{% if accountType == 'a' %}
+	<a href="/about/edit">
+		<button class="button">Edit Page</button>
+	</a>
+	{% endif %}
 	<p>This application is being developed by {{Team}}</p>
 	<br>
 	<p>This is Version {{Version}}</p>

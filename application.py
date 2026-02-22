@@ -586,12 +586,9 @@ def about():
 		aboutInfo = {"TeamNum":"","VersionNum":"","ReleaseDate":"","ProductName":"","ProductDescription":""}
 	
 	if 'UserID' in session:
-		if session['role'] == "a":
-			return render_template("adminAbout.html", layout = "activenav.html", Team=aboutInfo['TeamNum'], Version=aboutInfo['VersionNum'], 
+		return render_template("about.html", layout = "activenav.html", accountType=session['role'], Team=aboutInfo['TeamNum'], Version=aboutInfo['VersionNum'], 
 			Release=aboutInfo['ReleaseDate'], Name=aboutInfo['ProductName'], Description=aboutInfo['ProductDescription'])
-		return render_template("about.html", layout = "activenav.html", Team=aboutInfo['TeamNum'], Version=aboutInfo['VersionNum'], 
-			Release=aboutInfo['ReleaseDate'], Name=aboutInfo['ProductName'], Description=aboutInfo['ProductDescription'])
-	return render_template("about.html", layout = "nav.html", Team=aboutInfo['TeamNum'], Version=aboutInfo['VersionNum'], 
+	return render_template("about.html", layout = "nav.html", accountType='d', Team=aboutInfo['TeamNum'], Version=aboutInfo['VersionNum'], 
 		Release=aboutInfo['ReleaseDate'], Name=aboutInfo['ProductName'], Description=aboutInfo['ProductDescription'])
 
 @application.route("/about/edit")
