@@ -2,6 +2,8 @@
 document.querySelectorAll('.product-update').forEach(box => box.addEventListener("input", search));
 document.getElementById("filter-button").addEventListener("click", toggleMenu);
 document.getElementById("category").addEventListener("input", search)
+document.getElementById("sort-type").addEventListener("input", search)
+document.getElementById("sort-direction").addEventListener("input", search)
 
 //store all product data for the page for when we expand to show more detail
 let pageProductData;
@@ -28,6 +30,10 @@ async function queryProducts() {
 	let maxPrice = maxPriceBox.value;
 	let categoryBox = document.getElementById("category");
 	let category = categoryBox.value;
+	let sortByBox = document.getElementById("sort-type");
+	let sortBy = sortByBox.value;
+	let sortDirectionBox = document.getElementById("sort-direction");
+	let sortDirection = sortDirectionBox.value;
 
 	let response = await fetch ("/get_products", {
 		method: 'POST',
@@ -38,7 +44,9 @@ async function queryProducts() {
 			query: query,
 			minPrice: minPrice,
 			maxPrice: maxPrice,
-			category: category
+			category: category,
+			sortBy: sortBy,
+			sortDirection: sortDirection
 		})
 	});
 	let data = await response.json();

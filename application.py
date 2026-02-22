@@ -889,9 +889,16 @@ def get_products():
 	minPrice = data["minPrice"]
 	maxPrice = data["maxPrice"]
 	category = data["category"]
+	sortBy = data["sortBy"]
+	sortDirection = data["sortDirection"]
 
-	result = requests.get(url+query)
-	result = result.json()
+	#change query depending on sort parameters
+	if sortBy == "":
+		result = requests.get(url+query)
+		result = result.json()
+	else: 
+		result = requests.get(url+query+f"&sortBy={sortBy}&order={sortDirection}")
+		result = result.json()
 
 	#adjust dollar curreny to point currency
 	result = adjustPrice(result)

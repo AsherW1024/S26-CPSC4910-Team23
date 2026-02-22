@@ -183,3 +183,18 @@ p{
 .product h3 {
 	font-weight: bold;
 }
+
+#sort-div h4 {
+	font-size: 4vw;
+	margin-top: 50px;
+}
+
+#sort-div select {
+	font-size: 2vw;
+	margin: 0;
+}
+
+#filter-menu h4 {
+	font-size: 4vw;
+	margin: 10px;
+}
