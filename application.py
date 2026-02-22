@@ -5,6 +5,7 @@ import pymysql
 from config import db_config
 import os
 import requests
+import math
 
 application = Flask(__name__)
 application.secret_key = os.urandom(24)  # Use a secure random key in production
@@ -857,6 +858,29 @@ def filterByCategory(data, category):
 				filteredData["products"].append(product)
 		return filteredData
 
+"""
+helper function for get_products to give catalog items a point price determined
+by their point worth in their org
+"""
+def adjustPrice(data):
+	try:
+		#get org info from db
+		orgName = paramQueryDb(query="SELECT OrganizationName FROM Sponsors WHERE SponsorID=%s", params=(session["UserID"]))["OrganizationName"]
+		orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName))["OrganizationID"]
+
+		#get point value tied to org
+		point_value = paramQueryDb(query="SELECT PointValue FROM Point_Values WHERE OrgID=%s", params=(orgID))["PointValue"]
+	except Exception as e:
+		print(e)
+		return data
+
+	#make the price equal to the price in dollars multiplied by the point value
+	#rounded to nearest whole point, always rounded up
+	for product in data["products"]:
+		product["price"] = math.ceil(product["price"]*float(point_value))
+
+	return(data)
+
 @application.route("/get_products", methods=["POST"])
 def get_products():
 	url = "https://dummyjson.com/products/search?limit=300&q="
@@ -868,6 +892,9 @@ def get_products():
 
 	result = requests.get(url+query)
 	result = result.json()
+
+	#adjust dollar curreny to point currency
+	result = adjustPrice(result)
 
 	#appy category filter
 	result = filterByCategory(data=result, category=category)

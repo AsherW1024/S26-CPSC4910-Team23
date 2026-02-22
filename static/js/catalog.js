@@ -63,7 +63,7 @@ async function queryProducts() {
 		name.innerText = product.title;
 		//product price shown in the catalog grid
 		let price = document.createElement("p");
-		price.innerText = "$"+product.price;
+		price.innerText = product.price+ " Points";
 
 		//establish relationships between elements
 		productDiv.appendChild(productImg);
@@ -118,8 +118,8 @@ function showProductDetails() {
 				<h2>${productDetails.title}</H3>
 				<div id="popup-price">
 					<div class="side-by-side">
-						<h3>Price:</h3>
-						<p>$${productDetails.price}</p>
+						<h3>Point Cost:</h3>
+						<p>${productDetails.price} Points</p>
 					</div>
 				</div>
 				<div id="popup-availability">
