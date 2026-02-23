@@ -833,7 +833,7 @@ def excludeProduct():
 		"message": "Permission error"
 	}), 403
 
-@application.route("/user/role", methods="GET")
+@application.route("/user/role", methods=["GET"])
 def getRole():
 	if "UserID" in session:
 		roleCode = session.get("role")

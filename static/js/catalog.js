@@ -8,12 +8,13 @@ document.getElementById("sort-direction").addEventListener("input", search)
 //store all product data for the page for when we expand to show more detail
 let pageProductData;
 
-//find the value for each point
-let pointValue;
-fetch("/point_value")
+//find user's role
+let userRole;
+fetch("/user/role")
 .then(response => response.json())
 .then(data => {
-	pointValue = data.pointValue;
+	userRole = data.role;
+	console.log(userRole);
 })
 .catch(error => {
 	console.log("Error:", error);
