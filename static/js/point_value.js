@@ -31,7 +31,7 @@ function pointValueRequest() {
 		errorMessageEl.hidden = false;
 		errorMessageEl.style.color = "darkred";
 		if (new_val!="") {
-			pointValueEl.innerText = `$${new_val}`;
+			pointValueEl.innerText = `$${parseFloat(new_val).toFixed(2)}`;
 			errorMessageEl.style.color = "green";
 		}
 	});
@@ -78,5 +78,5 @@ dropdownButton.addEventListener("click", toggleMenu);
 inputBox.addEventListener("input", clearErrorMessage);
 
 //event listeners to always show point values as having 2 decimal places
-inputBox.addEventListener("input", formatPointVal);
+inputBox.addEventListener("change", formatPointVal);
 window.addEventListener("load", formatPointVal);
