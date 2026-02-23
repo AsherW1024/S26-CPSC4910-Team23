@@ -58,7 +58,7 @@ def paramQueryDb(query: str, params=None):
 		if connection:
 			connection.close()
 
-def insertDb(query: str, params=None):
+def updateDb(query: str, params=None):
 	connection = None
 	try:
 		connection = getDbConnection()
@@ -146,12 +146,12 @@ def registerUser():
 	timeCreated = datetime.now()
 	adminCount = queryDb("SELECT COUNT(*) as count FROM Users WHERE UserType = 'Admin'") or {"count": 0}
 	if "admin" in username.strip().lower() and adminCount['count'] == 0:
-		insertDb(
+		updateDb(
 			"""INSERT INTO Users (Email, Username, Password_hash, TimeCreated, UserType, Name)
 			VALUES (%s, %s, %s, %s, %s, %s)""", (email, username, hashPassword, timeCreated, "Admin", name))
 		newUser = paramQueryDb("SELECT UserID FROM Users WHERE Email=%s OR Username=%s", 
 			(email, username))
-		insertDb(
+		updateDb(
 			"""INSERT INTO Admins (AdminID)
 			VALUES (%s)""", (newUser['UserID']))
 		flash("Admin account created please login", "created")
@@ -163,22 +163,22 @@ def registerUser():
 			if not orgExists:
 				flash("The organization you entered doesn't exist, please enter a valid organization", "invalid")
 				return redirect("sRegister")
-			insertDb(
+			updateDb(
 				"""INSERT INTO Users (Email, Username, Password_hash, TimeCreated, UserType, Name)
 				VALUES (%s, %s, %s, %s, %s, %s)""", (email, username, hashPassword, timeCreated, "Sponsor", name))
 			newUser = paramQueryDb("SELECT UserID FROM Users WHERE Email=%s OR Username=%s", 
 				(email, username))		
-			insertDb(
+			updateDb(
 				"""INSERT INTO Sponsors (SponsorID, OrganizationName)
 				VALUES (%s, %s)""", (newUser['UserID'], organization))
 			flash("Sponsor account created please login", "created")
 		else:	
-			insertDb(
+			updateDb(
 				"""INSERT INTO Users (Email, Username, Password_hash, TimeCreated, UserType, Name)
 				VALUES (%s, %s, %s, %s, %s, %s)""", (email, username, hashPassword, timeCreated, "Driver", name))
 			newUser = paramQueryDb("SELECT UserID FROM Users WHERE Email=%s OR Username=%s", 
 				(email, username))
-			insertDb(
+			updateDb(
 				"""INSERT INTO Drivers (DriverID, OrganizationName)
 				VALUES (%s, %s)""", (newUser['UserID'], organization))
 			flash("User account created please login", "created")
@@ -201,9 +201,9 @@ def registerOrganization():
 		flash("Organization already exists", "registeredOrg")
 		return redirect(url_for("login"))
 
-	insertDb(
-			"""INSERT INTO Organizations (Name, TimeCreated)
-			VALUES (%s, %s)""", (orgName, timeCreated))
+	updateDb(
+		"""INSERT INTO Organizations (Name, TimeCreated)
+		VALUES (%s, %s)""", (orgName, timeCreated))
 
 	session["createOrg"] = orgName
 	return redirect(url_for("sRegister"))
@@ -249,7 +249,7 @@ def loginUser():
 	if not exists:
 		session['attempts'] -= 1
 		flash("Please enter the correct credentials, Attempts left %d of 5" % (session['attempts'] + 1), "username")
-		insertDb(
+		updateDb(
             """INSERT INTO Logins (LoginDate, LoginUser, LoginResult)
             VALUES (%s, %s, %s)""", (datetime.now(), "", False))
 		return redirect(url_for("login"))
@@ -260,7 +260,7 @@ def loginUser():
 	if not check_password_hash(hashPassword, password):
 		session['attempts'] -= 1
 		flash("Please enter the correct credentials, Attempts left %d of 5" % (session['attempts'] + 1), "password")
-		insertDb(
+		updateDb(
             """INSERT INTO Logins (LoginDate, LoginUser, LoginResult)
             VALUES (%s, %s, %s)""", (datetime.now(), identifier, False))
 		return redirect(url_for("login"))
@@ -274,7 +274,7 @@ def loginUser():
 	session.pop('attempts', None)
 	session['UserID'] = exists['id']
 	session['role'] = exists['UserType']
-	insertDb(
+	updateDb(
         """INSERT INTO Logins (LoginDate, LoginUser, LoginResult)
         VALUES (%s, %s, %s) """, (datetime.now(), exists['Username'], True))
 
@@ -348,55 +348,6 @@ def adminUserList():
 		""")
 	
 	return render_template("userList.html", layout="activenav.html", users=users, q=q, accountType='admin')
-	
-@application.route("/admin/users/<int:UserID>/edit")
-def adminUserEdit(UserID):
-	guard = require_admin()
-	if guard:
-		return guard
-
-	user = paramQueryDb("""
-		SELECT UserType, UserID, Name, Email, Username
-		FROM Users
-		WHERE UserID=%s
-	""", (UserID,))
-	
-	if not user:
-		flash("User not found.", "notfound")
-		return redirect(url_for("adminUserList"))
-
-	return render_template("userEdit.html", layout="activenav.html", user=user, accountType='admin')
-
-@application.route("/admin/users/<int:UserID>/edit", methods=["POST"])
-def adminUserEditPost(UserID):	
-	guard = require_admin()
-	if guard:
-		return guard
-
-	name = request.form.get("name", "").strip()
-	email = request.form.get("email", "").strip()
-	username = request.form.get("username", "").strip()
-
-	# basic required validation
-	if not name or not email or not username:
-		flash("All fields are required.", "validation")
-		return redirect(url_for("adminUserEdit", UserID=UserID))
-
-	# uniqueness check for email/username (excluding this user)
-	conflict = paramQueryDb("""
-		SELECT UserID FROM Users
-		WHERE (Email=%s OR Username=%s) AND UserID<>%s
-	""", (email, username, UserID))
-
-	if conflict:
-		flash("Email or username already in use.", "validation")
-		return redirect(url_for("adminUserEdit", UserID=UserID))
-
-	# update Users
-	insertDb("UPDATE Users SET Name = %s, Email=%s, Username=%s WHERE UserID=%s", (name, email, username, UserID))
-
-	flash("User profile updated.", "success")
-	return redirect(url_for("adminUserList"))
 
 @application.route("/sponsor/users")
 def sponsorUserList():
@@ -411,7 +362,7 @@ def sponsorUserList():
 		users = selectDb("""
 			SELECT UserType, UserID, Name, Email, Username
 			FROM Users
-			WHERE Name LIKE %s OR Email LIKE %s OR u.Username LIKE %s
+			WHERE (Name LIKE %s OR Email LIKE %s OR Username LIKE %s) AND (UserType = "Sponsor" OR UserType = "Driver") 
 			ORDER BY Name
 			LIMIT 50
 		""", (like, like, like))
@@ -419,15 +370,20 @@ def sponsorUserList():
 		users = selectDb("""
 			SELECT UserType, UserID, Name, Email, Username
 			FROM Users
+			WHERE UserType = "Sponsor" OR UserType = "Driver"
 			ORDER BY Name
 			LIMIT 50
 		""")
 
 	return render_template("userList.html", layout="activenav.html", users=users, q=q, accountType='sponsor')
+	
+@application.route("/<accountType>/users/<int:UserID>/edit")
+def userEdit(accountType, UserID):
+	if accountType == 'sponsor':
+		guard = require_sponsor()
+	elif accountType == 'admin':
+		guard = require_admin()
 
-@application.route("/sponsor/users/<int:UserID>/edit")
-def sponsorUserEdit(UserID):
-	guard = require_sponsor()
 	if guard:
 		return guard
 
@@ -436,16 +392,23 @@ def sponsorUserEdit(UserID):
 		FROM Users
 		WHERE UserID=%s
 	""", (UserID,))
-
+	
 	if not user:
 		flash("User not found.", "notfound")
-		return redirect(url_for("sponsorUserList"))
+		if accountType == 'sponsor':
+			return redirect(url_for("sponsorUserList"))
+		elif accountType == 'admin':
+			return redirect(url_for("adminUserList"))
 
-	return render_template("userEdit.html", layout="activenav.html", user=user, accountType='sponsor')
+	return render_template("userEdit.html", layout="activenav.html", user=user, accountType=accountType)
 
-@application.route("/sponsor/users/<int:UserID>/edit", methods=["POST"])
-def sponsorUserEditPost(UserID):
-	guard = require_sponsor()
+@application.route("/<accountType>/users/<int:UserID>/edit", methods=["POST"])
+def userEditPost(accountType, UserID):	
+	if accountType == 'sponsor':
+		guard = require_sponsor()
+	elif accountType == 'admin':
+		guard = require_admin()
+
 	if guard:
 		return guard
 
@@ -453,10 +416,12 @@ def sponsorUserEditPost(UserID):
 	email = request.form.get("email", "").strip()
 	username = request.form.get("username", "").strip()
 
+	# basic required validation
 	if not name or not email or not username:
 		flash("All fields are required.", "validation")
-		return redirect(url_for("sponsorUserEdit", UserID=UserID))
+		return redirect(url_for("userEdit", UserID=UserID))
 
+	# uniqueness check for email/username (excluding this user)
 	conflict = paramQueryDb("""
 		SELECT UserID FROM Users
 		WHERE (Email=%s OR Username=%s) AND UserID<>%s
@@ -464,12 +429,30 @@ def sponsorUserEditPost(UserID):
 
 	if conflict:
 		flash("Email or username already in use.", "validation")
-		return redirect(url_for("sponsorUserEdit", UserID=UserID))
+		return redirect(url_for("userEdit", UserID=UserID))
 
-	insertDb("UPDATE Users SET Name = %s, Email=%s, Username=%s WHERE UserID=%s", (name, email, username, UserID))
+	# update Users
+	updateDb("UPDATE Users SET Name = %s, Email=%s, Username=%s WHERE UserID=%s", (name, email, username, UserID))
 
 	flash("User profile updated.", "success")
-	return redirect(url_for("sponsor_driver_list"))
+	if accountType == "sponsor":
+		return redirect(url_for("sponsorUserList"))
+	elif accountType == "admin":
+		return redirect(url_for("adminUserList"))
+
+@application.route("/<accountType>/users/<int:UserID>/delete", methods=["POST"])
+def delete_user(accountType, UserID):
+	user = paramQueryDb("SELECT UserType FROM Users WHERE UserID = %s", (UserID,))
+	if user["UserType"] == "Admin": 
+		updateDb("DELETE FROM Admins WHERE AdminID = %s", (UserID,))
+	elif user["UserType"] == "Sponsor": 
+		updateDb("DELETE FROM Sponsors WHERE SponsorID = %s", (UserID,))
+	elif user["UserType"] == "Driver": 
+		updateDb("DELETE FROM Drivers WHERE DriverID = %s", (UserID,))
+	updateDb("DELETE FROM Users WHERE UserID = %s", (UserID,))
+	
+	flash("User deleted successfully.", "success")
+	return redirect(f"/{accountType}/users")
 
 
 #The different website pages
@@ -541,7 +524,7 @@ def registerAboutEdits():
 		flash("No fields were provided to update.", "validation")
 		return redirect(url_for("editAbout"))
 
-	insertDb(
+	updateDb(
 		f"""UPDATE Admins SET {",".join(identifier)} WHERE AdminID = 1""", update)
 
 	return redirect(url_for("about"))
@@ -607,13 +590,13 @@ def registerProfileEdits():
 		(session["UserID"],))
 
 	if session["role"] == "Admin":
-		insertDb(
+		updateDb(
 		f"""UPDATE Users SET {",".join(identifier)} WHERE UserID = %s""", update + [session['UserID']])
 	elif session["role"] == "Sponsor":
-		insertDb(
+		updateDb(
 		f"""UPDATE Users SET {",".join(identifier)} WHERE UserID = %s""", update + [session['UserID']])
 	elif session["role"] == "Driver":
-		insertDb(
+		updateDb(
 		f"""UPDATE Users SET {",".join(identifier)} WHERE UserID = %s""", update + [session['UserID']])
 
 	return redirect(url_for("profile"))
@@ -652,7 +635,7 @@ def changePointValue():
 			orgName = paramQueryDb(query="SELECT OrganizationName FROM Sponsors WHERE SponsorID=%s", params=(session["UserID"]))["OrganizationName"]
 			orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName))["OrganizationID"]
 
-			insertDb(query="UPDATE Point_Values SET OrgID=%s, PointValue=%s", params=(orgID, newPointVal))
+			updateDb(query="UPDATE Point_Values SET OrgID=%s, PointValue=%s", params=(orgID, newPointVal))
 
 			return jsonify({
 				"message": "Success",
