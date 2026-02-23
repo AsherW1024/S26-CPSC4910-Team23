@@ -771,8 +771,7 @@ def adjustPrice(data):
 		#get point value tied to org
 		point_value = paramQueryDb(query="SELECT PointValue FROM Point_Values WHERE OrgID=%s", params=(orgID))["PointValue"]
 	except Exception as e:
-		print(e)
-		return data
+		point_value = 1.00
 
 	#make the price equal to the price in dollars multiplied by the point value
 	#rounded to nearest whole point, always rounded up
@@ -780,6 +779,40 @@ def adjustPrice(data):
 		product["price"] = math.ceil(product["price"]*float(point_value))
 
 	return(data)
+
+"""
+remove items from product list if their id is found in the
+exclusion list found in the db
+"""
+def removeExclusions(data):
+	try:
+		#get org info from db
+		orgName = paramQueryDb(query="SELECT OrganizationName FROM Drivers WHERE DriverID=%s", params=(session["UserID"]))["OrganizationName"]
+		orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName))["OrganizationID"]
+
+		queryResult = queryDb(f"SELECT productID FROM Catalog_Exclusion_List WHERE orgID={orgID}")
+		
+		if queryResult == None:
+			return data
+
+		excludedProducts = []
+		for product in queryResult:
+			excludedProducts.append(product["productID"])
+
+		filteredData = {}
+		filteredData["products"] = []
+
+		for product in data["products"]:
+			if product["id"] not in excludedProducts:
+				filteredData["products"].append(product)
+
+		return filteredData
+	
+	#don't filter if there is an error
+	except Exception as e:
+		print(e)
+		return data
+
 
 @application.route("/get_products", methods=["POST"])
 def get_products():
@@ -799,6 +832,9 @@ def get_products():
 	else: 
 		result = requests.get(url+query+f"&sortBy={sortBy}&order={sortDirection}")
 		result = result.json()
+
+	if session.get("role") == "Driver":
+		result = removeExclusions(result)
 
 	#adjust dollar curreny to point currency
 	result = adjustPrice(result)
@@ -821,6 +857,12 @@ def getExcludedProducts():
 			orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName))["OrganizationID"]
 
 			products = queryDb(query=f"SELECT productID FROM Catalog_Exclusion_List WHERE orgID={orgID}")
+
+			if products == None:
+				return jsonify({
+					"message": "No excluded products",
+					"products": []
+				}), 200
 
 			#make list of product ids to send back to the javascript
 			productList = []
@@ -855,17 +897,25 @@ def excludeProduct():
 			#get id of product being excluded from catalog
 			data = request.json
 			productID = data["productID"]
+			action = data["action"]
 
 			#add product and org info to the exclusion list
-			updateDb("INSERT INTO Catalog_Exclusion_List (orgID, productID) VALUES (%s, %s)", params=(orgID, productID))
-
+			if (action == "remove"):
+				updateDb("INSERT INTO Catalog_Exclusion_List (orgID, productID) VALUES (%s, %s)", params=(orgID, productID))
+			elif (action == "add"):
+				updateDb("DELETE FROM Catalog_Exclusion_List WHERE orgID=%s AND productID=%s", params=(orgID, productID))
+			else:
+				return jsonify({
+					"message": "Improper action provided"
+				}), 400
+			
 			return jsonify({
 				"message": "Success"
 			}), 200
 		except Exception as e:
 			print(e)
 			return jsonify({
-				"message": "Catalog Item failed to be excluded"
+				"message": "Failed to update catalog"
 			}), 400
 
 	return jsonify({

@@ -40,14 +40,19 @@ async function removeProduct(event) {
 			'Content-Type': 'application/json',
 		},
 		body: JSON.stringify({
-			productID: productID
+			productID: productID,
+			action: "remove"
 		})
 	});
 	let data = await response.json();
 	
 	if (response.status == 200) {
 		productDiv.classList.add("not-included");
-		console.log(productDiv.classList);
+		removeButton.classList.remove("remove-button");
+		removeButton.classList.add("add-button");
+		removeButton.innerText="Add";
+		removeButton.removeEventListener("click", removeProduct);
+		removeButton.addEventListener("click", addProduct);
 	}
 }
 
@@ -61,12 +66,37 @@ async function getExcludedProducts() {
 		return excludedProducts;
 	}
 	else {
-		return "";
+		return [];
 	}
 }
 
-async function addProduct() {
-	console.log("add this product yo, im skylar white yo")
+async function addProduct(event) {
+	let addButton = event.target;
+	let productDiv = addButton.parentElement;
+
+	let productIndex = productDiv.dataset.index;
+	
+	let productID = pageProductData[productIndex].id;
+	
+	let response = await fetch("exclude_product", {method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify({
+			productID: productID,
+			action: "add"
+		})
+	});
+	let data = await response.json();
+	
+	if (response.status == 200) {
+		productDiv.classList.remove("not-included");
+		addButton.classList.remove("add-button");
+		addButton.classList.add("remove-button");
+		addButton.innerText="Remove";
+		addButton.removeEventListener("click", addProduct);
+		addButton.addEventListener("click", removeProduct);
+	}
 }
 
 //make api request in the backend for products
@@ -85,7 +115,10 @@ async function queryProducts() {
 	let sortDirectionBox = document.getElementById("sort-direction");
 	let sortDirection = sortDirectionBox.value;
 	let userRole = await getUserRole();
-	let excludedProducts = await getExcludedProducts();
+	let excludedProducts = []
+	if (userRole != "Driver") {
+		excludedProducts = await getExcludedProducts();
+	}
 
 	let response = await fetch ("/get_products", {
 		method: 'POST',
@@ -114,7 +147,7 @@ async function queryProducts() {
 		//product container
 		let productDiv = document.createElement("div");
 		productDiv.classList.add("product");
-		if (product.id in excludedProducts) {
+		if (excludedProducts.includes(product.id)) {
 			productDiv.classList.add("not-included");
 		}
 		productDiv.dataset.index = index;
@@ -131,14 +164,14 @@ async function queryProducts() {
 		//establish relationships between elements
 		productDiv.appendChild(productImg);
 		//add a remove product button for Sponsors
-		if (userRole == "Sponsor" && !(product.id in excludedProducts)) {
+		if (userRole == "Sponsor" && !(excludedProducts.includes(product.id))) {
 			let removeButton = document.createElement("button");
 			removeButton.classList.add("remove-button");
 			removeButton.innerText = "Remove";
 			removeButton.addEventListener("click", removeProduct);
 			productDiv.appendChild(removeButton);
 		}
-		else if (userRole == "Sponsor" && product.id in excludedProducts) {
+		else if (userRole == "Sponsor" && excludedProducts.includes(product.id)) {
 			let addButton = document.createElement("button");
 			addButton.classList.add("add-button");
 			addButton.innerText = "Add";
