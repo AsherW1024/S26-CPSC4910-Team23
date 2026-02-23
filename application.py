@@ -94,11 +94,13 @@ def selectDb(query: str, params=None):
 #Creating accounts and organizations
 @application.route("/register")
 def register():
-	return render_template("register.html", accountType="Driver")
+	orgs = selectDb("SELECT Name FROM Organizations ORDER BY Name DESC", ())
+	return render_template("register.html", accountType="Driver", organizations=orgs)
 
 @application.route("/sponsorRegister")
 def sRegister():
-	return render_template("register.html", accountType="Sponsor")
+	orgs = selectDb("SELECT Name FROM Organizations ORDER BY Name DESC", ())
+	return render_template("register.html", accountType="Sponsor", organizations=orgs)
 
 @application.route("/adminRegister")
 def aRegister():

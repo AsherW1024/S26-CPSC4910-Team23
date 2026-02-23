@@ -116,6 +116,7 @@
                         </div>
                     </div>
                     {% if accountType == "Driver" or accountType == "Sponsor" %}
+
                     <div class="field">
                         {% if accountType == "Driver"%}
                             <label class="label">Organization Name</label>
@@ -125,7 +126,12 @@
                             </label>
                         {% endif %}
                         <div class="control">
-                            <input class="input" type="text" name="organizationName" placeholder="Organization Name input" {% if accountType == "Sponsor" %}required{% endif %}>
+                            <input class=input id="orgInput" placeholder="Start typing organization name...">
+                            <datalist id="orgOptions">
+                                {% for org in organizations %}
+                                    <option>{{ org.Name }}</option>
+                                {% endfor %}
+                            </datalist> 
                         </div>
                     </div>
                     {% endif %}
@@ -134,5 +140,6 @@
             </div>
         </div>
     </div>
+<script src="/static/js/form.js"></script>
 </body>
 </html>
