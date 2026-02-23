@@ -693,6 +693,7 @@ def getPointValue():
 @application.route("/catalog")
 def catalog():
 	if 'UserID' in session:
+		role = session.get("role")
 		return render_template("catalog.html", layout="activenav.html")
 	return redirect(url_for("home"))
 
@@ -809,6 +810,56 @@ def get_products():
 	result = filterByPrice(data=result, min=minPrice, max=maxPrice)
 
 	return jsonify(result)
+
+@application.route("/exclude_product", methods=["POST"])
+def excludeProduct():
+	userType = session.get("role")
+	if "UserID" in session and userType == "s":
+		try:
+			#get org info from db
+			orgName = paramQueryDb(query="SELECT OrganizationName FROM Sponsors WHERE SponsorID=%s", params=(session["UserID"]))["OrganizationName"]
+			orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName))["OrganizationID"]
+
+			#get id of product being excluded from catalog
+			data = request.json
+			productID = data["productID"]
+
+			#add product and org info to the exclusion list
+			updateDb("INSERT INTO (orgID, productID), VALUES (%s, %s);", params=(orgID, productID))
+
+			return jsonify({
+				"message": "Success"
+			}), 400
+		except Exception as e:
+			print(e)
+			return jsonify({
+				"message": "Catalog Item failed to be excluded"
+			}), 400
+
+	return jsonify({
+		"message": "Permission error"
+	}), 403
+
+@application.route("/user/role", methods=["GET"])
+def getRole():
+	if "UserID" in session:
+		roleCode = session.get("role")
+		if roleCode == "s":
+			roleName = "Sponsor"
+		elif roleCode == "a":
+			roleName = "Admin"
+		else:
+			roleName = "Driver"
+
+		#return role
+		return jsonify({
+			"message": "Success",
+			"role": roleName
+		}), 200
+	return jsonify({
+		"message": "User not signed in",
+		"role": ""
+	}), 400
 
 """
 This lets us test locally. Should not execute in AWS
