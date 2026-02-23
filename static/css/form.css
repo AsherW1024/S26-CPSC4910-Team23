@@ -12,19 +12,7 @@
     border-color: red;
 }
 
-.username {
-    color: red;
-}
-
-.password {
-    color: red;
-}
-
-.registeredOrg {
-    color: red;
-}
-
-.failedAttempts {
+.username, .password, .registeredOrg, .failedAttempts, .required {
     color: red;
 }
 

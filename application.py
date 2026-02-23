@@ -555,17 +555,16 @@ def profile():
 	accountType = paramQueryDb("SELECT UserType FROM Users WHERE UserID = %s", 
 		(session["UserID"],))
 	if session["role"] == "Admin":
-		profile = paramQueryDb("SELECT Name, Email, Username FROM Users WHERE UserID = %s", 
+		profile = paramQueryDb("SELECT Name, Email, Username, PhoneNumber FROM Users WHERE UserID = %s", 
 			(session["UserID"],))
 	elif session["role"] == "Sponsor":
-		profile = paramQueryDb("SELECT Name, Email, Username FROM Users WHERE UserID = %s", 
+		profile = paramQueryDb("SELECT Name, Email, Username, PhoneNumber FROM Users WHERE UserID = %s", 
 			(session["UserID"],))
 	elif session["role"] == "Driver":
-		profile = paramQueryDb("SELECT Name, Email, Username FROM Users WHERE UserID = %s", 
+		profile = paramQueryDb("SELECT Name, Email, Username, PhoneNumber FROM Users WHERE UserID = %s", 
 			(session["UserID"],))
 	
-	return render_template("profile.html", layout = "activenav.html", 
-		name=profile["Name"], username=profile["Username"], email=profile["Email"])
+	return render_template("profile.html", layout = "activenav.html", profile=profile)
 
 @application.route("/profile/edit")
 def editProfile():

@@ -33,6 +33,18 @@
                     </div>
                 </div>
                 <div class="field">
+                    <label class="label">Phone Number</label>
+                    <div class="control has-icons-left">
+                        <input class="input" type="tel" name="phoneNum" value="{{ user.PhoneNumber }}" pattern="^\d{3}-\d{3}-\d{4}$">
+                        <span class="icon is-small is-left">
+                            <i class="fas fa-phone"></i>
+                        </span>
+                        <span class="error">
+                            Please enter your phone number in the format of 012-345-6789
+                        </span>
+                    </div>
+                </div>
+                <div class="field">
                     <label class="label">Username</label>
                     <div class="control has-icons-left">
                         <input class="input" type="text" name="username" value="{{ user.Username }}" pattern=".{4,80}" required>
@@ -56,6 +68,7 @@
                         </span>
                     </div>
                 </div>
+
                 <button class="button is-block is-info is-large is-fullwidth">Register</button>
             </form>
         </div>

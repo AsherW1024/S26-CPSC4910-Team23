@@ -20,7 +20,7 @@
         <div>
             <h3 class="title is-3">{{accountType}} Account Registration</h3>
             <h5 class="title is-5">Please fill out the form below.</h5>
-            <h5 class="title is-5">All fields marked by an asterisk are required</h5>
+            <h5 class="title is-5"><span class="required">*</span> indicates a required field</h5>
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                     <ul class=flashes>
@@ -47,7 +47,21 @@
                         </div>
                     </div>
                     <div class="field">
-                        <label class="label">Email*</label>
+                        <label class="label">Phone Number</label>
+                        <div class="control has-icons-left">
+                            <input class="input" type="tel" name="phoneNum" placeholder="Phone Number input" pattern="\d{3}-\d{3}-\d{4}">
+                            <span class="icon is-small is-left">
+                                <i class="fas fa-phone"></i>
+                            </span>
+                            <span class="error">
+                                Please enter your phone number in the format of 012-345-6789
+                            </span>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">
+                            <span class="required">*</span>Email
+                        </label>
                         <div class="control has-icons-left">
                             <input class="input" type="email" name="email" placeholder="Email input" pattern=".{1,80}" required>
                             <span class="icon is-small is-left">
@@ -59,7 +73,9 @@
                         </div>
                     </div>
                     <div class="field">
-                        <label class="label">Username*</label>
+                        <label class="label">
+                            <span class="required">*</span>Username
+                        </label>
                         <div class="control has-icons-left">
                             <input class="input" type="text" name="username" placeholder="Username input" pattern=".{4,80}" required>
                             <span class="icon is-small is-left">
@@ -71,7 +87,9 @@
                         </div>
                     </div>
                     <div class="field">
-                        <label class="label">Password*</label>
+                        <label class="label">
+                            <span class="required">*</span>Password
+                        </label>
                         <div class="control has-icons-left">
                             <input class="input" type="password" name="password" placeholder="Password input" pattern=".{8,128}" required>
                             <span class="icon is-small is-left">
@@ -83,7 +101,9 @@
                         </div>
                     </div>
                     <div class="field">
-                        <label class="label">Confirm Password*</label>
+                        <label class="label">
+                            <span class="required">*</span>Confirm Password
+                        </label>
                         <div class="control has-icons-left">
                             <input class="input" type="password" name="confirm_password" placeholder="Confirm Password" pattern=".{8,128}" required>
                             <span class="icon is-small is-left">
@@ -99,7 +119,9 @@
                         {% if accountType == "Driver"%}
                             <label class="label">Organization Name</label>
                         {% elif accountType == "Sponsor" %}
-                            <label class="label">Organization Name*</label>
+                            <label class="label">
+                                <span class="required">*</span>Organization Name
+                            </label>
                         {% endif %}
                         <div class="control">
                             <input class="input" type="text" name="organizationName" placeholder="Organization Name input" {% if accountType == "Sponsor" %}required{% endif %}>
