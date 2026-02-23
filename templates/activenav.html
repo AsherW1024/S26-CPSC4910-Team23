@@ -15,20 +15,20 @@
             <a href="/"> Home </a>	
             <a href="/about"> About us </a>
             <a href="/catalog"> Catalog </a>
-            {% if session.get('role') == 's' %}
-            <a href="/org_point_value">Org Point Value</a>
+            {% if session.get('role') == "Sponsor" %}
+                <a href="/org_point_value">Org Point Value</a>
             {% endif %}
         </div>
         <div class="nav-right">
-            {% if session.get('role') == 'a' or session.get('role') == 's' %}
+            {% if session.get('role') == "Admin" or session.get('role') == "Sponsor" %}
             <div class="dropdown">
                 <button class="dropbtn" type="button">Create Account</button>
                 <div class="dropdown-content">
-                    {% if session.get('role') == 'a' %}
+                    {% if session.get('role') == "Admin" %}
                         <a href="/adminRegister">Admin</a>
                         <a href="/sponsorRegister">Sponsor</a>
                         <a href="/register">Driver</a>
-                    {% elif session.get('role') == 's' %}
+                    {% elif session.get('role') == "Sponsor" %}
                         <a href="/sponsorRegister">Sponsor</a>
                         <a href="/register">Driver</a>
                     {% endif %}
@@ -42,11 +42,10 @@
                 <div class="dropdown-content">
                     <a href="/profile">Profile</a>
                     <a href="/settings">Settings</a>
-                    {% if session.get('role') == 'a' %}
-                        <a href="/admin/sponsors">Admin: Sponsors</a>
-                        <a href="/admin/drivers">Admin: Drivers</a>
-                    {% elif session.get('role') == 's' %}
-                        <a href="/sponsor/drivers">Sponsor: Drivers</a>
+                    {% if session.get('role') == "Admin" %}
+                        <a href="/admin/users">Edit Users</a>
+                    {% elif session.get('role') == "Sponsor" %}
+                        <a href="/sponsor/users">Edit Users</a>
                     {% endif %}
                     <a href="/logout">Logout</a>
                 </div>

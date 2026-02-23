@@ -14,7 +14,7 @@
                 <div class="field">
                     <label class="label">Name</label>
                     <div class="control">
-                        <input class="input" type="text" name="name" placeholder="Name input" pattern="[a-zA-Z ]{1,80}">
+                        <input class="input" type="text" name="name" value="{{ user.Name }}" pattern="[a-zA-Z ]{1,80}" required>
                         <span class="error">
                             Please enter letters with a minimum of one character
                         </span>
@@ -23,7 +23,7 @@
                 <div class="field">
                     <label class="label">Email</label>
                     <div class="control has-icons-left">
-                        <input class="input" type="email" name="email" placeholder="Email input" pattern=".{1,80}">
+                        <input class="input" type="email" name="email" value="{{ user.Email }}" pattern=".{1,80}" required>
                         <span class="icon is-small is-left">
                             <i class="fas fa-envelope"></i>
                         </span>
@@ -35,7 +35,7 @@
                 <div class="field">
                     <label class="label">Username</label>
                     <div class="control has-icons-left">
-                        <input class="input" type="text" name="username" placeholder="Username input" pattern=".{4,80}">
+                        <input class="input" type="text" name="username" value="{{ user.Username }}" pattern=".{4,80}" required>
                         <span class="icon is-small is-left">
                             <i class="fas fa-user"></i>
                         </span>
