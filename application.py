@@ -765,18 +765,26 @@ by their point worth in their org
 def adjustPrice(data):
 	try:
 		#get org info from db
-		orgName = paramQueryDb(query="SELECT OrganizationName FROM Sponsors WHERE SponsorID=%s", params=(session["UserID"]))["OrganizationName"]
+		if session["role"] == "Sponsor":
+			orgName = paramQueryDb(query="SELECT OrganizationName FROM Sponsors WHERE SponsorID=%s", params=(session["UserID"]))["OrganizationName"]
+		elif session["role"] == "Driver":
+			orgName = paramQueryDb(query="SELECT OrganizationName FROM Drivers WHERE DriverID=%s", params=(session["UserID"]))["OrganizationName"]
 		orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName))["OrganizationID"]
 
 		#get point value tied to org
 		point_value = paramQueryDb(query="SELECT PointValue FROM Point_Values WHERE OrgID=%s", params=(orgID))["PointValue"]
+
+		point_value = float(point_value)
 	except Exception as e:
 		point_value = 1.00
+
+	if point_value <= 0:
+		return data
 
 	#make the price equal to the price in dollars multiplied by the point value
 	#rounded to nearest whole point, always rounded up
 	for product in data["products"]:
-		product["price"] = math.ceil(product["price"]*float(point_value))
+		product["price"] = math.ceil(product["price"]/float(point_value))
 
 	return(data)
 
