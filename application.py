@@ -803,6 +803,38 @@ def get_products():
 
 	return jsonify(result)
 
+@application.route("/exclude_product", methods=["POST"])
+def excludeProduct():
+	userType = session.get("role")
+	if "UserID" in session and userType == "s":
+		try:
+			#get org info from db
+			orgName = paramQueryDb(query="SELECT OrganizationName FROM Sponsors WHERE SponsorID=%s", params=(session["UserID"]))["OrganizationName"]
+			orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName))["OrganizationID"]
+
+			#get id of product being excluded from catalog
+			data = request.json
+			productID = data["productID"]
+
+			#add product and org info to the exclusion list
+			updateDb("INSERT INTO (orgID, productID), VALUES (%s, %s);", params=(orgID, productID))
+
+			return
+			jsonify({
+				"message": "Success"
+			}), 400
+		except Exception as e:
+			print(e)
+			return
+			jsonify({
+				"message": "Catalog Item failed to be excluded"
+			}), 400
+
+	return
+	jsonify({
+		"message": "Permission error"
+	}), 403
+
 """
 This lets us test locally. Should not execute in AWS
 """
