@@ -71,7 +71,7 @@ async function queryProducts() {
 		name.innerText = product.title;
 		//product price shown in the catalog grid
 		let price = document.createElement("p");
-		price.innerText = product.price+ " Points";
+		price.innerText = product.price+" Points";
 
 		//establish relationships between elements
 		productDiv.appendChild(productImg);
