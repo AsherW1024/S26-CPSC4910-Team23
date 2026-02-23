@@ -4,21 +4,70 @@ document.getElementById("filter-button").addEventListener("click", toggleMenu);
 document.getElementById("category").addEventListener("input", search)
 document.getElementById("sort-type").addEventListener("input", search)
 document.getElementById("sort-direction").addEventListener("input", search)
+let allRemoveButtons = document.querySelectorAll(".remove-button");
+allRemoveButtons.forEach(removeButton => {
+	removeButton.addEventListener("click", removeProduct)
+});
 
 //store all product data for the page for when we expand to show more detail
 let pageProductData;
 
 //find user's role
-let userRole;
-fetch("/user/role")
-.then(response => response.json())
-.then(data => {
-	userRole = data.role;
-	console.log(userRole);
-})
-.catch(error => {
-	console.log("Error:", error);
-});
+async function getUserRole() {
+	let response = await fetch("/user/role");
+	let data = await response.json();
+	let userRole = data.role;
+
+	if (response.status == 200){
+		return userRole;
+	}
+	else {
+		return "";
+	}
+}
+
+//remove product from catalog
+async function removeProduct(event) {
+	let removeButton = event.target;
+	let productDiv = removeButton.parentElement;
+
+	let productIndex = productDiv.dataset.index;
+	
+	let productID = pageProductData[productIndex].id;
+	
+	let response = await fetch("exclude_product", {method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify({
+			productID: productID
+		})
+	});
+	let data = await response.json();
+	
+	if (response.status == 200) {
+		productDiv.classList.add("not-included");
+		console.log(productDiv.classList);
+	}
+}
+
+//returns list of product ids that are not shown to drivers
+async function getExcludedProducts() {
+	let response = await fetch("/exclude_product");
+	let data = await response.json();
+	let excludedProducts = data.products;
+
+	if (response.status == 200){
+		return excludedProducts;
+	}
+	else {
+		return "";
+	}
+}
+
+async function addProduct() {
+	console.log("add this product yo, im skylar white yo")
+}
 
 //make api request in the backend for products
 //update screen with results
@@ -35,6 +84,8 @@ async function queryProducts() {
 	let sortBy = sortByBox.value;
 	let sortDirectionBox = document.getElementById("sort-direction");
 	let sortDirection = sortDirectionBox.value;
+	let userRole = await getUserRole();
+	let excludedProducts = await getExcludedProducts();
 
 	let response = await fetch ("/get_products", {
 		method: 'POST',
@@ -63,6 +114,9 @@ async function queryProducts() {
 		//product container
 		let productDiv = document.createElement("div");
 		productDiv.classList.add("product");
+		if (product.id in excludedProducts) {
+			productDiv.classList.add("not-included");
+		}
 		productDiv.dataset.index = index;
 		//image shown in catalog grid
 		let productImg = document.createElement("img")
@@ -76,12 +130,27 @@ async function queryProducts() {
 
 		//establish relationships between elements
 		productDiv.appendChild(productImg);
+		//add a remove product button for Sponsors
+		if (userRole == "Sponsor" && !(product.id in excludedProducts)) {
+			let removeButton = document.createElement("button");
+			removeButton.classList.add("remove-button");
+			removeButton.innerText = "Remove";
+			removeButton.addEventListener("click", removeProduct);
+			productDiv.appendChild(removeButton);
+		}
+		else if (userRole == "Sponsor" && product.id in excludedProducts) {
+			let addButton = document.createElement("button");
+			addButton.classList.add("add-button");
+			addButton.innerText = "Add";
+			addButton.addEventListener("click", addProduct);
+			productDiv.appendChild(addButton);
+		}
 		productDiv.appendChild(name);
 		productDiv.appendChild(price);
 
 		//give product div an event listener that opens up the advanced details
 		productDiv.addEventListener("click", showProductDetails)
-		
+
 		//append elements to the grid;
 		grid.appendChild(productDiv);
 	});
@@ -114,7 +183,11 @@ function closePopup() {
 	popupEl.hidden = true;
 }
 
-function showProductDetails() {
+function showProductDetails(event) {
+	//no action if the remove or add button was pressed
+	if (event.target.classList.contains("remove-button")) {return}
+	if (event.target.classList.contains("add-button")) {return}
+
 	let productDetailIndex = this.dataset.index;
 	let productDetails = pageProductData[productDetailIndex];
 	console.log(productDetails)

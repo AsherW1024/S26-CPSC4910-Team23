@@ -36,7 +36,7 @@ def queryDb(query: str):
 		with connection.cursor() as cursor:
 			cursor.execute(query)
 			results = cursor.fetchall()
-		return results[0] if results else None
+		return results if results else None
 	except Exception as e:
 		print(e)
 		return None
@@ -145,7 +145,7 @@ def registerUser():
 
 	hashPassword = generate_password_hash(password, method="pbkdf2:sha256")
 	timeCreated = datetime.now()
-	adminCount = queryDb("SELECT COUNT(*) as count FROM Users WHERE UserType = 'Admin'") or {"count": 0}
+	adminCount = queryDb("SELECT COUNT(*) as count FROM Users WHERE UserType = 'Admin'")[0] or {"count": 0}
 
 	userType = accountType  
 	if adminCount['count'] == 0:
@@ -477,7 +477,7 @@ for example.
 @application.route("/about")
 def about():
 	#query db to find out how many accounts are in accounts table
-	aboutInfo = queryDb("SELECT TeamNum, VersionNum, ReleaseDate, ProductName, ProductDescription FROM Admins WHERE AdminID = 1")
+	aboutInfo = queryDb("SELECT TeamNum, VersionNum, ReleaseDate, ProductName, ProductDescription FROM Admins WHERE AdminID = 1")[0]
 
 	if not aboutInfo:
 		flash("About info missing (Admins.AdminID=1).", "notfound")
@@ -811,10 +811,42 @@ def get_products():
 
 	return jsonify(result)
 
+@application.route("/exclude_product", methods=["GET"])
+def getExcludedProducts():
+	userType = session.get("role")
+	if "UserID" in session and userType == "Sponsor":
+		try:
+			#get org info from db
+			orgName = paramQueryDb(query="SELECT OrganizationName FROM Sponsors WHERE SponsorID=%s", params=(session["UserID"]))["OrganizationName"]
+			orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName))["OrganizationID"]
+
+			products = queryDb(query=f"SELECT productID FROM Catalog_Exclusion_List WHERE orgID={orgID}")
+
+			#make list of product ids to send back to the javascript
+			productList = []
+			for product in products:
+				id = product["productID"];
+				productList.append(id)
+
+			return jsonify({
+				"message": "Error retrieving excluded products",
+				"products": productList
+			}), 200
+		except Exception as e:
+			print(e)
+			return jsonify({
+				"message": "Error retrieving excluded products",
+				"products": ""
+			}), 400
+	return jsonify({
+		"message": "Permission error",
+		"products": ""
+	}), 403
+
 @application.route("/exclude_product", methods=["POST"])
 def excludeProduct():
 	userType = session.get("role")
-	if "UserID" in session and userType == "s":
+	if "UserID" in session and userType == "Sponsor":
 		try:
 			#get org info from db
 			orgName = paramQueryDb(query="SELECT OrganizationName FROM Sponsors WHERE SponsorID=%s", params=(session["UserID"]))["OrganizationName"]
@@ -825,11 +857,11 @@ def excludeProduct():
 			productID = data["productID"]
 
 			#add product and org info to the exclusion list
-			updateDb("INSERT INTO (orgID, productID), VALUES (%s, %s);", params=(orgID, productID))
+			updateDb("INSERT INTO Catalog_Exclusion_List (orgID, productID) VALUES (%s, %s)", params=(orgID, productID))
 
 			return jsonify({
 				"message": "Success"
-			}), 400
+			}), 200
 		except Exception as e:
 			print(e)
 			return jsonify({
@@ -843,18 +875,12 @@ def excludeProduct():
 @application.route("/user/role", methods=["GET"])
 def getRole():
 	if "UserID" in session:
-		roleCode = session.get("role")
-		if roleCode == "s":
-			roleName = "Sponsor"
-		elif roleCode == "a":
-			roleName = "Admin"
-		else:
-			roleName = "Driver"
+		role = session.get("role")
 
 		#return role
 		return jsonify({
 			"message": "Success",
-			"role": roleName
+			"role": role
 		}), 200
 	return jsonify({
 		"message": "User not signed in",

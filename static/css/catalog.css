@@ -198,3 +198,29 @@ p{
 	font-size: 4vw;
 	margin: 10px;
 }
+
+.remove-button {
+	background-color: rgb(200, 0, 0);
+	color: white;
+	font-size: 2vw;
+	width: 60%;
+	height: fit-content;
+}
+
+.product {
+	display: grid;
+	grid-template-columns: (1fr);
+	justify-items: center;
+}
+
+.not-included {
+	background-color: rgb(252, 205, 212);
+}
+
+.add-button {
+	background-color: rgb(143, 251, 131);
+	color: rgb(0, 0, 0);
+	font-size: 2vw;
+	width: 60%;
+	height: fit-content;
+}
