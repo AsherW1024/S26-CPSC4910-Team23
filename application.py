@@ -385,6 +385,25 @@ def sponsorUserList():
 		""", (session["UserID"]))
 
 	return render_template("userList.html", layout="activenav.html", users=users, q=q, accountType='sponsor')
+
+@application.route("/sponsor/drivers/<int:driver_id>/points")
+def sponsor_driver_points(driver_id):
+    guard = require_sponsor()
+    if guard:
+        return guard
+
+    driver = paramQueryDb("""
+        SELECT u.UserID, d.Name, u.Email, u.Username, d.OrganizationName, d.Points
+        FROM Users u
+        JOIN Drivers d ON u.UserID = d.DriverID
+        WHERE u.UserID=%s AND u.UserType='d'
+    """, (driver_id,))
+
+    if not driver:
+        flash("Driver not found.", "notfound")
+        return redirect(url_for("sponsor_driver_list"))
+
+    return render_template("sponsor_driver_points.html", layout="activenav.html", driver=driver)
 	
 @application.route("/<accountType>/users/<int:UserID>/edit")
 def userEdit(accountType, UserID):
