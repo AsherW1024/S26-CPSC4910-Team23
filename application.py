@@ -404,6 +404,63 @@ def sponsor_driver_points(driver_id):
         return redirect(url_for("sponsor_driver_list"))
 
     return render_template("sponsor_driver_points.html", layout="activenav.html", driver=driver)
+
+@application.route("/sponsor/drivers/<int:driver_id>/points", methods=["POST"])
+def sponsor_driver_points_post(driver_id):
+    guard = require_sponsor()
+    if guard:
+        return guard
+
+    # Read + validate inputs
+    points_raw = request.form.get("points", "").strip()
+    reason = request.form.get("reason", "").strip()
+
+    if not points_raw.isdigit():
+        flash("Points must be a positive integer.", "validation")
+        return redirect(url_for("sponsor_driver_points", driver_id=driver_id))
+
+    points = int(points_raw)
+    if points <= 0:
+        flash("Points must be greater than 0.", "validation")
+        return redirect(url_for("sponsor_driver_points", driver_id=driver_id))
+
+    if not reason:
+        flash("Reason/feedback is required.", "validation")
+        return redirect(url_for("sponsor_driver_points", driver_id=driver_id))
+
+    # Fetch current points
+    driver = paramQueryDb("""
+        SELECT u.UserID, d.Points
+        FROM Users u
+        JOIN Drivers d ON u.UserID = d.DriverID
+        WHERE u.UserID=%s AND u.UserType='d'
+    """, (driver_id,))
+
+    if not driver:
+        flash("Driver not found.", "notfound")
+        return redirect(url_for("sponsor_driver_list"))
+
+    current_points = int(driver.get("Points") or 0)
+    new_total = current_points - points
+    if new_total < 0:
+        new_total = 0  # clamp (or change to block if your rules require)
+
+    # Update driver points
+    insertDb("UPDATE Drivers SET Points=%s WHERE DriverID=%s", (new_total, driver_id))
+
+    # Try to record feedback in an audit table if it exists (won't crash if not)
+    sponsor_id = session.get("UserID")
+    try:
+        insertDb("""
+            INSERT INTO PointDeductions (SponsorID, DriverID, Amount, Reason, CreatedAt)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (sponsor_id, driver_id, points, reason, datetime.now()))
+    except Exception as e:
+        # If table doesn't exist, keep app working
+        print("PointDeductions insert skipped:", e)
+
+    flash(f"Deducted {points} points. New total: {new_total}.", "success")
+    return redirect(url_for("sponsor_driver_list"))
 	
 @application.route("/<accountType>/users/<int:UserID>/edit")
 def userEdit(accountType, UserID):
