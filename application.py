@@ -297,6 +297,37 @@ def loginUser():
 
 	return redirect(url_for("home"))
 
+# Forgot password
+@application.route("/forgot_password")
+def forgot_password():
+    return render_template("forgot_password.html")
+
+# Forgot password (POST)
+@application.route("/forgot_password", methods=["POST"])
+def forgot_password_post():
+    email = request.form.get("email", "").strip()
+
+    if not email:
+        flash("Please enter an email.", "resetFail")
+        return redirect(url_for("forgot_password"))
+
+    # Check DB for email
+    user = paramQueryDb("SELECT UserID FROM Users WHERE Email=%s", (email,))
+
+    if not user:
+        flash("No account found with that email.", "resetFail")
+        return redirect(url_for("forgot_password"))
+
+    # "Fake send": generate a temp password and update hash in DB
+    temp_password = "Temp" + str(datetime.utcnow().timestamp()).replace(".", "")[-6:]
+    temp_hash = generate_password_hash(temp_password, method="pbkdf2:sha256")
+
+    updateDb("UPDATE Users SET Password_hash=%s WHERE UserID=%s", (temp_hash, user["UserID"]))
+
+    # For demo: show the temp password on screen (since emails are fake)
+    flash(f"Temporary password generated: {temp_password} (pretend this was emailed).", "resetSent")
+    return redirect(url_for("login"))
+
 @application.route("/logout")
 def logout():
 	session.pop("UserID", None)
