@@ -1,0 +1,41 @@
+{% extends layout %}
+
+{% block content %}
+<div class="container is-max-desktop mt-6">
+  <h1 class="title">Deduct Points</h1>
+
+  <div class="box">
+    <p><strong>Driver:</strong> {{ driver.Name }} ({{ driver.Username }})</p>
+    <p><strong>Email:</strong> {{ driver.Email }}</p>
+    <p><strong>Organization:</strong> {{ driver.OrganizationName }}</p>
+    <p><strong>Current Points:</strong> {{ driver.Points }}</p>
+  </div>
+
+  <form method="POST" action="/sponsor/drivers/{{ driver.UserID }}/points">
+    <div class="field">
+      <label class="label">Points to deduct</label>
+      <div class="control">
+        <input class="input" type="number" name="points" min="1" step="1" required placeholder="e.g., 10">
+      </div>
+      <p class="help">Must be a positive integer.</p>
+    </div>
+
+    <div class="field">
+      <label class="label">Reason / feedback</label>
+      <div class="control">
+        <textarea class="textarea" name="reason" required placeholder="Explain why points are being deducted..."></textarea>
+      </div>
+      <p class="help">Required (stored with the deduction).</p>
+    </div>
+
+    <div class="field is-grouped">
+      <div class="control">
+        <button class="button is-danger" type="submit">Deduct</button>
+      </div>
+      <div class="control">
+        <a class="button is-light" href="/sponsor/drivers">Cancel</a>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}
