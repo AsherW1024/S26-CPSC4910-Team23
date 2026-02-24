@@ -75,3 +75,14 @@ html, body {
 	background-color: #ddd;
 	color: #522D80;
 }
+
+/* Minimal theme + font support */
+html[data-font="sm"] { font-size: 14px; }
+html[data-font="md"] { font-size: 16px; }
+html[data-font="lg"] { font-size: 18px; }
+html[data-font="xl"] { font-size: 20px; }
+
+html[data-theme="dark"] body {
+  background: #0f1115;
+  color: #f4f6fb;
+}
