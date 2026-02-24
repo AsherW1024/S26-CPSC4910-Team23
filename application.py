@@ -652,6 +652,8 @@ def organizationEdit(OrgID):
 
 @application.route("/organization/<int:OrgID>/delete", methods=["POST"])
 def organizationDelete(OrgID):
+	org = paramQueryDb("SELECT Name FROM Organizations WHERE OrganizationID = %s", (OrgID,))
+	UpdateDb("UPDATE Drivers SET OrganizationName = %s WHERE OrganizationName = %s", ("None", org['Name']))
 	updateDb("DELETE FROM Organizations WHERE OrganizationID = %s", (OrgID,))
 	
 	flash("Organization deleted successfully.", "success")
