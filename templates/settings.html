@@ -7,10 +7,33 @@
 {% endblock %}
 
 {% block content %}
-<h1>Settings</h1>
-<p>Update the settings</p>
-<br>
-<p>Add in settings buttons or options</p>
-<br>
-<p>end of settings</p>
+<div class="settings-wrap">
+  <h1>Settings</h1>
+  <p class="muted">Customize how the site looks for your device.</p>
+
+  <div class="settings-card">
+    <div class="settings-row">
+      <label for="themeSelect">Theme</label>
+      <select id="themeSelect">
+        <option value="system">System</option>
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+      </select>
+      <div class="hint">“System” follows your device setting.</div>
+    </div>
+
+    <div class="settings-row">
+      <label for="fontSelect">Font size</label>
+      <select id="fontSelect">
+        <option value="sm">Small</option>
+        <option value="md">Default</option>
+        <option value="lg">Large</option>
+        <option value="xl">Extra Large</option>
+      </select>
+      <div class="hint">Applies across all pages.</div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/settings.js"></script>
 {% endblock %}
