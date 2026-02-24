@@ -4,21 +4,41 @@
 
   const themeSelect = byId("themeSelect");
   const fontSelect  = byId("fontSelect");
-
-  // If someone hits /settings before ui_prefs.js loads, fail safely.
   if (!themeSelect || !fontSelect) return;
 
-  // init dropdowns from saved prefs
-  if (window.getThemePref) themeSelect.value = window.getThemePref();
-  if (window.getFontPref)  fontSelect.value  = window.getFontPref();
+  const THEME_KEY = "ui_theme";
+  const FONT_KEY  = "ui_font_size";
+
+  function safeGet(key, fallback) {
+    try {
+      const v = localStorage.getItem(key);
+      return v === null ? fallback : v;
+    } catch (e) { return fallback; }
+  }
+
+  function safeSet(key, value) {
+    try { localStorage.setItem(key, value); } catch (e) {}
+  }
+
+  // init dropdown values
+  themeSelect.value = (window.getThemePref ? window.getThemePref() : safeGet(THEME_KEY, "system"));
+  fontSelect.value  = (window.getFontPref  ? window.getFontPref()  : safeGet(FONT_KEY, "md"));
+
+  function apply() {
+    if (window.applyPrefs) window.applyPrefs();
+  }
 
   themeSelect.addEventListener("change", () => {
-    if (window.setThemePref) window.setThemePref(themeSelect.value);
-    if (window.applyPrefs) window.applyPrefs();
+    const v = themeSelect.value;
+    if (window.setThemePref) window.setThemePref(v);
+    else safeSet(THEME_KEY, v);
+    apply();
   });
 
   fontSelect.addEventListener("change", () => {
-    if (window.setFontPref) window.setFontPref(fontSelect.value);
-    if (window.applyPrefs) window.applyPrefs();
+    const v = fontSelect.value;
+    if (window.setFontPref) window.setFontPref(v);
+    else safeSet(FONT_KEY, v);
+    apply();
   });
 })();
