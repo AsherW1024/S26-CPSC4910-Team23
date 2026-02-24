@@ -4,7 +4,7 @@
 <div class="container is-max-desktop mt-6">
   <h1 class="title">User Profiles</h1>
 
-  <form method="GET" action="/{{ accountType }}/users" class="mb-4">
+  <form method="GET" action="/organizations" class="mb-4">
     <div class="field has-addons">
       <div class="control is-expanded">
         <input class="input" type="text" name="q" placeholder="Search name, email, username..." value="{{ q }}">
@@ -18,20 +18,17 @@
   <table class="table is-striped is-fullwidth">
     <thead>
       <tr>
-        <th>UserType</th><th>Name</th><th>Email</th><th>Username</th><th></th>
+        <th>Organization Name</th><th></th><th></th><th></th><th></th>
       </tr>
     </thead>
     <tbody>
-      {% for u in users %}
+      {% for o in orgs %}
       <tr>
-        <td>{{ u.UserType }}</td>
-        <td>{{ u.Name }}</td>
-        <td>{{ u.Email }}</td>
-        <td>{{ u.Username }}</td>
-        <td><a class="button is-small" href="/{{ accountType }}/users/{{ u.UserID }}/edit">Edit</a></td>
+        <td>{{ o.Name }}</td>
+        <td><a class="button is-small" href="/organization/{{ o.OrganizationID }}/edit">Edit</a></td>
         <td>
-          <form method="POST" action="/{{ accountType }}/users/{{ u.UserID }}/delete"
-                style="display:inline;" onsubmit="return confirmUserDelete();">
+          <form method="POST" action="/organization/{{ o.OrganizationID }}/delete"
+                style="display:inline;" onsubmit="return confirmOrgDelete();">
             <button class="button is-small is-danger" type="submit">
               Delete
             </button>
@@ -39,7 +36,7 @@
         </td>
       </tr>
       {% endfor %}
-      {% if users|length == 0 %}
+      {% if orgs|length == 0 %}
         <tr><td colspan="5">No users found.</td></tr>
       {% endif %}
     </tbody>

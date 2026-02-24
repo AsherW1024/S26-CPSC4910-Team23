@@ -14,27 +14,22 @@
         <div class="nav-left">
             <a href="/"> Home </a>
             <a href="/catalog"> Catalog </a>
-            {% if session.get('role') != "Admin" %}
-                <a href="/organization"> Organization </a>
-            {% elif session.get('role') == "Admin" %}
+            {% if session.get('role') == "Admin" %}
                 <a href="/organizations"> Organizations </a>
             {% endif %}
+            {% if "Organization" in session or session.get('role') == "Admin" %}
+                {% if session.get('role') != "Driver" %}
+                    <a href="/applications"> Applications </a>
+                    {% if session.get('role') == "Sponsor" %}
+                        <a href="/org_point_value">Org Point Value</a>
+                    {% endif %}
+                {% endif %}
+            {% endif %}
+
         </div>
         <div class="nav-right">
-            {% if session.get('role') == "Admin" or session.get('role') == "Sponsor" %}
-            <div class="dropdown">
-                <button class="dropbtn" type="button">Create Account</button>
-                <div class="dropdown-content">
-                    {% if session.get('role') == "Admin" %}
-                        <a href="/adminRegister">Admin</a>
-                        <a href="/sponsorRegister">Sponsor</a>
-                        <a href="/register">Driver</a>
-                    {% elif session.get('role') == "Sponsor" %}
-                        <a href="/sponsorRegister">Sponsor</a>
-                        <a href="/register">Driver</a>
-                    {% endif %}
-                </div>
-            </div>
+            {% if session.get('role') != "Driver" %}
+                <a href="/organization/users">Users Status</a>
             {% endif %}
             <div class="dropdown">
                 <button class="icon-user dropbtn" type="button">

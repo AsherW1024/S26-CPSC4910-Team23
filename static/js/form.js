@@ -1,7 +1,11 @@
 document.getElementById("orgInput").addEventListener("input", showOrgs)
 
-function confirmDelete() {
+function confirmUserDelete() {
     return confirm("Are you sure you want to delete this user?");
+}
+
+function confirmOrgDelete() {
+    return confirm("Are you sure you want to delete this organization?");
 }
 
 function showOrgs() {

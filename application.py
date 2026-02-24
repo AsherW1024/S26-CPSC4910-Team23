@@ -287,11 +287,11 @@ def loginUser():
 		flash("Welcome Admin, we appreciate your visit to our website!", "admin")
 	elif exists['UserType'] == "Sponsor":
 		flash("Welcome Sponsor, we appreciate your visit to our website!", "sponsor")
-		userOrg = paramQueryDb("SELECT OrganizationName FROM Sponsors WHERE SponsorID = %s", (exists['id']))
+		userOrg = paramQueryDb("SELECT OrganizationName FROM Sponsors WHERE SponsorID = %s", (exists['id'],))
 		session['Organization'] = userOrg['OrganizationName']
 	elif exists['UserType'] == "Driver":
 		flash("Welcome Driver, we appreciate your visit to our website!", "driver")
-		userOrg = paramQueryDb("SELECT OrganizationName FROM Drivers WHERE SponsorID = %s", (exists['id']))
+		userOrg = paramQueryDb("SELECT OrganizationName FROM Drivers WHERE SponsorID = %s", (exists['id'],))
 		if userOrg:	
 			session['Organization'] = userOrg['OrganizationName']
 
@@ -388,13 +388,13 @@ def sponsorUserList():
 	
 @application.route("/<accountType>/users/<int:UserID>/edit")
 def userEdit(accountType, UserID):
-	if accountType == 'sponsor':
+	"""if accountType == 'sponsor':
 		guard = require_sponsor()
 	elif accountType == 'admin':
 		guard = require_admin()
 
 	if guard:
-		return guard
+		return guard"""
 
 	user = paramQueryDb("""
 		SELECT UserType, UserID, Name, Email, Username
@@ -413,13 +413,13 @@ def userEdit(accountType, UserID):
 
 @application.route("/<accountType>/users/<int:UserID>/edit", methods=["POST"])
 def userEditPost(accountType, UserID):	
-	if accountType == 'sponsor':
+	"""if accountType == 'sponsor':
 		guard = require_sponsor()
 	elif accountType == 'admin':
 		guard = require_admin()
 
 	if guard:
-		return guard
+		return guard"""
 
 	name = request.form.get("name", "").strip()
 	email = request.form.get("email", "").strip()
@@ -448,6 +448,8 @@ def userEditPost(accountType, UserID):
 		return redirect(url_for("sponsorUserList"))
 	elif accountType == "admin":
 		return redirect(url_for("adminUserList"))
+	elif accountType == "organization":
+		return redirect(url_for("organizationUsers"))
 
 @application.route("/<accountType>/users/<int:UserID>/delete", methods=["POST"])
 def delete_user(accountType, UserID):
@@ -461,7 +463,7 @@ def delete_user(accountType, UserID):
 	updateDb("DELETE FROM Users WHERE UserID = %s", (UserID,))
 	
 	flash("User deleted successfully.", "success")
-	return redirect(f"/{accountType}/users")
+	return redirect(f"/{accountType}")
 
 
 #The different website pages
@@ -614,6 +616,85 @@ def registerProfileEdits():
 def settings():
 	return render_template("settings.html", layout = "activenav.html") 
 
+@application.route("/organizations")
+def organizations():
+	guard = require_admin()
+	if guard: 
+		return guard
+	
+	q = request.args.get("q", "").strip()
+	like = f"%{q}%"
+
+	if q:
+		orgs = selectDb("""
+			SELECT OrganizationID, Name
+			FROM Organizations 
+			WHERE Name LIKE %s
+			ORDER BY Name
+			LIMIT 50
+		""", (like))
+	else:
+		orgs = selectDb("""
+			SELECT OrganizationID, Name
+			FROM Organizations
+			ORDER BY Name
+			LIMIT 50
+		""")
+	
+	return render_template("orgList.html", layout="activenav.html", orgs=orgs, q=q)
+
+
+@application.route("/organization/<int:OrgID>/edit")
+def organizationEdit(OrgID):
+	org = paramQueryDb("SELECT Name FROM Organizations WHERE OrganizationID = %s", (OrgID,))
+	session['Organization'] = org['Name']
+	return redirect(url_for("organization"))
+
+@application.route("/organization/<int:OrgID>/delete", methods=["POST"])
+def organizationDelete(OrgID):
+	updateDb("DELETE FROM Organizations WHERE OrganizationID = %s", (OrgID,))
+	
+	flash("Organization deleted successfully.", "success")
+	return redirect("/organizations")
+
+@application.route("/organization")
+def organization():
+	if "Organization" in session or session.get('role') == "Admin":
+		return render_template("organization.html", layout="orgnav.html", organizationName=session["Organization"])
+	else:
+		return render_template("organization.html", layout="orgnav.html", organizationName="None")
+
+@application.route("/organization/users")
+def organizationUsers():
+	"""guard = require_admin()
+	if guard: 
+		return guard"""
+	
+	q = request.args.get("q", "").strip()
+	like = f"%{q}%"
+
+	if q:
+		users = selectDb("""
+			SELECT u.UserType, u.UserID, u.Name, u.Email, u.Username, s.OrganizationName, d.OrganizationName
+			FROM Users u LEFT JOIN Sponsors s ON u.UserID = s.SponsorID LEFT JOIN Drivers d ON u.UserID = d.DriverID
+			WHERE (Name LIKE %s OR Email LIKE %s OR Username LIKE %s) AND 
+				  (UserType = "Sponsor" OR UserType = "Driver") AND 
+				  (s.OrganizationName = %s OR d.OrganizationName = %s)
+			ORDER BY Name
+			LIMIT 50
+		""", (like, like, like, session['Organization'], session['Organization']))
+	else:
+		users = selectDb("""
+			SELECT u.UserType, u.UserID, u.Name, u.Email, u.Username, s.OrganizationName, d.OrganizationName
+			FROM Users u LEFT JOIN Sponsors s ON u.UserID = s.SponsorID LEFT JOIN Drivers d ON u.UserID = d.DriverID
+			WHERE (UserType = "Sponsor" OR UserType = "Driver") AND 
+				  (s.OrganizationName = %s OR d.OrganizationName = %s)
+			ORDER BY Name
+			LIMIT 50
+		""", (session['Organization'], session['Organization']))
+	
+	return render_template("userList.html", layout="orgnav.html", users=users, q=q, accountType='organization')
+
 @application.route("/org_point_value")
 def pointValueScreen():
 	if 'UserID' in session and session["role"]=="Sponsor":
@@ -629,7 +710,7 @@ def pointValueScreen():
 			print(e)
 			pointVal = 1.00
 
-		return render_template("point_value.html", layout="activenav.html", current_point_value=pointVal)
+		return render_template("point_value.html", layout="orgnav.html", current_point_value=pointVal)
 	return redirect(url_for("home"))
 
 @application.route("/point_value", methods=["POST"])
