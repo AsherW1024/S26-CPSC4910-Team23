@@ -1,0 +1,24 @@
+{% extends layout %}
+
+{% block title %}Catalog{% endblock %}
+
+{% block page_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/catalog_rules.css">
+{% endblock %}
+
+{% block content %}
+<h1>Catalog Rules For {{ orgName }}</h1>
+
+<form action="/catalog/rules" method="POST">
+	<label for="min-price">Minimum Product Point Cost</label>
+	<input id="min-price" name="min-price" type="number" min="0" step="1">
+
+	<label for="max-price">Maximum Product Point Cost</label>
+	<input id="max-price" name="max-price" type="number" min="0" step="1">
+
+	<label for="keep-all">Keep All Product Categories</label>
+	<input id="keep-all" name="keep-all" type="checkbox" checked>
+
+	
+</form>
+{% endblock %}

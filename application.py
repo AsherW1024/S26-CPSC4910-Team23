@@ -885,9 +885,15 @@ def getPointValue():
 @application.route("/catalog")
 def catalog():
 	if 'UserID' in session:
-		role = session.get("role")
 		return render_template("catalog.html", layout="activenav.html")
 	return redirect(url_for("home"))
+
+@application.route("/catalog/rules")
+def catalogRules():
+	if 'UserID' in session and session.get("role")=="Sponsor":
+		return render_template("catalog_rules.html", layout="activenav.html")
+	return redirect(url_for("home"))
+
 
 """
 helper function used when get_products is called. This removes products that
