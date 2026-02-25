@@ -891,7 +891,9 @@ def catalog():
 @application.route("/catalog/rules")
 def catalogRules():
 	if 'UserID' in session and session.get("role")=="Sponsor":
-		return render_template("catalog_rules.html", layout="activenav.html")
+		orgName = paramQueryDb(query="SELECT OrganizationName FROM Sponsors WHERE SponsorID=%s", params=(session.get("UserID")))["OrganizationName"]
+
+		return render_template("catalog_rules.html", layout="activenav.html", orgName=orgName)
 	return redirect(url_for("home"))
 
 
