@@ -71,7 +71,7 @@
 
 .select-many {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+	grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
 	gap: 15px;
 	background-color: rgb(207, 255, 255);
 	padding: 20px;
@@ -80,4 +80,21 @@
 
 .select-many label input{
 	margin-right: 10px
+}
+
+.section {
+	margin: 15px;
+	padding: 0;
+	justify-content: center;
+}
+
+.submit-button {
+	background-color: rgb(132, 255, 132);
+	border-radius: 10px;
+	font-size: 2em;
+}
+
+.content {
+	padding-left: 20px;
+	padding-right:	20px;
 }
