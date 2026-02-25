@@ -898,6 +898,47 @@ def catalogRules():
 
 
 """
+Where sponsors connect to when submitting catalog rules form
+"""
+@application.route("/catalog/rules", methods=["POST"])
+def changeCatalogRules():
+	if 'UserID' in session and session.get("role")=="Sponsor":
+		#get org info from db
+		orgName = paramQueryDb(query="SELECT OrganizationName FROM Sponsors WHERE SponsorID=%s", params=(session["UserID"]))["OrganizationName"]
+		orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName))["OrganizationID"]
+
+		minPoints = request.form.get("min-price")
+		maxPoints = request.form.get("max-price")
+		minRating = request.form.get("min-rating")
+		keepAllCategories = request.form.get("keep-all-categories")
+		keepAllBrands = request.form.get("keep-all-brands")
+		allowedCategories = request.form.getlist("category")
+		allowedBrands = request.form.getlist("brand")
+
+		#do we have a rule yet for this org?
+		ruleCount = paramQueryDb(query="SELECT COUNT(1) FROM Catalog_Rules WHERE orgID=%s", params=(orgID))["COUNT(1)"]
+		orgHasRule = ruleCount>0
+
+		#make empty strings None for db queries
+		def makeNoneIfEmpty(var):
+			value = None if var=="" else var
+			return value
+		minPoints = makeNoneIfEmpty(minPoints)
+		maxPoints = makeNoneIfEmpty(maxPoints)
+		minRating = makeNoneIfEmpty(minRating)
+
+		#update rule if present, otherwise insert new rule
+		if ruleCount>0:
+			updateDb(query="UPDATE Catalog_Rules SET minPoints=%s, maxPoints=%s, minRating=%s, updated=current_timestamp WHERE orgID=%s", params=(minPoints, maxPoints, minRating, orgID))
+		else:
+			updateDb(query="INSERT INTO Catalog_Rules (orgID, minPoints, maxPoints, minRating, created) VALUES (%s, %s, %s, %s, current_timestamp)", params=(orgID, minPoints, maxPoints, minRating))
+		
+		#TODO- add the form data to the other 2 tables
+
+		return redirect(url_for("catalogRules"))
+	return redirect(url_for("catalogRules"))
+
+"""
 helper function used when get_products is called. This removes products that
 are not between a min and max price
 """
