@@ -3,11 +3,11 @@
 {% block title %}Catalog{% endblock %}
 
 {% block page_css %}
-<link rel="stylesheet" type="text/css" href="/static/css/catalog_rules.css">
+<link rel="stylesheet" type="text/css" href="/static/css/form.css">
 {% endblock %}
 
 {% block content %}
-<h2>Catalog Rules For {{ orgName }}</h2>
+<h2 class="title">Catalog Rules For {{ orgName }}</h2>
 
 <div class="box">
 <form action="/catalog/rules" method="POST">
@@ -35,12 +35,35 @@
 	<div class="field">
 	<div class="control">
 		<label for="keep-all-categories">Keep All Product Categories</label>
-		<input id="keep-all-categories" name="keep-all-categories" type="checkbox" checked>
+		<input id="keep-all-categories" name="keep-all-categories" type="checkbox">
 	</div>
 	</div>
 	
 	<div id="category-select" class="select-many">
-
+		<label><input type="checkbox" value="beauty">Beauty</label>
+		<label><input type="checkbox" value="fragrances">Fragrances</label>
+		<label><input type="checkbox" value="furniture">Furniture</label>
+		<label><input type="checkbox" value="groceries">Groceries</label>
+		<label><input type="checkbox" value="home-decoration">Home Decoration</label>
+		<label><input type="checkbox" value="kitchen-accessories">Kitchen Accessories</label>
+		<label><input type="checkbox" value="laptops">Laptops</label>
+		<label><input type="checkbox" value="mens-shirts">Mens Shirts</label>
+		<label><input type="checkbox" value="mens-shoes">Mens Shoes</label>
+		<label><input type="checkbox" value="mens-watches">Mens Watches</label>
+		<label><input type="checkbox" value="mobile-accessories">Mobile Accessories</label>
+		<label><input type="checkbox" value="motorcycle">Motorcycle</label>
+		<label><input type="checkbox" value="skin-care">Skin Care</label>
+		<label><input type="checkbox" value="smartphones">Smartphones</label>
+		<label><input type="checkbox" value="sports-accessories">Sports Accessories</label>
+		<label><input type="checkbox" value="sunglasses">Sunglasses</label>
+		<label><input type="checkbox" value="tablets">Tablets</label>
+		<label><input type="checkbox" value="tops">Tops</label>
+		<label><input type="checkbox" value="vehicle">Vehicle</label>
+		<label><input type="checkbox" value="womens-bags">Womens Bags</label>
+		<label><input type="checkbox" value="womens-dresses">Womens Dresses</label>
+		<label><input type="checkbox" value="womens-jewellery">Womens Jewellery</label>
+		<label><input type="checkbox" value="womens-shoes">Womens Shoes</label>
+		<label><input type="checkbox" value="womens-watches">Womens Watches</label>
 	</div>
 	
 	<div class="field">
