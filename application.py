@@ -823,6 +823,15 @@ def organizationUsers():
 	
 	return render_template("userList.html", layout="orgnav.html", users=users, q=q, accountType='organization', use="organization")
 
+@application.route("/organization/users/<int:UserID>/remove", methods=["POST"])
+def removeOrgUser(UserID):
+	user = selectDb("""SELECT UserType FROM Users WHERE UserID = %s""", (UserID,))
+	if user[0]["UserType"] == "Sponsor":
+		updateDb("""UPDATE Sponsors SET OrganizationName = NULL WHERE SponsorID = %s""", (UserID,))
+	elif user[0]["UserType"] == "Driver":
+		updateDb("""UPDATE Drivers SET OrganizationName = NULL WHERE DriverID = %s""", (UserID,))
+	return redirect(url_for("organizationUsers"))
+
 @application.route("/organization/apply")
 def apply():
 	user = selectDb("SELECT Username FROM Users WHERE UserID = %s", (session["UserID"],))
