@@ -18,24 +18,70 @@
   <table class="table is-striped is-fullwidth">
     <thead>
       <tr>
+        {% if use == "website" %}
         <th>UserType</th><th>Name</th><th>Email</th><th>Username</th><th></th>
+        {% elif use == "organization" %}
+        <th>UserType</th><th>Username</th><th>status</th><th></th><th></th>
+        {% elif use == "application" %}
+        <th>Username</th><th>Name</th><th>Email</th><th>Date Applied</th><th></th>
+        {% endif %}
       </tr>
     </thead>
     <tbody>
       {% for u in users %}
       <tr>
+        {% if use == "website" %}
         <td>{{ u.UserType }}</td>
         <td>{{ u.Name }}</td>
         <td>{{ u.Email }}</td>
         <td>{{ u.Username }}</td>
+        {% elif use == "organization" %}
+        <td>{{ u.UserType }}</td>
+        <td>{{ u.Username }}</td>
+        <td>{{ u.Username }}</td>
+        {% elif use == "application" %}
+        <td>{{ u.UserType }}</td>
+        <td>{{ u.Name }}</td>
+        <td>{{ u.Email }}</td>
+        <td>{{ u.DateApplied }}</td>
+        {% endif %}
+        {% if use == "website" or use == "organization"%}
         <td><a class="button is-small" href="/{{ accountType }}/users/{{ u.UserID }}/edit">Edit</a></td>
+        {% elif use == "application" %}
         <td>
+          <form method="POST" action="/{{ accountType }}/applications/{{ u.UserID }}/accept"
+                  style="display:inline;" onsubmit="return promptUserAccept();">
+            <input type="hidden" name="acceptReason" id="acceptReason">
+            <button class="button is-small is-success" type="submit">
+              Accept
+            </button>
+          </form>
+        </td>
+        {% endif %}
+        <td>
+          {% if use == "website" %}
           <form method="POST" action="/{{ accountType }}/users/{{ u.UserID }}/delete"
                 style="display:inline;" onsubmit="return confirmUserDelete();">
             <button class="button is-small is-danger" type="submit">
               Delete
             </button>
           </form>
+          {% elif use == "organization" %}
+          <form method="POST" action="/{{ accountType }}/users/{{ u.UserID }}/remove"
+                style="display:inline;" onsubmit="return confirmUserRemove();">
+            <button class="button is-small is-danger" type="submit">
+              Remove
+            </button>
+          </form>
+          {% elif use == "application" %}
+          <form method="POST" action="/{{ accountType }}/applications/{{ u.UserID }}/reject"
+                style="display:inline;" onsubmit="return promptUserReject();">
+            <input type="hidden" name="rejectReason" id="rejectReason">
+            <button class="button is-small is-danger" type="submit">
+              Reject
+            </button>
+          </form>
+          {% endif %}
         </td>
       </tr>
       {% endfor %}

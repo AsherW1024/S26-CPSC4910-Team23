@@ -17,7 +17,9 @@
         <div class="box">
             <form method="POST" action="/createOrg">
                 <div class="field">
-                    <label class="label">Organization Name*</label>
+                    <label class="label">
+                        <span class="required">*</span>Organization Name
+                    </label>
                     <div class="control has-icons-left">
                         <input class="input" type="text" name="organizationName" placeholder="Organization Name input" pattern="[a-zA-Z ]{4,80}" required>
                         <span class="error">

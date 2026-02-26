@@ -18,12 +18,11 @@
             {% if session.get('role') == "Admin" %}
                 <a href="/organizations"> Organizations </a>
             {% endif %}
-            {% if "Organization" in session or session.get('role') == "Admin" %}
+            {% if session.get('role') != "Driver" %}
                 {% if session.get('role') != "Driver" %}
-                    <a href="/applications"> Applications </a>
+                    <a href="/organization/applications"> Applications </a>
                     {% if session.get('role') == "Sponsor" %}
-                        <a href="/org_point_value">Point Value</a>
-                        <a href="/catalog/rules">Catalog Rules</a>
+                        <a href="/organization/org_point_value">Org Point Value</a>
                     {% endif %}
                 {% endif %}
             {% endif %}

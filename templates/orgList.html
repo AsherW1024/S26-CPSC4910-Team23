@@ -4,7 +4,11 @@
 <div class="container is-max-desktop mt-6">
   <h1 class="title">User Profiles</h1>
 
+  {% if session.get('role') == "Admin" %}
   <form method="GET" action="/organizations" class="mb-4">
+  {% elif session.get('role') == "Driver" %}
+  <form method="GET" action="/organization/apply" class="mb-4">
+  {% endif %}
     <div class="field has-addons">
       <div class="control is-expanded">
         <input class="input" type="text" name="q" placeholder="Search name, email, username..." value="{{ q }}">
@@ -25,7 +29,8 @@
       {% for o in orgs %}
       <tr>
         <td>{{ o.Name }}</td>
-        <td><a class="button is-small" href="/organization/{{ o.OrganizationID }}/edit">Edit</a></td>
+        {% if session.get('role') == "Admin" %}
+        <td><a class="button is-small is-success" href="/organization/{{ o.OrganizationID }}/edit">Edit</a></td>
         <td>
           <form method="POST" action="/organization/{{ o.OrganizationID }}/delete"
                 style="display:inline;" onsubmit="return confirmOrgDelete();">
@@ -34,10 +39,18 @@
             </button>
           </form>
         </td>
+        {% elif session.get('role') == "Driver" %}
+          {% if o.Applied == 1 %}
+          <td><a class="button is-small is-success" disabled>Applied</a></td>
+          <td><a class="button is-small is-danger" href="/organization/apply/{{ o.OrganizationID }}/cancel">Cancel</a></td>
+          {% elif o.Applied == 0 and not hasApplied%}
+          <td><a class="button is-small" href="/organization/apply/{{ o.OrganizationID }}">Apply</a></td>
+          {% endif %}
+        {% endif %}
       </tr>
       {% endfor %}
       {% if orgs|length == 0 %}
-        <tr><td colspan="5">No users found.</td></tr>
+        <tr><td colspan="5">No Organizations found.</td></tr>
       {% endif %}
     </tbody>
   </table>

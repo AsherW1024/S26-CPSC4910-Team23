@@ -90,6 +90,45 @@ def selectDb(query: str, params=None):
 		if connection:
 			connection.close()
 
+"""
+Check if the user is an admin and logged in. 
+If not, redirect to the login page with a flash message.
+"""
+def require_admin():
+	if "UserID" not in session:
+		flash("Please login first.", "auth")
+		return redirect(url_for("login"))
+	if session.get("role") != "Admin":
+		flash("Admins only.", "auth")
+		return redirect(url_for("home"))
+	return None
+
+def require_sponsor():
+	if "UserID" not in session:
+		flash("Please login first.", "auth")
+		return redirect(url_for("login"))
+	if session.get("role") != "Sponsor":
+		flash("Sponsors only.", "auth")
+		return redirect(url_for("home"))
+	return None
+
+def getOrganization():
+	if "UserID" in session:
+		org = paramQueryDb("""SELECT s.OrganizationName as SponsorOrg, d.OrganizationName as DriverOrg
+							FROM Users u 
+							LEFT JOIN Sponsors s ON u.UserID = s.SponsorID 
+							LEFT JOIN Drivers d ON u.UserID = d.DriverID
+							WHERE u.UserID = %s""", (session['UserID'],))
+
+		if org:
+			organization = org["SponsorOrg"] or org["DriverOrg"]
+			if organization is not None:
+				session['Organization'] = organization
+			else:
+				session['Organization'] = None
+		else:
+			session.pop("Organization", None)
+
 
 #Creating accounts and organizations
 @application.route("/register")
@@ -187,6 +226,7 @@ def registerUser():
 				VALUES (%s, %s)""", (newUser['UserID'], organization))
 			flash("Driver account created please login", "created")
 	if "UserID" in session:
+		getOrganization()
 		return redirect(url_for("home"))
 	return redirect(url_for("login"))
 
@@ -287,13 +327,15 @@ def loginUser():
 		flash("Welcome Admin, we appreciate your visit to our website!", "admin")
 	elif exists['UserType'] == "Sponsor":
 		flash("Welcome Sponsor, we appreciate your visit to our website!", "sponsor")
-		userOrg = paramQueryDb("SELECT OrganizationName FROM Sponsors WHERE SponsorID = %s", (exists['id'],))
-		session['Organization'] = userOrg['OrganizationName']
+		#userOrg = paramQueryDb("SELECT OrganizationName FROM Sponsors WHERE SponsorID = %s", (exists['id'],))
+		#session['Organization'] = userOrg['OrganizationName']
 	elif exists['UserType'] == "Driver":
 		flash("Welcome Driver, we appreciate your visit to our website!", "driver")
-		userOrg = paramQueryDb("SELECT OrganizationName FROM Drivers WHERE SponsorID = %s", (exists['id'],))
-		if userOrg:	
-			session['Organization'] = userOrg['OrganizationName']
+		#userOrg = paramQueryDb("SELECT OrganizationName FROM Drivers WHERE SponsorID = %s", (exists['id'],))
+		#if userOrg:	
+			#session['Organization'] = userOrg['OrganizationName']
+
+	getOrganization()
 
 	return redirect(url_for("home"))
 
@@ -336,28 +378,6 @@ def logout():
 	session.pop("lockoutTime", None)
 	return redirect(url_for("home"))
 
-"""
-Check if the user is an admin and logged in. 
-If not, redirect to the login page with a flash message.
-"""
-def require_admin():
-	if "UserID" not in session:
-		flash("Please login first.", "auth")
-		return redirect(url_for("login"))
-	if session.get("role") != "Admin":
-		flash("Admins only.", "auth")
-		return redirect(url_for("home"))
-	return None
-
-def require_sponsor():
-	if "UserID" not in session:
-		flash("Please login first.", "auth")
-		return redirect(url_for("login"))
-	if session.get("role") != "Sponsor":
-		flash("Sponsors only.", "auth")
-		return redirect(url_for("home"))
-	return None
-
 @application.route("/admin/users")
 def adminUserList():
 	guard = require_admin()
@@ -384,7 +404,7 @@ def adminUserList():
 			LIMIT 50
 		""", (session["UserID"]))
 	
-	return render_template("userList.html", layout="activenav.html", users=users, q=q, accountType='admin')
+	return render_template("userList.html", layout="activenav.html", users=users, q=q, accountType='admin', use="website")
 
 @application.route("/sponsor/users")
 def sponsorUserList():
@@ -415,7 +435,7 @@ def sponsorUserList():
 			LIMIT 50
 		""", (session["UserID"]))
 
-	return render_template("userList.html", layout="activenav.html", users=users, q=q, accountType='sponsor')
+	return render_template("userList.html", layout="activenav.html", users=users, q=q, accountType='sponsor', use="website")
 
 @application.route("/sponsor/drivers/<int:driver_id>/points")
 def sponsor_driver_points(driver_id):
@@ -427,7 +447,7 @@ def sponsor_driver_points(driver_id):
         SELECT u.UserID, d.Name, u.Email, u.Username, d.OrganizationName, d.Points
         FROM Users u
         JOIN Drivers d ON u.UserID = d.DriverID
-        WHERE u.UserID=%s AND u.UserType='d'
+        WHERE u.UserID=%s AND u.UserType='Driver'
     """, (driver_id,))
 
     if not driver:
@@ -464,7 +484,7 @@ def sponsor_driver_points_post(driver_id):
         SELECT u.UserID, d.Points
         FROM Users u
         JOIN Drivers d ON u.UserID = d.DriverID
-        WHERE u.UserID=%s AND u.UserType='d'
+        WHERE u.UserID=%s AND u.UserType='Driver'
     """, (driver_id,))
 
     if not driver:
@@ -477,12 +497,12 @@ def sponsor_driver_points_post(driver_id):
         new_total = 0  # clamp (or change to block if your rules require)
 
     # Update driver points
-    insertDb("UPDATE Drivers SET Points=%s WHERE DriverID=%s", (new_total, driver_id))
+    updateDb("UPDATE Drivers SET Points=%s WHERE DriverID=%s", (new_total, driver_id))
 
     # Try to record feedback in an audit table if it exists (won't crash if not)
     sponsor_id = session.get("UserID")
     try:
-        insertDb("""
+        updateDb("""
             INSERT INTO PointDeductions (SponsorID, DriverID, Amount, Reason, CreatedAt)
             VALUES (%s, %s, %s, %s, %s)
         """, (sponsor_id, driver_id, points, reason, datetime.now()))
@@ -750,7 +770,6 @@ def organizations():
 	
 	return render_template("orgList.html", layout="activenav.html", orgs=orgs, q=q)
 
-
 @application.route("/organization/<int:OrgID>/edit")
 def organizationEdit(OrgID):
 	org = paramQueryDb("SELECT Name FROM Organizations WHERE OrganizationID = %s", (OrgID,))
@@ -760,7 +779,7 @@ def organizationEdit(OrgID):
 @application.route("/organization/<int:OrgID>/delete", methods=["POST"])
 def organizationDelete(OrgID):
 	org = paramQueryDb("SELECT Name FROM Organizations WHERE OrganizationID = %s", (OrgID,))
-	UpdateDb("UPDATE Drivers SET OrganizationName = %s WHERE OrganizationName = %s", ("None", org['Name']))
+	updateDb("UPDATE Drivers SET OrganizationName = %s WHERE OrganizationName = %s", ("None", org['Name']))
 	updateDb("DELETE FROM Organizations WHERE OrganizationID = %s", (OrgID,))
 	
 	flash("Organization deleted successfully.", "success")
@@ -784,7 +803,7 @@ def organizationUsers():
 
 	if q:
 		users = selectDb("""
-			SELECT u.UserType, u.UserID, u.Name, u.Email, u.Username, s.OrganizationName, d.OrganizationName
+			SELECT u.UserID, u.UserType, u.UserID, u.Name, u.Email, u.Username, s.OrganizationName, d.OrganizationName
 			FROM Users u LEFT JOIN Sponsors s ON u.UserID = s.SponsorID LEFT JOIN Drivers d ON u.UserID = d.DriverID
 			WHERE (Name LIKE %s OR Email LIKE %s OR Username LIKE %s) AND 
 				  (UserType = "Sponsor" OR UserType = "Driver") AND 
@@ -794,7 +813,7 @@ def organizationUsers():
 		""", (like, like, like, session['Organization'], session['Organization']))
 	else:
 		users = selectDb("""
-			SELECT u.UserType, u.UserID, u.Name, u.Email, u.Username, s.OrganizationName, d.OrganizationName
+			SELECT u.UserID, u.UserType, u.UserID, u.Name, u.Email, u.Username, s.OrganizationName, d.OrganizationName
 			FROM Users u LEFT JOIN Sponsors s ON u.UserID = s.SponsorID LEFT JOIN Drivers d ON u.UserID = d.DriverID
 			WHERE (UserType = "Sponsor" OR UserType = "Driver") AND 
 				  (s.OrganizationName = %s OR d.OrganizationName = %s)
@@ -802,7 +821,83 @@ def organizationUsers():
 			LIMIT 50
 		""", (session['Organization'], session['Organization']))
 	
-	return render_template("userList.html", layout="orgnav.html", users=users, q=q, accountType='organization')
+	return render_template("userList.html", layout="orgnav.html", users=users, q=q, accountType='organization', use="organization")
+
+@application.route("/organization/apply")
+def apply():
+	user = selectDb("SELECT Username FROM Users WHERE UserID = %s", (session["UserID"],))
+	username = user[0]["Username"]
+	orgs = selectDb("SELECT OrganizationID, Name FROM Organizations ORDER BY Name DESC", ())
+	application = selectDb("""SELECT o.Name, a.ApplicationStatus 
+							FROM OrganizationApplications a JOIN Organizations o ON a.OrganizationID = o.OrganizationID
+							WHERE a.DriverUName = %s""", (username,))
+	if application:
+		app = application[0]
+	else:
+		app = None
+	return render_template("enroll.html", layout="activenav.html", orgs=orgs, application=app)
+
+@application.route("/organization/apply", methods=["POST"])
+def applyPost():
+	organization = request.form.get("organization")
+	user = paramQueryDb("""SELECT Username FROM Users WHERE UserID = %s""", (session['UserID'],))
+	org = paramQueryDb("""SELECT OrganizationID FROM Organizations WHERE Name = %s""", (organization,))
+	timeApplied = datetime.now()
+	updateDb("""INSERT INTO OrganizationApplications (OrganizationID, DriverUName, ApplicationStatus, DateApplied)
+				VALUES (%s, %s, %s, %s)""", (org["OrganizationID"], user['Username'], "Pending", timeApplied))
+	flash(f"You have applied for enrollment in {{ organization }}", "enrolled")
+	return redirect(url_for("apply"))
+
+@application.route("/organization/apply/cancel")
+def cancelPost():
+	user = paramQueryDb("""SELECT u.Username, a.OrganizationID 
+						FROM Users u JOIN OrganizationApplications a ON u.Username = a.DriverUName 
+						WHERE UserID = %s""", (session['UserID'],))
+	updateDb("""DELETE FROM OrganizationApplications WHERE DriverUName = %s AND OrganizationID = %s""", (user["Username"], user["OrganizationID"]))
+	return redirect(url_for("apply"))
+
+@application.route("/organization/applications")
+def applications():
+	q = request.args.get("q", "").strip()
+	like = f"%{q}%"
+
+	if q:
+		users = selectDb("""
+			SELECT u.UserID, u.Username, u.Name, u.Email, u.UserType, a.DateApplied, o.Name
+			FROM OrganizationApplications a JOIN Users u ON a.DriverUName = u.Username JOIN Organizations o ON a.OrganizationID = o.OrganizationID
+			WHERE (u.Name LIKE %s OR u.Email LIKE %s OR u.Username LIKE %s) AND 
+				  (u.UserType = "Driver") AND (o.Name = %s) AND a.ApplicationStatus = "Pending"
+			ORDER BY o.Name, u.Name
+			LIMIT 50
+		""", (like, like, like, session['Organization']))
+	else:
+		users = selectDb("""
+			SELECT u.UserID, u.Username, u.Name, u.Email, u.UserType, a.DateApplied, o.Name
+			FROM OrganizationApplications a JOIN Users u ON a.DriverUName = u.Username JOIN Organizations o ON a.OrganizationID = o.OrganizationID
+			WHERE (u.UserType = "Driver") AND (o.Name = %s) AND a.ApplicationStatus = "Pending"
+			ORDER BY o.Name, u.Name
+			LIMIT 50
+		""", (session['Organization'],))
+	
+	return render_template("userList.html", layout="orgnav.html", users=users, q=q, accountType='organization', use="application")
+
+@application.route("/organization/applications/<int:UserID>/accept", methods=["POST"])
+def acceptedApplications(UserID):
+	reason = request.form.get("acceptReason")
+	user = paramQueryDb("""SELECT Username FROM Users WHERE UserID = %s""", (session['UserID'],))
+	driver = paramQueryDb("""SELECT Username FROM Users WHERE UserID = %s""", (UserID,))
+	updateDb("""UPDATE OrganizationApplications SET ApplicationStatus = %s, SponsorUName = %s, ApplicationReason = %s WHERE DriverUName = %s""", ("Accepted", user["Username"], reason, driver["Username"]))
+	updateDb("""UPDATE Drivers SET OrganizationName = %s WHERE DriverID = %s""", (session['Organization'], UserID))
+	organizationSig.send(None)
+	return redirect(url_for("applications"))
+
+@application.route("/organization/applications/<int:UserID>/reject", methods=["POST"])
+def rejectedApplications(UserID):
+	reason = request.form.get("rejectReason")
+	user = paramQueryDb("""SELECT Username FROM Users WHERE UserID = %s""", (session['UserID'],))
+	driver = paramQueryDb("""SELECT Username FROM Users WHERE UserID = %s""", (UserID,))
+	updateDb("""UPDATE OrganizationApplications SET ApplicationStatus = %s, SponsorUName = %s, ApplicationReason = %s WHERE DriverUName = %s""", ("Rejected", user["Username"], reason, driver["Username"]))
+	return redirect(url_for("applications"))
 
 @application.route("/org_point_value")
 def pointValueScreen():
