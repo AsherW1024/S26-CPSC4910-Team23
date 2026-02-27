@@ -815,11 +815,12 @@ def adjustDriverPointsPost(UserID):
 
 	# Try to record feedback in an audit table if it exists (won't crash if not)
 	user = paramQueryDb("""SELECT Username FROM Users WHERE UserID = %s""", (session["UserID"],))
+	organization = paramQueryDb("""SELECT OrganizationID FROM Organizations WHERE Name = %s""", (session["Organization"]))
 	try:
 		updateDb("""
-		INSERT INTO PointAdjustments(AdjustedByUName, DriverUName, AdjustmentPoints, AdjustmentReason, DateAdjusted)
-		VALUES (%s, %s, %s, %s, %s)
-		""", (user.get("Username"), driver["Username"], points, reason, datetime.now()))
+		INSERT INTO PointAdjustments(OrganizationID, AdjustedByUName, DriverUName, AdjustmentPoints, AdjustmentReason, DateAdjusted)
+		VALUES (%s, %s, %s, %s, %s, %s)
+		""", (organization.get("OrganizationID"), user.get("Username"), driver["Username"], points, reason, datetime.now()))
 	except Exception as e:
 		# If table doesn't exist, keep app working
 		print("PointDeductions insert skipped:", e)
