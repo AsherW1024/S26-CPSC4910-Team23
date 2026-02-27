@@ -436,82 +436,6 @@ def sponsorUserList():
 		""", (session["UserID"]))
 
 	return render_template("userList.html", layout="activenav.html", users=users, q=q, accountType='sponsor', use="website")
-
-@application.route("/sponsor/drivers/<int:driver_id>/points")
-def sponsor_driver_points(driver_id):
-    guard = require_sponsor()
-    if guard:
-        return guard
-
-    driver = paramQueryDb("""
-        SELECT u.UserID, d.Name, u.Email, u.Username, d.OrganizationName, d.Points
-        FROM Users u
-        JOIN Drivers d ON u.UserID = d.DriverID
-        WHERE u.UserID=%s AND u.UserType='Driver'
-    """, (driver_id,))
-
-    if not driver:
-        flash("Driver not found.", "notfound")
-        return redirect(url_for("sponsor_driver_list"))
-
-    return render_template("sponsor_driver_points.html", layout="activenav.html", driver=driver)
-
-@application.route("/sponsor/drivers/<int:driver_id>/points", methods=["POST"])
-def sponsor_driver_points_post(driver_id):
-    guard = require_sponsor()
-    if guard:
-        return guard
-
-    # Read + validate inputs
-    points_raw = request.form.get("points", "").strip()
-    reason = request.form.get("reason", "").strip()
-
-    if not points_raw.isdigit():
-        flash("Points must be a positive integer.", "validation")
-        return redirect(url_for("sponsor_driver_points", driver_id=driver_id))
-
-    points = int(points_raw)
-    if points <= 0:
-        flash("Points must be greater than 0.", "validation")
-        return redirect(url_for("sponsor_driver_points", driver_id=driver_id))
-
-    if not reason:
-        flash("Reason/feedback is required.", "validation")
-        return redirect(url_for("sponsor_driver_points", driver_id=driver_id))
-
-    # Fetch current points
-    driver = paramQueryDb("""
-        SELECT u.UserID, d.Points
-        FROM Users u
-        JOIN Drivers d ON u.UserID = d.DriverID
-        WHERE u.UserID=%s AND u.UserType='Driver'
-    """, (driver_id,))
-
-    if not driver:
-        flash("Driver not found.", "notfound")
-        return redirect(url_for("sponsor_driver_list"))
-
-    current_points = int(driver.get("Points") or 0)
-    new_total = current_points - points
-    if new_total < 0:
-        new_total = 0  # clamp (or change to block if your rules require)
-
-    # Update driver points
-    updateDb("UPDATE Drivers SET Points=%s WHERE DriverID=%s", (new_total, driver_id))
-
-    # Try to record feedback in an audit table if it exists (won't crash if not)
-    sponsor_id = session.get("UserID")
-    try:
-        updateDb("""
-            INSERT INTO PointDeductions (SponsorID, DriverID, Amount, Reason, CreatedAt)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (sponsor_id, driver_id, points, reason, datetime.now()))
-    except Exception as e:
-        # If table doesn't exist, keep app working
-        print("PointDeductions insert skipped:", e)
-
-    flash(f"Deducted {points} points. New total: {new_total}.", "success")
-    return redirect(url_for("sponsor_driver_list"))
 	
 @application.route("/<accountType>/users/<int:UserID>/edit")
 def userEdit(accountType, UserID):
@@ -770,13 +694,13 @@ def organizations():
 	
 	return render_template("orgList.html", layout="activenav.html", orgs=orgs, q=q)
 
-@application.route("/organization/<int:OrgID>/edit")
+@application.route("/organizations/<int:OrgID>/edit")
 def organizationEdit(OrgID):
 	org = paramQueryDb("SELECT Name FROM Organizations WHERE OrganizationID = %s", (OrgID,))
 	session['Organization'] = org['Name']
 	return redirect(url_for("organization"))
 
-@application.route("/organization/<int:OrgID>/delete", methods=["POST"])
+@application.route("/organizations/<int:OrgID>/delete", methods=["POST"])
 def organizationDelete(OrgID):
 	org = paramQueryDb("SELECT Name FROM Organizations WHERE OrganizationID = %s", (OrgID,))
 	updateDb("UPDATE Drivers SET OrganizationName = %s WHERE OrganizationName = %s", ("None", org['Name']))
@@ -805,8 +729,8 @@ def organizationUsers():
 		users = selectDb("""
 			SELECT u.UserID, u.UserType, u.UserID, u.Name, u.Email, u.Username, s.OrganizationName, d.OrganizationName
 			FROM Users u LEFT JOIN Sponsors s ON u.UserID = s.SponsorID LEFT JOIN Drivers d ON u.UserID = d.DriverID
-			WHERE (Name LIKE %s OR Email LIKE %s OR Username LIKE %s) AND 
-				  (UserType = "Sponsor" OR UserType = "Driver") AND 
+			WHERE (u.Name LIKE %s OR u.Email LIKE %s OR u.Username LIKE %s) AND 
+				  (u.UserType = "Sponsor" OR u.UserType = "Driver") AND 
 				  (s.OrganizationName = %s OR d.OrganizationName = %s)
 			ORDER BY Name
 			LIMIT 50
@@ -815,13 +739,93 @@ def organizationUsers():
 		users = selectDb("""
 			SELECT u.UserID, u.UserType, u.UserID, u.Name, u.Email, u.Username, s.OrganizationName, d.OrganizationName
 			FROM Users u LEFT JOIN Sponsors s ON u.UserID = s.SponsorID LEFT JOIN Drivers d ON u.UserID = d.DriverID
-			WHERE (UserType = "Sponsor" OR UserType = "Driver") AND 
+			WHERE (u.UserType = "Sponsor" OR u.UserType = "Driver") AND 
 				  (s.OrganizationName = %s OR d.OrganizationName = %s)
 			ORDER BY Name
 			LIMIT 50
 		""", (session['Organization'], session['Organization']))
 	
 	return render_template("userList.html", layout="orgnav.html", users=users, q=q, accountType='organization', use="organization")
+
+@application.route("/organization/users/<int:UserID>/points")
+def adjustDriverPoints(UserID):
+    #guard = require_sponsor()
+    #if guard:
+        #return guard
+
+    driver = paramQueryDb("""
+        SELECT u.UserID, u.Name, u.Email, u.Username, d.OrganizationName, d.TotalPoints
+        FROM Users u
+        JOIN Drivers d ON u.UserID = d.DriverID
+        WHERE u.UserID=%s AND u.UserType='Driver'
+    """, (UserID,))
+
+    if not driver:
+        flash("Driver not found.", "notfound")
+        return redirect(url_for("organizationUsers"))
+
+    return render_template("adjustDriverPoints.html", layout="orgnav.html", driver=driver)
+
+@application.route("/organization/users/<int:UserID>/points", methods=["POST"])
+def adjustDriverPointsPost(UserID):
+    #guard = require_sponsor()
+    #if guard:
+     #   return guard
+
+    # Read + validate inputs
+	adjustmentType = request.form.get("adjustType")
+	pointsRaw = request.form.get("points", "").strip()
+	reason = request.form.get("reason", "").strip()
+
+	if not pointsRaw.isdigit():
+		flash("Points must be a positive integer.", "validation")
+		return redirect(url_for("adjsutDriverPoints", UserID=UserID))
+
+	points = int(pointsRaw)
+	if points <= 0:
+		flash("Points must be greater than 0.", "validation")
+		return redirect(url_for("adjustDriverPoints", UserID=UserID))
+
+	if not reason:
+		flash("Reason/feedback is required.", "validation")
+		return redirect(url_for("adjustDriverPoints", UserID=UserID))
+
+	# Fetch current points
+	driver = paramQueryDb("""
+		SELECT u.UserID, u.Username, d.TotalPoints
+		FROM Users u
+		JOIN Drivers d ON u.UserID = d.DriverID
+		WHERE u.UserID=%s AND u.UserType='Driver'
+		""", (UserID,))
+
+	if not driver:
+		flash("Driver not found.", "notfound")
+		return redirect(url_for("organizationUsers"))
+
+	currentPoints = int(driver.get("TotalPoints") or 0)
+	if adjustmentType == "award":
+		newTotal = currentPoints + points
+	elif adjustmentType == "deduct":
+		newTotal = currentPoints - points
+		if newTotal < 0:
+			newTotal = 0  # clamp (or change to block if your rules require)
+
+	# Update driver points
+	updateDb("UPDATE Drivers SET TotalPoints=%s WHERE DriverID=%s", (newTotal, UserID))
+
+	# Try to record feedback in an audit table if it exists (won't crash if not)
+	user = paramQueryDb("""SELECT Username FROM Users WHERE UserID = %s""", (session["UserID"],))
+	try:
+		updateDb("""
+		INSERT INTO PointAdjustments(AdjustedByUName, DriverUName, AdjustmentPoints, AdjustmentReason, DateAdjusted)
+		VALUES (%s, %s, %s, %s, %s)
+		""", (user.get("Username"), driver["Username"], points, reason, datetime.now()))
+	except Exception as e:
+		# If table doesn't exist, keep app working
+		print("PointDeductions insert skipped:", e)
+
+	flash(f"Adjusted Points by {points}. New total: {newTotal}.", "success")
+	return redirect(url_for("organizationUsers"))
 
 @application.route("/organization/users/<int:UserID>/remove", methods=["POST"])
 def removeOrgUser(UserID):
@@ -895,8 +899,9 @@ def acceptedApplications(UserID):
 	reason = request.form.get("acceptReason")
 	user = paramQueryDb("""SELECT Username FROM Users WHERE UserID = %s""", (session['UserID'],))
 	driver = paramQueryDb("""SELECT Username FROM Users WHERE UserID = %s""", (UserID,))
-	updateDb("""UPDATE OrganizationApplications SET ApplicationStatus = %s, SponsorUName = %s, ApplicationReason = %s WHERE DriverUName = %s""", ("Accepted", user["Username"], reason, driver["Username"]))
-	updateDb("""UPDATE Drivers SET OrganizationName = %s WHERE DriverID = %s""", (session['Organization'], UserID))
+	timeJoined= datetime.now()
+	updateDb("""UPDATE OrganizationApplications SET ApplicationStatus = %s, AcceptedByUName = %s, ApplicationReason = %s WHERE DriverUName = %s""", ("Accepted", user["Username"], reason, driver["Username"]))
+	updateDb("""UPDATE Drivers SET OrganizationName = %s, DateJoined = %s WHERE DriverID = %s""", (session['Organization'], timeJoined, UserID))
 	organizationSig.send(None)
 	return redirect(url_for("applications"))
 
@@ -905,7 +910,7 @@ def rejectedApplications(UserID):
 	reason = request.form.get("rejectReason")
 	user = paramQueryDb("""SELECT Username FROM Users WHERE UserID = %s""", (session['UserID'],))
 	driver = paramQueryDb("""SELECT Username FROM Users WHERE UserID = %s""", (UserID,))
-	updateDb("""UPDATE OrganizationApplications SET ApplicationStatus = %s, SponsorUName = %s, ApplicationReason = %s WHERE DriverUName = %s""", ("Rejected", user["Username"], reason, driver["Username"]))
+	updateDb("""UPDATE OrganizationApplications SET ApplicationStatus = %s, AcceptedByUName = %s, ApplicationReason = %s WHERE DriverUName = %s""", ("Rejected", user["Username"], reason, driver["Username"]))
 	return redirect(url_for("applications"))
 
 @application.route("/org_point_value")

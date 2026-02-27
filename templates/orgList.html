@@ -30,9 +30,9 @@
       <tr>
         <td>{{ o.Name }}</td>
         {% if session.get('role') == "Admin" %}
-        <td><a class="button is-small is-success" href="/organization/{{ o.OrganizationID }}/edit">Edit</a></td>
+        <td><a class="button is-small is-success" href="/organizations/{{ o.OrganizationID }}/edit">Edit</a></td>
         <td>
-          <form method="POST" action="/organization/{{ o.OrganizationID }}/delete"
+          <form method="POST" action="/organizations/{{ o.OrganizationID }}/delete"
                 style="display:inline;" onsubmit="return confirmOrgDelete();">
             <button class="button is-small is-danger" type="submit">
               Delete

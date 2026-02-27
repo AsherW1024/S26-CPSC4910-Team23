@@ -45,7 +45,12 @@
         <td>{{ u.Email }}</td>
         <td>{{ u.DateApplied }}</td>
         {% endif %}
-        {% if use == "website" or use == "organization"%}
+        {% if use == "website"%}
+        <td><a class="button is-small" href="/{{ accountType }}/users/{{ u.UserID }}/edit">Edit</a></td>
+        {% elif use == "organization" %}
+          {% if u.UserType == "Driver" %}
+          <td><a class="button is-small" href="/{{ accountType }}/users/{{ u.UserID }}/points">Adjust Points</a></td>
+          {% endif %}
         <td><a class="button is-small" href="/{{ accountType }}/users/{{ u.UserID }}/edit">Edit</a></td>
         {% elif use == "application" %}
         <td>

@@ -1,0 +1,59 @@
+{% extends layout %}
+
+{% block title %}Adjust Driver Points{% endblock %}
+
+{% block page_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/form.css">
+{% endblock %}
+
+{% block content %}
+<div class="container is-max-desktop mt-6">
+  <h1 class="title">Deduct Points</h1>
+
+  <div class="box">
+    <p><strong>Driver:</strong> {{ driver.Name }} ({{ driver.Username }})</p>
+    <p><strong>Email:</strong> {{ driver.Email }}</p>
+    <p><strong>Organization:</strong> {{ driver.OrganizationName }}</p>
+    <p><strong>Current Points:</strong> {{ driver.TotalPoints }}</p>
+  </div>
+
+  <form method="POST" action="/organization/users/{{ driver.UserID }}/points">
+    <div class="field">
+      <label class="label">Point Adjustment Type</label>
+      <select name="adjustType" id="adjustment">
+        <option value="award">Award Points</option>
+        <option value="deduct">Deduct Points</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label class="label">Points</label>
+      <div class="control">
+        <input class="input" type="number" name="points" min="1" step="1" required placeholder="e.g., 10">
+      </div>
+      <span class="error">
+        Must be a positive integer.          
+      </span>
+    </div>
+
+    <div class="field">
+      <label class="label">Reason / feedback</label>
+      <div class="control">
+        <textarea class="textarea" name="reason" required placeholder="Explain why points are being adjusted..."></textarea>
+      </div>
+      <span class="error">
+        Required (stored with the deduction).         
+      </span>
+    </div>
+
+    <div class="field is-grouped">
+      <div class="control">
+        <button class="button is-danger" type="submit">Adjust Points</button>
+      </div>
+      <div class="control">
+        <a class="button is-light" href="/organization/users">Cancel</a>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}
