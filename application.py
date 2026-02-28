@@ -914,9 +914,9 @@ def rejectedApplications(UserID):
 	updateDb("""UPDATE OrganizationApplications SET ApplicationStatus = %s, AcceptedByUName = %s, ApplicationReason = %s WHERE DriverUName = %s""", ("Rejected", user["Username"], reason, driver["Username"]))
 	return redirect(url_for("applications"))
 
-@application.route("/org_point_value")
+@application.route("/organization/point_value")
 def pointValueScreen():
-	if 'UserID' in session and session["role"]=="Sponsor":
+	if 'UserID' in session and session.get("role")=="Sponsor":
 		#get org info from db
 		orgName = paramQueryDb(query="SELECT OrganizationName FROM Sponsors WHERE SponsorID=%s", params=(session["UserID"]))["OrganizationName"]
 		orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName))["OrganizationID"]
@@ -934,7 +934,7 @@ def pointValueScreen():
 
 @application.route("/point_value", methods=["POST"])
 def changePointValue():
-	if 'UserID' in session and session["role"]=="Sponsor":
+	if 'UserID' in session and session.get("role")=="Sponsor":
 		try:
 			newPointVal = request.get_json()["newPointVal"]
 			newPointVal = float(newPointVal)
@@ -1031,8 +1031,7 @@ def changeCatalogRules():
 
 		#make empty strings None for db queries
 		def makeNoneIfEmpty(var):
-			value = None if var=="" else var
-			return value
+			return None if var=="" else var
 		minPoints = makeNoneIfEmpty(minPoints)
 		maxPoints = makeNoneIfEmpty(maxPoints)
 		minRating = makeNoneIfEmpty(minRating)
@@ -1042,8 +1041,45 @@ def changeCatalogRules():
 			updateDb(query="UPDATE Catalog_Rules SET minPoints=%s, maxPoints=%s, minRating=%s, updated=current_timestamp WHERE orgID=%s", params=(minPoints, maxPoints, minRating, orgID))
 		else:
 			updateDb(query="INSERT INTO Catalog_Rules (orgID, minPoints, maxPoints, minRating, created) VALUES (%s, %s, %s, %s, current_timestamp)", params=(orgID, minPoints, maxPoints, minRating))
+
+		clearCategoriesQuery = "DELETE FROM Allowed_Categories WHERE orgID=%s"
+
+		clearBrandsQuery = "DELETE FROM Allowed_Brands WHERE orgID=%s"
+
+		addCategoryQuery = "INSERT INTO Allowed_Categories (orgID, category) VALUES (%s, %s)"
+
+		addBrandQuery = "INSERT INTO Allowed_Brands (orgID, brand) VALUES (%s, %s)"
 		
-		#TODO- add the form data to the other 2 tables
+		#table logic for allowed categories
+		if keepAllCategories == "keep-all":
+			#clear allowed categories
+			updateDb(query=clearCategoriesQuery, params=(orgID))
+			#insert keep-all value
+			updateDb(query=addCategoryQuery, params=(orgID, keepAllCategories))
+		elif allowedCategories != []:
+			#clear allowed categories
+			updateDb(query=clearCategoriesQuery, params=(orgID))
+			#insert each allowed category
+			for category in allowedCategories:
+				updateDb(query=addCategoryQuery, params=(orgID, category))
+		else:
+			#clear allowed categories
+			updateDb(query=clearCategoriesQuery, params=(orgID))
+
+		#table logic for allowed brands
+		if keepAllBrands == "keep-all":
+			#clear allowed brands
+			updateDb(query=clearBrandsQuery, params=(orgID))
+			#insert keep-all value
+			updateDb(query=addBrandQuery, params=(orgID, keepAllBrands))
+		elif allowedBrands != []:
+			#clear allowed brands
+			updateDb(query=clearBrandsQuery, params=(orgID))
+			for brand in allowedBrands:
+				updateDb(query=addBrandQuery, params=(orgID, brand))
+		else:
+			#clear allowed brands
+			updateDb(query=clearBrandsQuery, params=(orgID))
 
 		return redirect(url_for("catalogRules"))
 	return redirect(url_for("catalogRules"))

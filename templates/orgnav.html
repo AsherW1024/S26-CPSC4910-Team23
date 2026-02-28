@@ -22,7 +22,8 @@
                 {% if session.get('role') != "Driver" %}
                     <a href="/organization/applications"> Applications </a>
                     {% if session.get('role') == "Sponsor" %}
-                        <a href="/organization/org_point_value">Org Point Value</a>
+                        <a href="/organization/point_value">Point Value</a>
+                        <a href="/catalog/rules">Catalog Rules</a>
                     {% endif %}
                 {% endif %}
             {% endif %}
