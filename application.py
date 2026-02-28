@@ -1001,9 +1001,70 @@ def catalog():
 @application.route("/catalog/rules")
 def catalogRules():
 	if 'UserID' in session and session.get("role")=="Sponsor":
+		#get org info for user
 		orgName = paramQueryDb(query="SELECT OrganizationName FROM Sponsors WHERE SponsorID=%s", params=(session.get("UserID")))["OrganizationName"]
+		orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName))["OrganizationID"]
 
-		return render_template("catalog_rules.html", layout="activenav.html", orgName=orgName)
+		#get data from Catalog_Rules
+		try:
+			getRuleQuery = """
+				SELECT * 
+				FROM Catalog_Rules
+				WHERE orgID=%s
+			"""
+			ruleData = paramQueryDb(query=getRuleQuery, params=(orgID))
+			rules = {
+				'minPoints': ruleData.get('minPoints'), 
+				'maxPoints': ruleData.get('maxPoints'), 
+				'minRating': ruleData.get('minRating'), 
+			}
+		except Exception as e:
+			print(e)
+			rules = {
+				'minPoints': None, 
+				'maxPoints': None, 
+				'minRating': None
+			}
+
+		#get data from Allowed_Categories
+		try:
+			getCategoriesQuery = f"""
+				SELECT *
+				FROM Allowed_Categories
+				WHERE orgID={orgID}
+			"""
+
+			categoryData = queryDb(getCategoriesQuery)
+
+			#collect all allowed categories in an array
+			allowedCategories = []
+			for row in categoryData:
+				allowedCategories.append(row.get("category"))
+
+		except Exception as e:
+			print(e)
+			allowedCategories = ["keep-all"]
+
+		#get data from Allowed_Brands
+		try:
+			getBrandsQuery = f"""
+				SELECT *
+				FROM Allowed_Brands
+				WHERE orgID={orgID}
+			"""
+
+			brandData = queryDb(getBrandsQuery)
+
+			#collect all allowed brands into an array
+			allowedBrands = []
+			for row in brandData:
+				allowedBrands.append(row.get("brand"))
+
+		except Exception as e:
+			print(e)
+			allowedBrands = ["keep-all"]
+
+		return render_template("catalog_rules.html", layout="activenav.html", orgName=orgName, rules=rules, allowedCategories=allowedCategories, allowedBrands=allowedBrands)
 	return redirect(url_for("home"))
 
 
@@ -1065,6 +1126,7 @@ def changeCatalogRules():
 		else:
 			#clear allowed categories
 			updateDb(query=clearCategoriesQuery, params=(orgID))
+			updateDb(query=addCategoryQuery, params=(orgID, "none"))
 
 		#table logic for allowed brands
 		if keepAllBrands == "keep-all":
@@ -1080,6 +1142,7 @@ def changeCatalogRules():
 		else:
 			#clear allowed brands
 			updateDb(query=clearBrandsQuery, params=(orgID))
+			updateDb(query=addBrandQuery, params=(orgID, "none"))
 
 		return redirect(url_for("catalogRules"))
 	return redirect(url_for("catalogRules"))

@@ -15,33 +15,33 @@
 <form action="/catalog/rules" method="POST">
 	<div class="section">
 		<label for="min-price">Minimum Product Point Cost</label>
-		<input id="min-price" name="min-price" type="number" min="0" step="1">
+		<input id="min-price" name="min-price" type="number" min="0" step="1" value="{{rules.get("minPoints")}}">
 	</div>
 
 	<div class="section">
 		<label for="max-price">Maximum Product Point Cost</label>
-		<input id="max-price" name="max-price" type="number" min="0" step="1">
+		<input id="max-price" name="max-price" type="number" min="0" step="1" value="{{rules.get("maxPoints")}}">
 	</div>
 
 	<div class="section">
 		<label for="min-rating">Minimum Product Rating</label>
-		<input id="min-rating" name="min-rating" type="number" min="0" max="5" step="0.1">
+		<input id="min-rating" name="min-rating" type="number" min="0" max="5" step="0.1" value="{{rules.get("minRating")}}">
 	</div>
 
 	<div class="section">
 		<label for="keep-all-categories">Keep All Product Categories</label>
-		<input id="keep-all-categories" name="keep-all-categories" value="keep-all" type="checkbox">
+		<input id="keep-all-categories" name="keep-all-categories" value="keep-all" type="checkbox" {% if "keep-all" in allowedCategories %} checked {% endif %}>
 	</div>
 
 	<div class="section">
 		<label for="keep-all-brands">Keep All Brands</label>
-		<input id="keep-all-brands" name="keep-all-brands" value="keep-all" type="checkbox">
+		<input id="keep-all-brands" name="keep-all-brands" value="keep-all" type="checkbox" {% if "keep-all" in allowedBrands %} checked {% endif %}>
 	</div>
 	
 	<div class="section">
 		<h2 class="title">Allowed Categories...</h2>
 		<div id="category-select" class="select-many">
-			<label><input name="category" class="category-box" type="checkbox" value="beauty">Beauty</label>
+			<label><input name="category" class="category-box" type="checkbox" value="beauty" {% if "keep-all" in allowedCategories or "beauty" in allowedCategories %} checked {% endif %}>Beauty</label>
 			<label><input name="category" class="category-box" type="checkbox" value="fragrances">Fragrances</label>
 			<label><input name="category" class="category-box" type="checkbox" value="furniture">Furniture</label>
 			<label><input name="category" class="category-box" type="checkbox" value="groceries">Groceries</label>
