@@ -94,6 +94,12 @@
 	font-size: 2em;
 }
 
+.reset-button {
+    background-color: rgb(254, 190, 190);
+	border-radius: 10px;
+	font-size: 2em;
+}
+
 .content {
 	padding-left: 20px;
 	padding-right:	20px;
