@@ -38,7 +38,7 @@
 		<input id="keep-all-brands" name="keep-all-brands" value="keep-all" type="checkbox" {% if "keep-all" in allowedBrands %} checked {% endif %}>
 	</div>
 	
-	<div class="section">
+	<div class="section" id="allowed-categories" {% if "keep-all" in allowedCategories %} hidden {% endif %}>
 		<h2 class="title">Allowed Categories...</h2>
 		<div id="category-select" class="select-many">
 			<label><input name="category" class="category-box" type="checkbox" value="beauty" {% if "keep-all" in allowedCategories or "beauty" in allowedCategories %} checked {% endif %}>Beauty</label>
@@ -68,7 +68,7 @@
 		</div>
 	</div>
 
-	<div class="section">
+	<div class="section" id="allowed-brands" {% if "keep-all" in allowedBrands %} hidden {% endif %}>
 		<h2 class="title">Allowed Brands...</h2>
 		<div id="brand-select" class="select-many">
 			<label><input name="brand" class="brand-box" type="checkbox" value="Essence" {% if "keep-all" in allowedBrands or "Essence" in allowedBrands %} checked {% endif %}>Essence</label>
@@ -141,4 +141,5 @@
 </form>
 </div>
 </div>
+<script src="/static/js/catalog_rules.js"></script>
 {% endblock %}
