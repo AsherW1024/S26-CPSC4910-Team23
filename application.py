@@ -1271,6 +1271,42 @@ def removeExclusions(data):
 		print(e)
 		return data
 
+"""
+Helper function for get_products. Filters out products based on catalog 
+rules set for the organization.
+"""
+def filterByRules(data):
+	try:
+		#get session data for queries
+		userType = session.get("role")
+		userID = session.get("UserID")
+
+		#get organization name from specific user table
+		getOrgNameQuery = """
+			SELECT OrganizationName
+			FROM %ss
+			WHERE %sID = %s
+		"""
+		orgName = paramQueryDb(query=getOrgNameQuery, params=(userType, userType, userID)).get("OrganizationName")
+
+		#get organization ID from Organizations table
+		getOrgIDQuery = """
+			SELECT OrganizationID
+			FROM Organanizations
+			WHERE Name=%s
+		"""
+		orgID = paramQueryDb(query=getOrgIDQuery, params=(orgName)).get("OrganizationID")
+		
+		#get catalog rules for organization
+		try:
+			None
+		except Exception as e:
+			pass
+
+		
+	except Exception as e:
+		print(e)
+		return data
 
 @application.route("/get_products", methods=["POST"])
 def get_products():
@@ -1291,6 +1327,10 @@ def get_products():
 		result = requests.get(url+query+f"&sortBy={sortBy}&order={sortDirection}")
 		result = result.json()
 
+	#filter products based on catalog rules
+	result = filterByRules(result)
+
+	#remove any products from product exclusion list table
 	if session.get("role") == "Driver":
 		result = removeExclusions(result)
 
