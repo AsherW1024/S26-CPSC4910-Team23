@@ -1272,6 +1272,130 @@ def removeExclusions(data):
 		return data
 
 """
+Removes any products from a list of products that fall below the given rating
+"""
+def filterByRating(data, minRating:float):
+
+	if minRating == None or minRating == "":
+		return data
+	
+	minRating = float(minRating)
+	
+	filteredData = {}
+	filteredData["products"] = []
+
+	productList = data.get("products")
+
+	for item in productList:
+		if float(item.get("rating")) >= minRating:
+			filteredData["products"].append(item)
+
+	return filteredData
+
+"""
+Removes any products from a list of products that do not belong to the allowed
+categories list.
+"""
+def filterByAllowedCategories(data):
+	try:
+		#get session data for queries
+		userType = session.get("role")
+		userID = session.get("UserID")
+
+		#get organization name from specific user table
+		getOrgNameQuery = f"""
+			SELECT OrganizationName
+			FROM {userType}s
+			WHERE {userType}ID = %s
+		"""
+		orgName = paramQueryDb(query=getOrgNameQuery, params=(userID)).get("OrganizationName")
+
+		#get organization ID from Organizations table
+		getOrgIDQuery = """
+			SELECT OrganizationID
+			FROM Organizations
+			WHERE Name=%s
+		"""
+		orgID = paramQueryDb(query=getOrgIDQuery, params=(orgName)).get("OrganizationID")
+
+		getAllowedCategoriesQuery = f"""
+			SELECT category
+			FROM Allowed_Categories
+			WHERE orgID={orgID}
+		"""
+		rows = queryDb(getAllowedCategoriesQuery)
+		
+		allowedCategories = []
+		for row in rows:
+			allowedCategories.append(row.get("category"))
+
+		#filter by category
+		filteredData = {}
+		filteredData["products"] = []
+
+		for product in data.get("products"):
+			if product.get("category") in allowedCategories or "keep-all" in allowedCategories:
+				filteredData["products"].append(product)
+
+		return filteredData
+
+	except Exception as e:
+		print(e)
+		return data
+	
+
+"""
+Removes any products from a list of products that do not belong to the allowed
+brands list.
+"""
+def filterByAllowedBrands(data):
+	try:
+		#get session data for queries
+		userType = session.get("role")
+		userID = session.get("UserID")
+
+		#get organization name from specific user table
+		getOrgNameQuery = f"""
+			SELECT OrganizationName
+			FROM {userType}s
+			WHERE {userType}ID = %s
+		"""
+		orgName = paramQueryDb(query=getOrgNameQuery, params=(userID)).get("OrganizationName")
+
+		#get organization ID from Organizations table
+		getOrgIDQuery = """
+			SELECT OrganizationID
+			FROM Organizations
+			WHERE Name=%s
+		"""
+		orgID = paramQueryDb(query=getOrgIDQuery, params=(orgName)).get("OrganizationID")
+
+		getAllowedBrandsQuery = f"""
+			SELECT brand
+			FROM Allowed_Brands
+			WHERE orgID={orgID}
+		"""
+		rows = queryDb(getAllowedBrandsQuery)
+		
+		allowedBrands = []
+		for row in rows:
+			allowedBrands.append(row.get("brand"))
+
+		#filter by brand
+		filteredData = {}
+		filteredData["products"] = []
+
+		for product in data.get("products"):
+			if product.get("brand") in allowedBrands or "keep-all" in allowedBrands:
+				filteredData["products"].append(product)
+
+		return filteredData
+
+	except Exception as e:
+		print(e)
+		return data
+
+"""
 Helper function for get_products. Filters out products based on catalog 
 rules set for the organization.
 """
@@ -1282,27 +1406,43 @@ def filterByRules(data):
 		userID = session.get("UserID")
 
 		#get organization name from specific user table
-		getOrgNameQuery = """
+		getOrgNameQuery = f"""
 			SELECT OrganizationName
-			FROM %ss
-			WHERE %sID = %s
+			FROM {userType}s
+			WHERE {userType}ID = %s
 		"""
-		orgName = paramQueryDb(query=getOrgNameQuery, params=(userType, userType, userID)).get("OrganizationName")
+		orgName = paramQueryDb(query=getOrgNameQuery, params=(userID)).get("OrganizationName")
 
 		#get organization ID from Organizations table
 		getOrgIDQuery = """
 			SELECT OrganizationID
-			FROM Organanizations
+			FROM Organizations
 			WHERE Name=%s
 		"""
 		orgID = paramQueryDb(query=getOrgIDQuery, params=(orgName)).get("OrganizationID")
 		
 		#get catalog rules for organization
 		try:
-			None
+			getRulesQuery = """
+				SELECT *
+				FROM Catalog_Rules
+				WHERE orgID=%s
+			"""
+			rules = paramQueryDb(query=getRulesQuery, params=(orgID))
+
+			minPoints = rules.get("minPoints")
+			maxPoints = rules.get("maxPoints")
+			minRating = rules.get("minRating")
+
+			data = filterByPrice(data=data, min=minPoints, max=maxPoints)
+			data = filterByRating(data=data, minRating=minRating)
+			data = filterByAllowedCategories(data=data)
+			data = filterByAllowedBrands(data=data)
+
 		except Exception as e:
 			pass
 
+		return data
 		
 	except Exception as e:
 		print(e)
@@ -1327,15 +1467,15 @@ def get_products():
 		result = requests.get(url+query+f"&sortBy={sortBy}&order={sortDirection}")
 		result = result.json()
 
-	#filter products based on catalog rules
-	result = filterByRules(result)
-
 	#remove any products from product exclusion list table
 	if session.get("role") == "Driver":
 		result = removeExclusions(result)
 
 	#adjust dollar curreny to point currency
 	result = adjustPrice(result)
+
+	#filter products based on catalog rules
+	result = filterByRules(result)
 
 	#appy category filter
 	result = filterByCategory(data=result, category=category)
