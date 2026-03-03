@@ -853,9 +853,11 @@ def organizationUsers():
 
 @application.route("/organization/users/<int:UserID>/points")
 def adjustDriverPoints(UserID):
-    #guard = require_sponsor()
-    #if guard:
-        #return guard
+    guard = require_sponsor()
+    if guard:
+    # allow Admin too
+        if session.get("role") != "Admin":
+            return guard
 
     driver = paramQueryDb("""
         SELECT u.UserID, u.Name, u.Email, u.Username, d.OrganizationName, d.TotalPoints
@@ -872,10 +874,12 @@ def adjustDriverPoints(UserID):
 
 @application.route("/organization/users/<int:UserID>/points", methods=["POST"])
 def adjustDriverPointsPost(UserID):
-    #guard = require_sponsor()
-    #if guard:
-     #   return guard
-
+	guard = require_sponsor()
+	if guard:
+    # allow Admin too
+		if session.get("role") != "Admin":
+			return guard
+			
     # Read + validate inputs
 	adjustmentType = request.form.get("adjustType")
 	pointsRaw = request.form.get("points", "").strip()
@@ -883,7 +887,7 @@ def adjustDriverPointsPost(UserID):
 
 	if not pointsRaw.isdigit():
 		flash("Points must be a positive integer.", "validation")
-		return redirect(url_for("adjsutDriverPoints", UserID=UserID))
+		return redirect(url_for("adjustDriverPoints", UserID=UserID))
 
 	points = int(pointsRaw)
 	if points <= 0:
