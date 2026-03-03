@@ -415,6 +415,65 @@ def forgot_password_post():
     flash("If an account exists for that email, reset instructions were sent.", "resetSent")
     return redirect(url_for("login"))
 
+@application.route("/reset_password/<token>")
+def reset_password(token):
+    return render_template("reset_password.html", token=token)
+
+@application.route("/reset_password/<token>", methods=["POST"])
+def reset_password_post(token):
+    new_pw = request.form.get("new_password", "")
+    confirm = request.form.get("confirm_new_password", "")
+
+    if new_pw != confirm:
+        flash("Passwords do not match.", "resetFail")
+        return redirect(url_for("reset_password", token=token))
+
+    errors = password_policy_errors(new_pw)
+    if errors:
+        flash(" ".join(errors), "resetFail")
+        return redirect(url_for("reset_password", token=token))
+
+    token_hash = hash_reset_token(token)
+    rec = paramQueryDb("""
+        SELECT TokenID, UserID, ExpiresAt, UsedAt
+        FROM PasswordResetTokens
+        WHERE TokenHash=%s
+    """, (token_hash,))
+
+    if not rec or rec["UsedAt"] is not None:
+        flash("Reset link is invalid or already used.", "resetFail")
+        return redirect(url_for("forgot_password"))
+
+    if rec["ExpiresAt"] < datetime.now():
+        flash("Reset link has expired.", "resetFail")
+        return redirect(url_for("forgot_password"))
+
+    new_hash = generate_password_hash(new_pw, method="pbkdf2:sha256")
+    updateDb("UPDATE Users SET Password_hash=%s WHERE UserID=%s", (new_hash, rec["UserID"]))
+    updateDb("UPDATE PasswordResetTokens SET UsedAt=%s WHERE TokenID=%s", (datetime.now(), rec["TokenID"]))
+
+    # Log reset event
+    org_id = None
+    # attempt to infer org via joined sponsor/driver for the target user
+    org = paramQueryDb("""
+        SELECT o.OrganizationID
+        FROM Users u
+        LEFT JOIN Sponsors s ON u.UserID=s.SponsorID
+        LEFT JOIN Drivers d ON u.UserID=d.DriverID
+        LEFT JOIN Organizations o ON o.Name=COALESCE(s.OrganizationName, d.OrganizationName)
+        WHERE u.UserID=%s
+    """, (rec["UserID"],))
+    if org:
+        org_id = org["OrganizationID"]
+
+    updateDb("""
+        INSERT INTO PasswordChangeLog (OrganizationID, ActorUserID, TargetUserID, EventType, EventTime, ActorIP)
+        VALUES (%s, %s, %s, %s, %s, %s)
+    """, (org_id, rec["UserID"], rec["UserID"], "reset", datetime.now(), get_request_ip()))
+
+    flash("Password reset successful. Please login.", "success")
+    return redirect(url_for("login"))
+
 @application.route("/logout")
 def logout():
 	session.pop("UserID", None)
