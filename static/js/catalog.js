@@ -99,6 +99,17 @@ async function addProduct(event) {
 	}
 }
 
+async function addToWishlist(event) {
+	let wishlistButton = event.target;
+	let productDiv = wishlistButton.parentElement;
+
+	let productDetailIndex = productDiv.dataset.index;
+
+	let productID = pageProductData[productDetailIndex].id;
+
+	//to-do: implement post request to backend once that is setup
+}
+
 //make api request in the backend for products
 //update screen with results
 async function queryProducts() {
@@ -177,6 +188,13 @@ async function queryProducts() {
 			addButton.innerText = "Add";
 			addButton.addEventListener("click", addProduct);
 			productDiv.appendChild(addButton);
+		}
+		else if (userRole == "Driver") {
+			let wishlistButton = document.createElement("button");
+			wishlistButton.addEventListener("click", addToWishlist)
+			wishlistButton.classList.add("wishlist-button");
+			wishlistButton.innerText = "Add To Wishlist";
+			productDiv.appendChild(wishlistButton);
 		}
 		productDiv.appendChild(name);
 		productDiv.appendChild(price);
