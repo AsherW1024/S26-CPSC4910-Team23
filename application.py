@@ -156,6 +156,67 @@ def require_sponsor():
 		return redirect(url_for("home"))
 	return None
 
+def require_login():
+    if "UserID" not in session:
+        flash("Please login first.", "auth")
+        return redirect(url_for("login"))
+    return None
+
+@application.route("/orgs")
+def org_search():
+    guard = require_login()
+    if guard:
+        return guard
+
+    q = request.args.get("q", "").strip()
+    mode = request.args.get("mode", "contains").strip()
+
+    if not q:
+        orgs = selectDb("""
+            SELECT OrganizationID, Name
+            FROM Organizations
+            ORDER BY Name
+            LIMIT 50
+        """)
+    else:
+        if mode == "starts_with":
+            like = f"{q}%"
+            orgs = selectDb("""
+                SELECT OrganizationID, Name
+                FROM Organizations
+                WHERE Name LIKE %s
+                ORDER BY Name
+                LIMIT 50
+            """, (like,))
+        elif mode == "exact":
+            orgs = selectDb("""
+                SELECT OrganizationID, Name
+                FROM Organizations
+                WHERE Name = %s
+                ORDER BY Name
+                LIMIT 50
+            """, (q,))
+        else:
+            like = f"%{q}%"
+            orgs = selectDb("""
+                SELECT OrganizationID, Name
+                FROM Organizations
+                WHERE Name LIKE %s
+                ORDER BY Name
+                LIMIT 50
+            """, (like,))
+
+    can_manage = (session.get("role") == "Admin")
+    return render_template(
+        "orgList.html",
+        layout="activenav.html",
+        orgs=orgs,
+        q=q,
+        mode=mode,
+        action_url="/orgs",
+        can_manage=can_manage
+    )
+
 def getOrganization():
 	if "UserID" in session:
 		org = paramQueryDb("""SELECT s.OrganizationName as SponsorOrg, d.OrganizationName as DriverOrg
@@ -1916,4 +1977,5 @@ def getRole():
 This lets us test locally. Should not execute in AWS
 """
 if __name__ == "__main__":
+
 	application.run()
