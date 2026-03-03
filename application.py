@@ -6,10 +6,54 @@ from config import db_config
 import os
 import requests
 import math
+import secrets
+import hashlib
 
 application = Flask(__name__)
 application.secret_key = os.urandom(24)  # Use a secure random key in production
 application.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=1)
+
+# -----------------------------
+# Security / Validation Helpers
+# -----------------------------
+
+PASSWORD_MIN_LEN = 10
+PASSWORD_MAX_LEN = 128
+
+def password_policy_errors(pw: str):
+    """Return a list of human-readable password policy errors."""
+    errors = []
+    if not pw:
+        errors.append("Password is required.")
+        return errors
+    if len(pw) < PASSWORD_MIN_LEN:
+        errors.append(f"Password must be at least {PASSWORD_MIN_LEN} characters.")
+    if len(pw) > PASSWORD_MAX_LEN:
+        errors.append(f"Password must be at most {PASSWORD_MAX_LEN} characters.")
+    if not any(c.islower() for c in pw):
+        errors.append("Password must include a lowercase letter.")
+    if not any(c.isupper() for c in pw):
+        errors.append("Password must include an uppercase letter.")
+    if not any(c.isdigit() for c in pw):
+        errors.append("Password must include a number.")
+    if not any(not c.isalnum() for c in pw):
+        errors.append("Password must include a special character.")
+    return errors
+
+def hash_reset_token(token: str) -> str:
+    """Hash token before storing in DB (never store raw reset tokens)."""
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+def get_request_ip():
+    # basic (good enough for class project); reverse-proxy setups may vary
+    return request.headers.get("X-Forwarded-For", request.remote_addr)
+
+def get_user_org_id():
+    """Return org id for the currently logged-in user (sponsor/driver/admin)."""
+    if "Organization" not in session or not session["Organization"]:
+        return None
+    org = paramQueryDb("SELECT OrganizationID FROM Organizations WHERE Name=%s", (session["Organization"],))
+    return org["OrganizationID"] if org else None
 
 """
 This uses the data provided in the db_config.py file to intinialize and return
