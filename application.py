@@ -392,26 +392,27 @@ def forgot_password():
 @application.route("/forgot_password", methods=["POST"])
 def forgot_password_post():
     email = request.form.get("email", "").strip()
-
     if not email:
         flash("Please enter an email.", "resetFail")
         return redirect(url_for("forgot_password"))
 
-    # Check DB for email
+    # Always act the same (no account enumeration)
     user = paramQueryDb("SELECT UserID FROM Users WHERE Email=%s", (email,))
+    if user:
+        # create token
+        raw_token = secrets.token_urlsafe(32)
+        token_hash = hash_reset_token(raw_token)
+        expires = datetime.now() + timedelta(minutes=30)
 
-    if not user:
-        flash("No account found with that email.", "resetFail")
-        return redirect(url_for("forgot_password"))
+        updateDb("""
+            INSERT INTO PasswordResetTokens (UserID, TokenHash, ExpiresAt, UsedAt, CreatedAt, RequestIP)
+            VALUES (%s, %s, %s, NULL, %s, %s)
+        """, (user["UserID"], token_hash, expires, datetime.now(), get_request_ip()))
 
-    # "Fake send": generate a temp password and update hash in DB
-    temp_password = "Temp" + str(datetime.utcnow().timestamp()).replace(".", "")[-6:]
-    temp_hash = generate_password_hash(temp_password, method="pbkdf2:sha256")
+        # Demo-only: show reset link token (pretend emailed)
+        flash(f"Reset link (demo): /reset_password/{raw_token}", "resetSent")
 
-    updateDb("UPDATE Users SET Password_hash=%s WHERE UserID=%s", (temp_hash, user["UserID"]))
-
-    # For demo: show the temp password on screen (since emails are fake)
-    flash(f"Temporary password generated: {temp_password} (pretend this was emailed).", "resetSent")
+    flash("If an account exists for that email, reset instructions were sent.", "resetSent")
     return redirect(url_for("login"))
 
 @application.route("/logout")
