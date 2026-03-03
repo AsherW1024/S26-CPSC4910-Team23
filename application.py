@@ -514,7 +514,7 @@ def adminUserList():
 			WHERE UserID <> %s
 			ORDER BY Name
 			LIMIT 50
-		""", (session["UserID"]))
+		""", (session["UserID"],))
 	
 	return render_template("userList.html", layout="activenav.html", users=users, q=q, accountType='admin', use="website")
 
@@ -545,7 +545,7 @@ def sponsorUserList():
 				  (UserID <> %s)
 			ORDER BY Name
 			LIMIT 50
-		""", (session["UserID"]))
+		""", (session["UserID"],))
 
 	return render_template("userList.html", layout="activenav.html", users=users, q=q, accountType='sponsor', use="website")
 	
