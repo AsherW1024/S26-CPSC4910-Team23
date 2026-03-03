@@ -251,7 +251,7 @@ def registerUser():
 	else:
 		if not organization:
 			organization = request.form.get("organizationName")	
-		orgExists = paramQueryDb("SELECT OrganizationID FROM Organizations WHERE Name = %s", (organization))
+		orgExists = paramQueryDb("SELECT OrganizationID FROM Organizations WHERE Name = %s", (organization,))
 		if sponsor:
 			if not orgExists:
 				flash("The organization you entered doesn't exist, please enter a valid organization", "invalid")
