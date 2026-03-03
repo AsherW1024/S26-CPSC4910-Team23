@@ -566,6 +566,63 @@ def userEdit(accountType, UserID):
 
 	return render_template("userEdit.html", layout="activenav.html", user=user, accountType=accountType)
 
+@application.route("/sponsor/drivers/create")
+def sponsor_create_driver():
+    guard = require_sponsor()
+    if guard:
+        return guard
+    if not session.get("Organization"):
+        flash("You must belong to an organization to create drivers.", "validation")
+        return redirect(url_for("home"))
+    return render_template("sponsor_create_driver.html", layout="activenav.html")
+
+@application.route("/sponsor/drivers/create", methods=["POST"])
+def sponsor_create_driver_post():
+    guard = require_sponsor()
+    if guard:
+        return guard
+    if not session.get("Organization"):
+        flash("You must belong to an organization to create drivers.", "validation")
+        return redirect(url_for("home"))
+
+    name = request.form.get("name", "").strip()
+    email = request.form.get("email", "").strip()
+    username = request.form.get("username", "").strip()
+    password = request.form.get("password", "")
+
+    if not (name and email and username and password):
+        flash("All fields are required.", "validation")
+        return redirect(url_for("sponsor_create_driver"))
+
+    if paramQueryDb("SELECT UserID FROM Users WHERE Email=%s", (email,)):
+        flash("Email is already in use.", "validation")
+        return redirect(url_for("sponsor_create_driver"))
+
+    if paramQueryDb("SELECT UserID FROM Users WHERE Username=%s", (username,)):
+        flash("Username is already taken.", "validation")
+        return redirect(url_for("sponsor_create_driver"))
+
+    # basic password policy for the temp password too
+    errors = password_policy_errors(password)
+    if errors:
+        flash(" ".join(errors), "validation")
+        return redirect(url_for("sponsor_create_driver"))
+
+    pw_hash = generate_password_hash(password, method="pbkdf2:sha256")
+    updateDb("""
+        INSERT INTO Users (Email, Username, Password_hash, Name, UserType)
+        VALUES (%s, %s, %s, %s, 'Driver')
+    """, (email, username, pw_hash, name))
+
+    new_user = paramQueryDb("SELECT UserID FROM Users WHERE Email=%s", (email,))
+    updateDb("""
+        INSERT INTO Drivers (DriverID, Name, OrganizationName, TotalPoints)
+        VALUES (%s, %s, %s, 0)
+    """, (new_user["UserID"], name, session["Organization"]))
+
+    flash("Driver account created.", "success")
+    return redirect(url_for("sponsor_drivers"))
+
 @application.route("/<accountType>/users/<int:UserID>/edit", methods=["POST"])
 def userEditPost(accountType, UserID):	
 	"""if accountType == 'sponsor':
