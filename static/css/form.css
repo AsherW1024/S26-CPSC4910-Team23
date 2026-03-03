@@ -50,6 +50,45 @@
     list-style: none;
 }
 
+/* Generic flash message blocks (works even if you output <div class="category">message</div>) */
+.success,
+.created {
+    background: rgba(42, 157, 143, 0.12);
+    color: #2a9d8f;
+    border: 1px solid rgba(42, 157, 143, 0.35);
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-weight: 700;
+    margin: 0.5rem 0;
+}
+
+.validation,
+.resetFail,
+.username,
+.password,
+.registered,
+.registeredOrg,
+.missing,
+.mismatch {
+    background: rgba(214, 40, 40, 0.10);
+    color: #d62828;
+    border: 1px solid rgba(214, 40, 40, 0.30);
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-weight: 700;
+    margin: 0.5rem 0;
+}
+
+.resetSent {
+    background: rgba(0, 115, 230, 0.10);
+    color: #0073e6;
+    border: 1px solid rgba(0, 115, 230, 0.25);
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-weight: 700;
+    margin: 0.5rem 0;
+}
+
 /* Error / warning style for all current categories */
 .username,
 .password,
