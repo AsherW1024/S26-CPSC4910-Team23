@@ -670,42 +670,102 @@ def editProfile():
 
 @application.route("/profile/edit", methods=["POST"])
 def registerProfileEdits():
-	Name = request.form.get("name")
-	Username = request.form.get("username")
-	Email = request.form.get("email")
-	Password = request.form.get("password")
+    if "UserID" not in session:
+        return redirect(url_for("login"))
 
-	update = []
-	identifier = []
+    Name = request.form.get("name", "").strip()
+    Username = request.form.get("username", "").strip()
+    Email = request.form.get("email", "").strip()
+    PhoneNumber = request.form.get("phoneNum", "").strip()
 
-	if Username:
-		identifier.append("Username = %s")
-		update.append(Username)
-	if Email:
-		identifier.append("Email = %s")
-		update.append(Email)
-	if Password:
-		identifier.append("Password_hash = %s")
-		hashedPassword = generate_password_hash(Password)
-		update.append(hashedPassword)
-	if Name:
-		identifier.append("Name = %s")
-		update.append(Name)
+    # NEW security fields
+    CurrentPassword = request.form.get("current_password", "")
+    NewPassword = request.form.get("new_password", "")
+    ConfirmNewPassword = request.form.get("confirm_new_password", "")
 
-	accountType = paramQueryDb("SELECT UserType FROM Users WHERE UserID = %s", 
-		(session["UserID"],))
+    # Fetch current user record
+    user = paramQueryDb("""
+        SELECT UserID, Name, Email, Username, PhoneNumber, Password_hash
+        FROM Users
+        WHERE UserID=%s
+    """, (session["UserID"],))
 
-	if session["role"] == "Admin":
-		updateDb(
-		f"""UPDATE Users SET {",".join(identifier)} WHERE UserID = %s""", update + [session['UserID']])
-	elif session["role"] == "Sponsor":
-		updateDb(
-		f"""UPDATE Users SET {",".join(identifier)} WHERE UserID = %s""", update + [session['UserID']])
-	elif session["role"] == "Driver":
-		updateDb(
-		f"""UPDATE Users SET {",".join(identifier)} WHERE UserID = %s""", update + [session['UserID']])
+    if not user:
+        flash("User not found.", "validation")
+        return redirect(url_for("profile"))
 
-	return redirect(url_for("profile"))
+    update_fields = []
+    update_vals = []
+
+    # Uniqueness checks (only if changed)
+    if Username and Username != user["Username"]:
+        exists = paramQueryDb("SELECT UserID FROM Users WHERE Username=%s AND UserID<>%s",
+                             (Username, session["UserID"]))
+        if exists:
+            flash("That username is already taken.", "validation")
+            return redirect(url_for("editProfile"))
+        update_fields.append("Username=%s")
+        update_vals.append(Username)
+
+    if Email and Email != user["Email"]:
+        exists = paramQueryDb("SELECT UserID FROM Users WHERE Email=%s AND UserID<>%s",
+                             (Email, session["UserID"]))
+        if exists:
+            flash("That email is already in use.", "validation")
+            return redirect(url_for("editProfile"))
+
+        # Require current password for email change
+        if not CurrentPassword or not check_password_hash(user["Password_hash"], CurrentPassword):
+            flash("Current password is required to change email.", "validation")
+            return redirect(url_for("editProfile"))
+
+        update_fields.append("Email=%s")
+        update_vals.append(Email)
+
+    if Name and Name != user["Name"]:
+        update_fields.append("Name=%s")
+        update_vals.append(Name)
+
+    if PhoneNumber != (user.get("PhoneNumber") or ""):
+        # allow blank to clear
+        update_fields.append("PhoneNumber=%s")
+        update_vals.append(PhoneNumber if PhoneNumber else None)
+
+    # Password change (requires current password)
+    if NewPassword or ConfirmNewPassword:
+        if not CurrentPassword or not check_password_hash(user["Password_hash"], CurrentPassword):
+            flash("Current password is required to change password.", "validation")
+            return redirect(url_for("editProfile"))
+        if NewPassword != ConfirmNewPassword:
+            flash("New password and confirmation do not match.", "validation")
+            return redirect(url_for("editProfile"))
+
+        errors = password_policy_errors(NewPassword)
+        if errors:
+            flash(" ".join(errors), "validation")
+            return redirect(url_for("editProfile"))
+
+        update_fields.append("Password_hash=%s")
+        update_vals.append(generate_password_hash(NewPassword, method="pbkdf2:sha256"))
+
+        # Log password change event
+        org_id = get_user_org_id()
+        updateDb("""
+            INSERT INTO PasswordChangeLog (OrganizationID, ActorUserID, TargetUserID, EventType, EventTime, ActorIP)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (org_id, session["UserID"], session["UserID"], "change", datetime.now(), get_request_ip()))
+
+    if not update_fields:
+        flash("No changes detected.", "validation")
+        return redirect(url_for("editProfile"))
+
+    updateDb(
+        f"UPDATE Users SET {', '.join(update_fields)} WHERE UserID=%s",
+        tuple(update_vals + [session["UserID"]])
+    )
+
+    flash("Profile updated.", "success")
+    return redirect(url_for("profile"))
 
 @application.route("/settings")
 def settings():
