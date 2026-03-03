@@ -1016,7 +1016,7 @@ def organizations():
 			WHERE Name LIKE %s
 			ORDER BY Name
 			LIMIT 50
-		""", (like))
+		""", (like,))
 	else:
 		orgs = selectDb("""
 			SELECT OrganizationID, Name
@@ -1152,7 +1152,7 @@ def adjustDriverPointsPost(UserID):
 
 	# Try to record feedback in an audit table if it exists (won't crash if not)
 	user = paramQueryDb("""SELECT Username FROM Users WHERE UserID = %s""", (session["UserID"],))
-	organization = paramQueryDb("""SELECT OrganizationID FROM Organizations WHERE Name = %s""", (session["Organization"]))
+	organization = paramQueryDb("""SELECT OrganizationID FROM Organizations WHERE Name = %s""", (session["Organization"],))
 	try:
 		updateDb("""
 		INSERT INTO PointAdjustments(OrganizationID, AdjustedByUName, DriverUName, AdjustmentPoints, AdjustmentReason, DateAdjusted)
