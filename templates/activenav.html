@@ -19,6 +19,11 @@
             {% elif session.get('role') != "Admin" %}
                 <a href="/catalog"> Catalog </a>
                 <a href="/organization"> Organization </a>
+                    {% if session.get('role') == "Sponsor" %}
+                        <a href="/sponsor/drivers">My Drivers</a>
+                        <a href="/sponsor/reports/points">Points Report</a>
+                        <a href="/sponsor/reports/passwords">Password Report</a>
+                    {% endif %}
             {% elif session.get('role') == "Admin" %}
                 <a href="/catalog"> Catalog </a>
                 <a href="/organizations"> Organizations </a>
@@ -51,6 +56,9 @@
                         <a href="/admin/users">Edit Users</a>
                     {% elif session.get('role') == "Sponsor" %}
                         <a href="/sponsor/users">Edit Users</a>
+                        <a href="/sponsor/drivers">My Drivers</a>
+                        <a href="/sponsor/reports/points">Points Report</a>
+                        <a href="/sponsor/reports/passwords">Password Report</a>
                     {% endif %}
                     <a href="/about"> About us </a>
                     <a href="/logout">Logout</a>
