@@ -655,6 +655,40 @@ def sponsor_drivers():
 
     return render_template("sponsor_drivers.html", layout="activenav.html", drivers=drivers, q=q)
 
+@application.route("/sponsor/reports/points")
+def sponsor_points_report():
+    guard = require_sponsor()
+    if guard:
+        return guard
+
+    org_id = get_user_org_id()
+    if not org_id:
+        flash("Organization not found.", "validation")
+        return redirect(url_for("home"))
+
+    start = request.args.get("start", "").strip()
+    end = request.args.get("end", "").strip()
+
+    params = [org_id]
+    where = "WHERE OrganizationID=%s"
+
+    if start:
+        where += " AND DateAdjusted >= %s"
+        params.append(start + " 00:00:00")
+    if end:
+        where += " AND DateAdjusted <= %s"
+        params.append(end + " 23:59:59")
+
+    rows = selectDb(f"""
+        SELECT DriverUName, AdjustedByUName, AdjustmentPoints, AdjustmentReason, DateAdjusted
+        FROM PointAdjustments
+        {where}
+        ORDER BY DateAdjusted DESC
+        LIMIT 500
+    """, tuple(params))
+
+    return render_template("sponsor_points_report.html", layout="activenav.html", rows=rows, start=start, end=end)
+
 @application.route("/<accountType>/users/<int:UserID>/edit", methods=["POST"])
 def userEditPost(accountType, UserID):	
 	"""if accountType == 'sponsor':
