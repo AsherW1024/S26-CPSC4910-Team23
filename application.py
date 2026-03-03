@@ -689,6 +689,44 @@ def sponsor_points_report():
 
     return render_template("sponsor_points_report.html", layout="activenav.html", rows=rows, start=start, end=end)
 
+@application.route("/sponsor/reports/passwords")
+def sponsor_password_report():
+    guard = require_sponsor()
+    if guard:
+        return guard
+
+    org_id = get_user_org_id()
+    if not org_id:
+        flash("Organization not found.", "validation")
+        return redirect(url_for("home"))
+
+    start = request.args.get("start", "").strip()
+    end = request.args.get("end", "").strip()
+
+    params = [org_id]
+    where = "WHERE pcl.OrganizationID=%s"
+
+    if start:
+        where += " AND pcl.EventTime >= %s"
+        params.append(start + " 00:00:00")
+    if end:
+        where += " AND pcl.EventTime <= %s"
+        params.append(end + " 23:59:59")
+
+    rows = selectDb(f"""
+        SELECT pcl.EventTime, pcl.EventType,
+               a.Name AS ActorName,
+               t.Name AS TargetName
+        FROM PasswordChangeLog pcl
+        JOIN Users a ON a.UserID = pcl.ActorUserID
+        JOIN Users t ON t.UserID = pcl.TargetUserID
+        {where}
+        ORDER BY pcl.EventTime DESC
+        LIMIT 500
+    """, tuple(params))
+
+    return render_template("sponsor_password_report.html", layout="activenav.html", rows=rows, start=start, end=end)
+
 @application.route("/<accountType>/users/<int:UserID>/edit", methods=["POST"])
 def userEditPost(accountType, UserID):	
 	"""if accountType == 'sponsor':
