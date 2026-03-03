@@ -246,7 +246,7 @@ def registerUser():
 			(email, username))
 		updateDb(
 			"""INSERT INTO Admins (AdminID)
-			VALUES (%s)""", (newUser['UserID']))
+			VALUES (%s)""", (newUser['UserID'],))
 		flash("Admin account created please login", "created")
 	else:
 		if not organization:
@@ -399,7 +399,7 @@ def forgot_password_post():
 		flash("Please wait a moment before trying again.", "resetFail")
 		return redirect(url_for("forgot_password"))
 	session["last_reset_request"] = now
-	
+
 	if not email:
 		flash("Please enter an email.", "resetFail")
 		return redirect(url_for("forgot_password"))
