@@ -107,7 +107,17 @@ async function addToWishlist(event) {
 
 	let productID = pageProductData[productDetailIndex].id;
 
-	//to-do: implement post request to backend once that is setup
+	let request = await fetch("/wishlist/add", {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify({
+			productID: productID
+		})
+	});
+	let response = await request.json();
+	console.log(response);
 }
 
 //make api request in the backend for products
@@ -238,6 +248,7 @@ function showProductDetails(event) {
 	//no action if the remove or add button was pressed
 	if (event.target.classList.contains("remove-button")) {return}
 	if (event.target.classList.contains("add-button")) {return}
+	if (event.target.classList.contains("wishlist-button")) {return}
 
 	let productDetailIndex = this.dataset.index;
 	let productDetails = pageProductData[productDetailIndex];

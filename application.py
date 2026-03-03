@@ -1973,6 +1973,22 @@ def getRole():
 		"role": ""
 	}), 400
 
+@application.route("/wishlist/add", methods=["POST"])
+def addToWishList():
+	if "UserID" in session and session.get("role")=="Driver":
+		productData = request.json
+		productID = productData.get("productID")
+
+		#TO-DO: insert into wishlist table product driver ID & product ID
+
+		return jsonify({
+			"message": "Success"
+		}), 200
+	else:
+		return jsonify({
+			"message": "Permission error"
+		}), 400
+
 """
 This lets us test locally. Should not execute in AWS
 """
