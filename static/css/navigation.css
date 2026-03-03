@@ -47,29 +47,38 @@ html, body {
 }
 
 .dropdown-content {
-	display: none;
-	position: absolute;
-	background-color: #f1f1f1;
-	min-width: unset;
-	width: max-content;
-	box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-	z-index: 1;
-	right: 0;
-	flex-direction: column;
+  display: none;
+  position: absolute;
+  background-color: #f1f1f1;
+  min-width: 220px;        /* consistent dropdown width */
+  width: max-content;      /* expands if needed */
+  max-width: 320px;        /* prevent huge dropdowns */
+  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+  z-index: 1;
+  right: 0;
+  flex-direction: column;
+  border-radius: 6px;
+  padding: 6px 0;          /* vertical breathing room */
 }
 
 .dropdown-content a {
-  color: black;
-  padding: 12px 16px;
+  color: #111;
+  padding: 10px 14px;
   text-decoration: none;
   display: block;
-  text-align: center;
-  font-size: 1rem; /* inherit base scaling */
+  text-align: left;        /* easier scanning */
+  font-size: 1rem;
+  white-space: nowrap;     /* keep items on one line */
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: #ddd;
+  margin: 6px 0;
 }
 
 .dropdown-content a:hover {
-	background-color: #ddd;
-	width: 100%;
+  background-color: #ddd;
 }
 .dropdown:hover .dropdown-content {display: flex;}
 .dropdown:hover .dropbtn {
