@@ -89,25 +89,6 @@
     margin: 0.5rem 0;
 }
 
-/* Error / warning style for all current categories */
-.username,
-.password,
-.registered,
-.registeredOrg,
-.missing,
-.mismatch {
-    color: #d62828;
-    font-weight: 600;
-    margin: 0.25rem 0;
-}
-
-/* Success style */
-.created {
-    color: #2a9d8f;
-    font-weight: 600;
-    margin: 0.25rem 0;
-}
-
 .select-many {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));

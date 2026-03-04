@@ -92,12 +92,12 @@
                             <span class="required">*</span>Password
                         </label>
                         <div class="control has-icons-left">
-                            <input class="input" type="password" name="password" placeholder="Password input" pattern=".{8,128}" required>
+                            <input class="input" type="password" name="password" placeholder="Password input" pattern=".{10,128}" required>
                             <span class="icon is-small is-left">
                                 <i class="fas fa-lock"></i>
                             </span>
                             <span class="error">
-                                Please enter digits or letters with a minimum of 8 characters
+                                Must be 10+ chars and include upper, lower, number, and special character.
                             </span>
                         </div>
                     </div>
@@ -106,7 +106,7 @@
                             <span class="required">*</span>Confirm Password
                         </label>
                         <div class="control has-icons-left">
-                            <input class="input" type="password" name="confirm_password" placeholder="Confirm Password" pattern=".{8,128}" required>
+                            <input class="input" type="password" name="confirm_password" placeholder="Confirm Password" pattern=".{10,128}" required>
                             <span class="icon is-small is-left">
                                 <i class="fas fa-lock"></i>
                             </span>

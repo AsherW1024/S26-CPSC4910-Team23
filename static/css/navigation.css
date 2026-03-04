@@ -50,7 +50,7 @@ html, body {
   display: none;
   position: absolute;
   background-color: #f1f1f1;
-  min-width: 220px;        /* consistent dropdown width */
+  min-width: unset;        /* consistent dropdown width */
   width: max-content;      /* expands if needed */
   max-width: 320px;        /* prevent huge dropdowns */
   box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
@@ -66,19 +66,13 @@ html, body {
   padding: 10px 14px;
   text-decoration: none;
   display: block;
-  text-align: left;        /* easier scanning */
-  font-size: 1rem;
-  white-space: nowrap;     /* keep items on one line */
-}
-
-.dropdown-divider {
-  height: 1px;
-  background: #ddd;
-  margin: 6px 0;
+  text-align: center;
+  font-size: 1rem; /* inherit base scaling */
 }
 
 .dropdown-content a:hover {
   background-color: #ddd;
+  width: 100%;
 }
 .dropdown:hover .dropdown-content {display: flex;}
 .dropdown:hover .dropbtn {
