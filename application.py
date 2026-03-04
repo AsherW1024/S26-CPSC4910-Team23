@@ -1856,7 +1856,21 @@ def addToWishList():
 		productData = request.json
 		productID = productData.get("productID")
 
-		#TO-DO: insert into wishlist table product driver ID & product ID
+		userID = session.get("UserID")
+
+		insertWishlistProductQuery = """
+			INSERT INTO Wishlist
+			(userID, productID)
+			VALUES (%s, %s)
+		"""
+		try:
+			updateDb(query=insertWishlistProductQuery, params=(userID, productID))
+		except Exception as e:
+			print(e)
+			return jsonify({
+				"message": "Database query error"
+			}), 400
+
 
 		return jsonify({
 			"message": "Success"
