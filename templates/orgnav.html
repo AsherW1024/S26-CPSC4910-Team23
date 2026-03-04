@@ -52,22 +52,6 @@
         </div>
     </div>
     <br> <br>
-    
-    {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-    <div class="container is-max-desktop mt-4">
-        {% for category, message in messages %}
-        <div class="notification
-            {% if category == 'success' %}is-success
-            {% elif category in ['validation', 'missing', 'mismatch'] %}is-warning
-            {% elif category in ['auth', 'notfound'] %}is-danger
-            {% else %}is-info{% endif %}">
-            {{ message }}
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-    {% endwith %}
 
     {% block content %}{% endblock %}
     
