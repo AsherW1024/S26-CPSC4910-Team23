@@ -41,6 +41,7 @@ p{
 
 .price-div {
 	font-size: 2.5vw;
+	margin-bottom: 10px;
 }
 
 #filter-div input {
@@ -58,7 +59,6 @@ p{
 	margin-top: 5px;
 	background-color: rgba(255, 219, 134, 0.882);
 	height: fit-content;
-	border-radius: 20px;
 	padding: 10px;
 	opacity: 1;
 	max-height: 300vh;
@@ -69,6 +69,14 @@ p{
 #filter-menu.closed {
 	opacity: 0;
 	max-height: 0vh;
+	pointer-events: none;
+}
+
+#category-div{
+	padding-top: 2px;
+}
+#category{
+	font-size: 2vw;
 }
 
 .grid {
@@ -84,4 +92,135 @@ p{
 .grid img {
 	width: 10vw;
 	height: auto;
+}
+
+#popup-overlay-bg {
+	background-color: rgba(0, 0, 0, 0.329);
+	position: fixed;
+	top: 0;
+	left: 0;
+	z-index: 99999;
+	justify-items: center;
+	align-content: center;
+	height: 100%;
+	width: 100%;
+}
+#popup-content-bg {
+	max-height: 80vh;
+	background-color: white;
+	max-width: 80%;
+	border-radius: 1.75em;
+	height: fit-content;
+	overflow: hidden;
+}
+
+#popup-content-div {
+	height: 80vh;
+	overflow-y: auto;
+	max-width: 100%;
+	justify-content: center;
+	padding-left: 5%;
+	padding-right: 5%;
+}
+#popup-content-div div{
+	display: block;
+	margin-top: 20px;
+	margin-bottom: 20px;
+}
+
+#popup-close {
+	background-color: red;
+	color: white;
+	border: none;
+	box-shadow: inset;
+	border-radius: 50%;
+	position: fixed;
+	top: 13%;
+	right: 13%;
+	font-size: 2em;
+	padding-left: 11px;
+	padding-right: 11px;
+	padding-top: 0px;
+	padding-bottom: 0px;
+}
+
+.side-by-side {
+	display: flex;
+}
+.side-by-side * {
+	display: inline-block;
+}
+
+#popup-content-div h4{
+	font-size: 1.8vw;
+}
+
+#popup-content-div h3{
+	font-size: 2.5vw;
+	font-weight: bold;
+}
+#popup-content-div h2{
+	font-size: 4vw;
+}
+
+.review-div {
+	margin-top: 0.5em;
+	margin-bottom: 0.5em;
+	padding-top: 1em;
+	padding-bottom: 1em;
+	outline: solid black 0.1em;
+}
+
+#popup-images img{
+	max-width: 80%;
+	height: auto;
+}
+
+#popup-dimensions div {
+	margin: 0;
+}
+
+.product h3 {
+	font-weight: bold;
+}
+
+#sort-div h4 {
+	font-size: 4vw;
+	margin-top: 50px;
+}
+
+#sort-div select {
+	font-size: 2vw;
+	margin: 0;
+}
+
+#filter-menu h4 {
+	font-size: 4vw;
+	margin: 10px;
+}
+
+.remove-button {
+	background-color: rgb(200, 0, 0);
+	color: white;
+	font-size: 2vw;
+	width: 60%;
+	height: fit-content;
+}
+
+.product {
+	display: grid;
+	grid-template-columns: (1fr);
+	justify-items: center;
+}
+
+.not-included {
+	background-color: rgb(252, 205, 212);
+}
+
+.add-button {
+	background-color: rgb(143, 251, 131);
+	color: rgb(0, 0, 0);
+	font-size: 2vw;
+	width: 60%;
+	height: fit-content;
 }

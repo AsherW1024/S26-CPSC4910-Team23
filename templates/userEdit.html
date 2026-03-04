@@ -1,0 +1,40 @@
+{% extends layout %}
+{% block page_css %}
+<link rel="stylesheet" href="/static/css/form.css">
+{% endblock %}
+
+{% block content %}
+<div class="container is-max-desktop mt-6">
+  <div class="box">
+    <h1 class="title is-4">Edit {{ userType }}</h1>
+
+    <form method="POST">
+      <div class="field">
+        <label class="label">Name</label>
+        <div class="control">
+          <input class="input" type="text" name="name" value="{{ user.Name }}" pattern="[a-zA-Z ]{1,80}" required>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label">Email</label>
+        <div class="control">
+          <input class="input" type="email" name="email" value="{{ user.Email }}" required>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label">Username</label>
+        <div class="control">
+          <input class="input" type="text" name="username" value="{{ user.Username }}" pattern=".{4,80}" required>
+        </div>
+      </div>
+
+      <div class="buttons">
+        <button class="button is-info" type="submit">Save</button>
+        <a class="button" href="/{{ accountType }}/users">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

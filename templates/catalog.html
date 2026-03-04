@@ -13,6 +13,7 @@
 	<div id="filter-div">
 		<button id="filter-button">Show Filters ▼</button>
 		<div id="filter-menu" class="closed">
+			<h4>Filtering</h4>
 			<div id="pricing">
 				<div class="price-div">
 					Minimum Price
@@ -26,8 +27,56 @@
 					<input id="max-price" type="number" min="0" class="product-update">
 				</div>
 			</div>
+			<div id="category-div">
+				<select id="category">
+					<option value="" disabled selected hidden>Filter By Category</option>
+					<option value="">None</option>
+					<option value="beauty">Beauty</option>
+					<option value="fragrances">Fragrances</option>
+					<option value="furniture">Furniture</option>
+					<option value="groceries">Groceries</option>
+					<option value="home-decoration">Home Decoration</option>
+					<option value="kitchen-accessories">Kitchen Accessories</option>
+					<option value="laptops">Laptops</option>
+					<option value="mens-shirts">Mens Shirts</option>
+					<option value="mens-shoes">Mens Shoes</option>
+					<option value="mens-watches">Mens Watches</option>
+					<option value="mobile-accessories">Mobile Accessories</option>
+					<option value="motorcycle">Motorcycle</option>
+					<option value="skin-care">Skin Care</option>
+					<option value="smartphones">Smartphones</option>
+					<option value="sports-accessories">Sports Accessories</option>
+					<option value="sunglasses">Sunglasses</option>
+					<option value="tablets">Tablets</option>
+					<option value="tops">Tops</option>
+					<option value="vehicle">Vehicle</option>
+					<option value="womens-bags">Womens Bags</option>
+					<option value="womens-dresses">Womens Dresses</option>
+					<option value="womens-jewellery">Womens Jewellery</option>
+					<option value="womens-shoes">Womens Shoes</option>
+					<option value="womens-watches">Womens Watches</option>
+				</select>
+			</div>
+			<div id="sort-div">
+				<h4>Sorting</h4>
+				<select id="sort-type">
+					<option value="" disabled selected hidden>Sort By...</option>
+					<option value="">None</option>
+					<option value="price">Price</option>
+					<option value="title">Name</option>
+					<option value="rating">Rating</option>
+					<option value="stock">Stock</option>
+					<option value="brand">Brand</option>
+					<option value="stock">Stock</option>
+				</select>
+				<select id="sort-direction">
+					<option value="asc">Ascending</option>
+					<option value="desc">Descending</option>
+				</select>
+			</div>
 		</div>
 	</div>
 	<div class="grid"></div>
+	<div id="popup-overlay-bg" hidden></div>
 	<script src="/static/js/catalog.js"></script>
 {% endblock %}

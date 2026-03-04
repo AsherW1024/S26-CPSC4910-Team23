@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Nav page</title>
+    <script src="/static/js/ui_prefs.js" defer></script>
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.2/css/bulma.min.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/navigation.css">
+    {% block page_css %}{% endblock %}
+</head>
+
+<body>
+    <div class="topnav">
+        <div class="nav-left">
+            <a href="/"> Home </a>
+            <a href="/catalog"> Catalog </a>
+            {% if session.get('role') == "Admin" %}
+                <a href="/organizations"> Organizations </a>
+            {% endif %}
+            {% if session.get('role') != "Driver" %}
+                {% if session.get('role') != "Driver" %}
+                    <a href="/organization/applications"> Applications </a>
+                    {% if session.get('role') == "Sponsor" %}
+                        <a href="/organization/point_value">Point Value</a>
+                        <a href="/catalog/rules">Catalog Rules</a>
+                    {% endif %}
+                {% endif %}
+            {% endif %}
+
+        </div>
+        <div class="nav-right">
+            {% if session.get('role') != "Driver" %}
+                <a href="/organization/users">Users Status</a>
+            {% endif %}
+            <div class="dropdown">
+                <button class="icon-user dropbtn" type="button">
+                    <i class="fa fa-user fa-1x"></i>
+                </button>
+                <div class="dropdown-content">
+                    <a href="/profile">Profile</a>
+                    <a href="/settings">Settings</a>
+                    {% if session.get('role') == "Admin" %}
+                        <a href="/admin/users">Edit Users</a>
+                    {% elif session.get('role') == "Sponsor" %}
+                        <a href="/sponsor/users">Edit Users</a>
+                    {% endif %}
+                    <a href="/about"> About us </a>
+                    <a href="/logout">Logout</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <br> <br>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="container is-max-desktop mt-4">
+        {% for category, message in messages %}
+        <div class="notification
+            {% if category == 'success' %}is-success
+            {% elif category in ['validation', 'missing', 'mismatch'] %}is-warning
+            {% elif category in ['auth', 'notfound'] %}is-danger
+            {% else %}is-info{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+    
+</body>
+</html>

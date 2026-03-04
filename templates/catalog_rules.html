@@ -1,0 +1,146 @@
+{% extends layout %}
+
+{% block title %}Catalog{% endblock %}
+
+{% block page_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/form.css">
+{% endblock %}
+
+{% block content %}
+
+<div class="content">
+<h2 class="title">Catalog Rules For {{ orgName }}</h2>
+
+<div class="box">
+<form action="/catalog/rules" method="POST">
+	<div class="section">
+		<label for="min-price">Minimum Product Point Cost</label>
+		<input id="min-price" name="min-price" type="number" min="0" step="1" value="{{rules.get("minPoints")}}">
+	</div>
+
+	<div class="section">
+		<label for="max-price">Maximum Product Point Cost</label>
+		<input id="max-price" name="max-price" type="number" min="0" step="1" value="{{rules.get("maxPoints")}}">
+	</div>
+
+	<div class="section">
+		<label for="min-rating">Minimum Product Rating</label>
+		<input id="min-rating" name="min-rating" type="number" min="0" max="5" step="0.1" value="{{rules.get("minRating")}}">
+	</div>
+
+	<div class="section">
+		<label for="keep-all-categories">Keep All Product Categories</label>
+		<input id="keep-all-categories" name="keep-all-categories" value="keep-all" type="checkbox" {% if "keep-all" in allowedCategories %} checked {% endif %}>
+	</div>
+
+	<div class="section">
+		<label for="keep-all-brands">Keep All Brands</label>
+		<input id="keep-all-brands" name="keep-all-brands" value="keep-all" type="checkbox" {% if "keep-all" in allowedBrands %} checked {% endif %}>
+	</div>
+	
+	<div class="section" id="allowed-categories" {% if "keep-all" in allowedCategories %} hidden {% endif %}>
+		<h2 class="title">Allowed Categories...</h2>
+		<div id="category-select" class="select-many">
+			<label><input name="category" class="category-box" type="checkbox" value="beauty" {% if "keep-all" in allowedCategories or "beauty" in allowedCategories %} checked {% endif %}>Beauty</label>
+			<label><input name="category" class="category-box" type="checkbox" value="fragrances" {% if "keep-all" in allowedCategories or "fragrances" in allowedCategories %} checked {% endif %}>Fragrances</label>
+			<label><input name="category" class="category-box" type="checkbox" value="furniture" {% if "keep-all" in allowedCategories or "furniture" in allowedCategories %} checked {% endif %}>Furniture</label>
+			<label><input name="category" class="category-box" type="checkbox" value="groceries" {% if "keep-all" in allowedCategories or "groceries" in allowedCategories %} checked {% endif %}>Groceries</label>
+			<label><input name="category" class="category-box" type="checkbox" value="home-decoration" {% if "keep-all" in allowedCategories or "home-decoration" in allowedCategories %} checked {% endif %}>Home Decoration</label>
+			<label><input name="category" class="category-box" type="checkbox" value="kitchen-accessories"{% if "keep-all" in allowedCategories or "kitchen-accessories" in allowedCategories %} checked {% endif %}>Kitchen Accessories</label>
+			<label><input name="category" class="category-box" type="checkbox" value="laptops" {% if "keep-all" in allowedCategories or "laptops" in allowedCategories %} checked {% endif %}>Laptops</label>
+			<label><input name="category" class="category-box" type="checkbox" value="mens-shirts" {% if "keep-all" in allowedCategories or "mens-shirts" in allowedCategories %} checked {% endif %}>Mens Shirts</label>
+			<label><input name="category" class="category-box" type="checkbox" value="mens-shoes" {% if "keep-all" in allowedCategories or "mens-shoes" in allowedCategories %} checked {% endif %}>Mens Shoes</label>
+			<label><input name="category" class="category-box" type="checkbox" value="mens-watches" {% if "keep-all" in allowedCategories or "mens-watches" in allowedCategories %} checked {% endif %}>Mens Watches</label>
+			<label><input name="category" class="category-box" type="checkbox" value="mobile-accessories" {% if "keep-all" in allowedCategories or "mobile-accessories" in allowedCategories %} checked {% endif %}>Mobile Accessories</label>
+			<label><input name="category" class="category-box" type="checkbox" value="motorcycle" {% if "keep-all" in allowedCategories or "motorcycle" in allowedCategories %} checked {% endif %}>Motorcycle</label>
+			<label><input name="category" class="category-box" type="checkbox" value="skin-care" {% if "keep-all" in allowedCategories or "skin-care" in allowedCategories %} checked {% endif %}>Skin Care</label>
+			<label><input name="category" class="category-box" type="checkbox" value="smartphones" {% if "keep-all" in allowedCategories or "smartphones" in allowedCategories %} checked {% endif %}>Smartphones</label>
+			<label><input name="category" class="category-box" type="checkbox" value="sports-accessories" {% if "keep-all" in allowedCategories or "sports-accessories" in allowedCategories %} checked {% endif %}>Sports Accessories</label>
+			<label><input name="category" class="category-box" type="checkbox" value="sunglasses" {% if "keep-all" in allowedCategories or "sunglasses" in allowedCategories %} checked {% endif %}>Sunglasses</label>
+			<label><input name="category" class="category-box" type="checkbox" value="tablets" {% if "keep-all" in allowedCategories or "tablets" in allowedCategories %} checked {% endif %}>Tablets</label>
+			<label><input name="category" class="category-box" type="checkbox" value="tops" {% if "keep-all" in allowedCategories or "tops" in allowedCategories %} checked {% endif %}>Tops</label>
+			<label><input name="category" class="category-box" type="checkbox" value="vehicle" {% if "keep-all" in allowedCategories or "vehicle" in allowedCategories %} checked {% endif %}>Vehicle</label>
+			<label><input name="category" class="category-box" type="checkbox" value="womens-bags" {% if "keep-all" in allowedCategories or "womens-bags" in allowedCategories %} checked {% endif %}>Womens Bags</label>
+			<label><input name="category" class="category-box" type="checkbox" value="womens-dresses" {% if "keep-all" in allowedCategories or "womens-dresses" in allowedCategories %} checked {% endif %}>Womens Dresses</label>
+			<label><input name="category" class="category-box" type="checkbox" value="womens-jewellery" {% if "keep-all" in allowedCategories or "womens-jewellery" in allowedCategories %} checked {% endif %}>Womens Jewellery</label>
+			<label><input name="category" class="category-box" type="checkbox" value="womens-shoes" {% if "keep-all" in allowedCategories or "womens-shoes" in allowedCategories %} checked {% endif %}>Womens Shoes</label>
+			<label><input name="category" class="category-box" type="checkbox" value="womens-watches" {% if "keep-all" in allowedCategories or "womens-watches" in allowedCategories %} checked {% endif %}>Womens Watches</label>
+		</div>
+	</div>
+
+	<div class="section" id="allowed-brands" {% if "keep-all" in allowedBrands %} hidden {% endif %}>
+		<h2 class="title">Allowed Brands...</h2>
+		<div id="brand-select" class="select-many">
+			<label><input name="brand" class="brand-box" type="checkbox" value="Essence" {% if "keep-all" in allowedBrands or "Essence" in allowedBrands %} checked {% endif %}>Essence</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Glamour Beauty" {% if "keep-all" in allowedBrands or "Glamour Beauty" in allowedBrands %} checked {% endif %}>Glamour Beauty</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Velvet Touch" {% if "keep-all" in allowedBrands or "Velvet Touch" in allowedBrands %} checked {% endif %}>Velvet Touch</label>
+			<label><input name="brand"  class="brand-box" type="checkbox" value="Chic Cosmetics" {% if "keep-all" in allowedBrands or "Chic Cosmetics" in allowedBrands %} checked {% endif %}>Chic Cosmetics</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Nail Couture" {% if "keep-all" in allowedBrands or "Nail Couture" in allowedBrands %} checked {% endif %}>Nail Couture</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Calvin Klein" {% if "keep-all" in allowedBrands or "Calvin Klein" in allowedBrands %} checked {% endif %}>Calvin Klein</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Chanel" {% if "keep-all" in allowedBrands or "Chanel" in allowedBrands %} checked {% endif %}>Chanel</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Dior" {% if "keep-all" in allowedBrands or "Dior" in allowedBrands %} checked {% endif %}>Dior</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Dolce & Gabbana" {% if "keep-all" in allowedBrands or "Dolce & Gabbana" in allowedBrands %} checked {% endif %}>Dolce & Gabbana</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Gucci" {% if "keep-all" in allowedBrands or "Gucci" in allowedBrands %} checked {% endif %}>Gucci</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Annibale Colombo" {% if "keep-all" in allowedBrands or "Annibale Colombo" in allowedBrands %} checked {% endif %}>Annibale Colombo</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Furniture Co." {% if "keep-all" in allowedBrands or "Furniture Co." in allowedBrands %} checked {% endif %}>Furniture Co.</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Knoll" {% if "keep-all" in allowedBrands or "Knoll" in allowedBrands %} checked {% endif %}>Knoll</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Bath Trends" {% if "keep-all" in allowedBrands or "Bath Trends" in allowedBrands %} checked {% endif %}>Bath Trends</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Apple" {% if "keep-all" in allowedBrands or "Apple" in allowedBrands %} checked {% endif %}>Apple</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Asus" {% if "keep-all" in allowedBrands or "Asus" in allowedBrands %} checked {% endif %}>Asus</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Huawei" {% if "keep-all" in allowedBrands or "Huawei" in allowedBrands %} checked {% endif %}>Huawei</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Lenovo" {% if "keep-all" in allowedBrands or "Lenovo" in allowedBrands %} checked {% endif %}>Lenovo</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Dell" {% if "keep-all" in allowedBrands or "Dell" in allowedBrands %} checked {% endif %}>Dell</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Fashion Trends" {% if "keep-all" in allowedBrands or "Fashion Trends" in allowedBrands %} checked {% endif %}>Fashion Trends</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Gigabyte" {% if "keep-all" in allowedBrands or "Gigabyte" in allowedBrands %} checked {% endif %}>Gigabyte</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Classic Wear" {% if "keep-all" in allowedBrands or "Classic Wear" in allowedBrands %} checked {% endif %}>Classic Wear</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Casual Comfort" {% if "keep-all" in allowedBrands or "Casual Comfort" in allowedBrands %} checked {% endif %}>Casual Comfort</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Urban Chic" {% if "keep-all" in allowedBrands or "Urban Chic" in allowedBrands %} checked {% endif %}>Urban Chic</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Nike" {% if "keep-all" in allowedBrands or "Nike" in allowedBrands %} checked {% endif %}>Nike</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Puma" {% if "keep-all" in allowedBrands or "Puma" in allowedBrands %} checked {% endif %}>Puma</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Off White" {% if "keep-all" in allowedBrands or "Off White" in allowedBrands %} checked {% endif %}>Off White</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Fashion Timepieces" {% if "keep-all" in allowedBrands or "Fashion Timepieces" in allowedBrands %} checked {% endif %}>Fashion Timepieces</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Longines" {% if "keep-all" in allowedBrands or "Longines" in allowedBrands %} checked {% endif %}>Longines</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Rolex" {% if "keep-all" in allowedBrands or "Rolex" in allowedBrands %} checked {% endif %}>Rolex</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Amazon" {% if "keep-all" in allowedBrands or "Amazon" in allowedBrands %} checked {% endif %}>Amazon</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Beats" {% if "keep-all" in allowedBrands or "Beats" in allowedBrands %} checked {% endif %}>Beats</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="TechGear" {% if "keep-all" in allowedBrands or "TechGear" in allowedBrands %} checked {% endif %}>TechGear</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="GadgetMaster" {% if "keep-all" in allowedBrands or "GadgetMaster" in allowedBrands %} checked {% endif %}>GadgetMaster</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="SnapTech" {% if "keep-all" in allowedBrands or "SnapTech" in allowedBrands %} checked {% endif %}>SnapTech</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="ProVision" {% if "keep-all" in allowedBrands or "ProVision" in allowedBrands %} checked {% endif %}>ProVision</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Generic Motors" {% if "keep-all" in allowedBrands or "Generic Motors" in allowedBrands %} checked {% endif %}>Generic Motors</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Kawasaki" {% if "keep-all" in allowedBrands or "Kawasaki" in allowedBrands %} checked {% endif %}>Kawasaki</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="MotoGP" {% if "keep-all" in allowedBrands or "MotoGP" in allowedBrands %} checked {% endif %}>MotoGP</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="ScootMaster" {% if "keep-all" in allowedBrands or "ScootMaster" in allowedBrands %} checked {% endif %}>ScootMaster</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="SpeedMaster" {% if "keep-all" in allowedBrands or "SpeedMaster" in allowedBrands %} checked {% endif %}>SpeedMaster</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Attitude" {% if "keep-all" in allowedBrands or "Attitude" in allowedBrands %} checked {% endif %}>Attitude</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Olay" {% if "keep-all" in allowedBrands or "Olay" in allowedBrands %} checked {% endif %}>Olay</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Vaseline" {% if "keep-all" in allowedBrands or "Vaseline" in allowedBrands %} checked {% endif %}>Vaseline</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Oppo" {% if "keep-all" in allowedBrands or "Oppo" in allowedBrands %} checked {% endif %}>Oppo</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Realme" {% if "keep-all" in allowedBrands or "Realme" in allowedBrands %} checked {% endif %}>Realme</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Samsung" {% if "keep-all" in allowedBrands or "Samsung" in allowedBrands %} checked {% endif %}>Samsung</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Vivo" {% if "keep-all" in allowedBrands or "Vivo" in allowedBrands %} checked {% endif %}>Vivo</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Fashion Shades" {% if "keep-all" in allowedBrands or "Fashion Shades" in allowedBrands %} checked {% endif %}>Fashion Shades</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Fashion Fun" {% if "keep-all" in allowedBrands or "Fashion Fun" in allowedBrands %} checked {% endif %}>Fashion Fun</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Chrysler" {% if "keep-all" in allowedBrands or "Chrysler" in allowedBrands %} checked {% endif %}>Chrysler</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Dodge" {% if "keep-all" in allowedBrands or "Dodge" in allowedBrands %} checked {% endif %}>Dodge</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Fashionista" {% if "keep-all" in allowedBrands or "Fashionista" in allowedBrands %} checked {% endif %}>Fashionista</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Heshe" {% if "keep-all" in allowedBrands or "Heshe" in allowedBrands %} checked {% endif %}>Heshe</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Prada" {% if "keep-all" in allowedBrands or "Prada" in allowedBrands %} checked {% endif %}>Prada</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Elegance Collection" {% if "keep-all" in allowedBrands or "Elegance Collection" in allowedBrands %} checked {% endif %}>Elegance Collection</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Comfort Trends" {% if "keep-all" in allowedBrands or "Comfort Trends" in allowedBrands %} checked {% endif %}>Comfort Trends</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Fashion Diva" {% if "keep-all" in allowedBrands or "Fashion Diva" in allowedBrands %} checked {% endif %}>Fashion Diva</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Pampi" {% if "keep-all" in allowedBrands or "Pampi" in allowedBrands %} checked {% endif %}>Pampi</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Fashion Express" {% if "keep-all" in allowedBrands or "Fashion Express" in allowedBrands %} checked {% endif %}>Fashion Express</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="IWC" {% if "keep-all" in allowedBrands or "IWC" in allowedBrands %} checked {% endif %}>IWC</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Fashion Gold" {% if "keep-all" in allowedBrands or "Fashion Gold" in allowedBrands %} checked {% endif %}>Fashion Gold</label>
+			<label><input name="brand" class="brand-box" type="checkbox" value="Fashion Co." {% if "keep-all" in allowedBrands or "Fashion Co." in allowedBrands %} checked {% endif %}>Fashion Co.</label>
+		</div>
+	</div>
+
+	<button class="submit-button" type="submit">Submit</button>
+	<button class="reset-button" type="button" onclick="window.location.reload();">Reset Changes</button>
+</form>
+</div>
+</div>
+<script src="/static/js/catalog_rules.js"></script>
+{% endblock %}

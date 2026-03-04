@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <title>Nav page</title>
+    <script src="/static/js/ui_prefs.js" defer></script>
     <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.2/css/bulma.min.css">
     <link rel="stylesheet" type="text/css" href="/static/css/navigation.css">
     {% block page_css %}{% endblock %}
 </head>
@@ -11,11 +13,38 @@
 <body>
     <div class="topnav">
         <div class="nav-left">
-            <a href="/"> Home </a>	
-            <a href="/about"> About us </a>
-            <a href="/catalog"> Catalog </a>
+            <a href="/"> Home </a>
+            {% if session.get('Organization') == None and session.get('role') == "Driver" %}
+                <a href="/organization/apply"> Apply </a>
+            {% elif session.get('role') != "Admin" %}
+                <a href="/catalog"> Catalog </a>
+                <a href="/organization"> Organization </a>
+                    {% if session.get('role') == "Sponsor" %}
+                        <a href="/sponsor/drivers">My Drivers</a>
+                        <a href="/sponsor/reports/points">Points Report</a>
+                        <a href="/sponsor/reports/passwords">Password Report</a>
+                    {% endif %}
+            {% elif session.get('role') == "Admin" %}
+                <a href="/catalog"> Catalog </a>
+                <a href="/organizations"> Organizations </a>
+            {% endif %}
         </div>
         <div class="nav-right">
+            {% if session.get('role') == "Admin" or session.get('role') == "Sponsor" %}
+            <div class="dropdown">
+                <button class="dropbtn" type="button">Create Account</button>
+                <div class="dropdown-content">
+                    {% if session.get('role') == "Admin" %}
+                        <a href="/adminRegister">Admin</a>
+                        <a href="/sponsorRegister">Sponsor</a>
+                        <a href="/register">Driver</a>
+                    {% elif session.get('role') == "Sponsor" %}
+                        <a href="/sponsorRegister">Sponsor</a>
+                        <a href="/register">Driver</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
             <div class="dropdown">
                 <button class="icon-user dropbtn" type="button">
                     <i class="fa fa-user fa-1x"></i>
@@ -23,6 +52,16 @@
                 <div class="dropdown-content">
                     <a href="/profile">Profile</a>
                     <a href="/settings">Settings</a>
+                    {% if session.get('role') == "Admin" %}
+                        <a href="/admin/users">Edit Users</a>
+                    {% elif session.get('role') == "Sponsor" %}
+                        <a href="/sponsor/users">Edit Users</a>
+                        <div class="dropdown-divider"></div>
+                        <a href="/sponsor/drivers">My Drivers</a>
+                        <a href="/sponsor/reports/points">Points Report</a>
+                        <a href="/sponsor/reports/passwords">Password Report</a>
+                    {% endif %}
+                    <a href="/about"> About us </a>
                     <a href="/logout">Logout</a>
                 </div>
             </div>
@@ -31,6 +70,5 @@
     <br> <br>
     
     {% block content %}{% endblock %}
-    
 </body>
 </html>

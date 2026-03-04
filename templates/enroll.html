@@ -1,0 +1,55 @@
+{% extends layout %}
+
+{% block title %}Application{% endblock %}
+
+{% block page_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/form.css">
+{% endblock %}
+
+
+{% block content %}  
+<div>
+    <h2 class="title is-2">Apply to be in an Organization</h2>
+    <h5 class="title is-5">You can only apply for one organization at a time.</h5>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <ul class=flashes>
+            {% for category, message in messages %}
+                {% if category in ["enrolled"] %}
+                    <div class="{{ category }}">{{ message }}</div>
+                {% endif %}
+            {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
+</div>
+<div class="container is-max-desktop mt-6">
+    <div class="box">
+        <form method="POST" action="/organization/apply">                 
+            <div class="field">
+                <label class="label">
+                    <span class="required">*</span>Organization Name
+                </label>
+                <div class="control">
+                    <input class=input id="orgInput" name="organization" placeholder="Start typing organization name...">
+                    <datalist id="orgOptions">
+                        {% for o in orgs %}
+                            <option>{{ o.Name }}</option>
+                        {% endfor %}
+                    </datalist> 
+                </div>
+            </div> 
+            <button class="button is-block is-info is-large is-fullwidth">Apply to Organization</button> 
+        </form>
+        {% if application %}
+            <label class="label">ApplicationStatus</label>
+            <div class="notification is-info mt-3">
+                <strong>Current Application:</strong>{{ application.Name }}<br>
+                <strong>Status:</strong>{{ application.ApplicationStatus }}
+            </div>
+            <a class="button is-block is-large is-fullwidth is-danger" href="/organization/apply/cancel">Cancel Application</a> 
+        {% endif %}
+    </div>
+</div>
+<script src="/static/js/form.js"></script>
+{% endblock %}

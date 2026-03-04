@@ -1,0 +1,93 @@
+{% extends layout %}
+
+{% block title %}Organization{% endblock %}
+
+{% block page_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/about.css">
+{% endblock %}
+
+{% block content %}
+  {% if session.get('role') == 'Driver' and organizationName == 'None' %}
+    <h1>Join an Organization</h1>
+
+    <form method="GET" action="/organization" class="mb-4" style="max-width:720px; margin: 0 auto;">
+      <div class="field has-addons">
+        <div class="control is-expanded">
+          <input class="input" type="text" name="q" placeholder="Search organization name..." value="{{ q }}">
+        </div>
+        <div class="control">
+          <button class="button is-info" type="submit">Search</button>
+        </div>
+      </div>
+    </form>
+
+    <table class="table is-striped is-fullwidth" style="max-width:720px; margin: 0 auto;">
+      <thead>
+        <tr>
+          <th>Organization</th>
+          <th style="width:140px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in orgs %}
+          <tr>
+            <td>{{ o.Name }}</td>
+            <td>
+              <form method="POST" action="/organization/apply" style="display:inline;">
+                <input type="hidden" name="org_id" value="{{ o.OrganizationID }}">
+                <button class="button is-small is-success" type="submit">Apply</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+        {% if orgs|length == 0 %}
+          <tr><td colspan="2">No organizations found.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+
+  {% else %}
+    <h1>{{ organizationName }}</h1>
+    <br>
+    <p>We welcome you to {{ organizationName }} good driving team!</p>
+    <br>
+    <p>We help sponsors incentivize good driving through rewards.</p>
+    <br>
+    <p>We hope you enjoy our system!</p>
+  {% endif %}
+
+  {% if session.get('role') == 'Driver' and organizationName != 'None' %}
+  <form method="POST" action="/organization/leave" style="margin-top: 12px;">
+    <button class="button is-danger is-small" type="submit"
+            onclick="return confirm('Leave this organization?');">
+      Leave Organization
+    </button>
+  </form>
+  {% endif %}
+
+  {% if session.get('role') == 'Sponsor' %}
+  <h2 class="title is-4">Drivers</h2>
+  <table class="table is-striped is-fullwidth">
+    <thead><tr><th>Name</th><th>Email</th><th style="width:140px;"></th></tr></thead>
+    <tbody>
+      {% for d in drivers %}
+      <tr>
+        <td>{{ d.FirstName }} {{ d.LastName }}</td>
+        <td>{{ d.Email }}</td>
+        <td>
+          <form method="POST" action="/organization/drivers/{{ d.DriverID }}/remove" style="display:inline;">
+            <button class="button is-small is-danger" type="submit"
+                    onclick="return confirm('Remove this driver from the organization?');">
+              Remove
+            </button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+      {% if drivers|length == 0 %}
+        <tr><td colspan="3">No drivers in this organization.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+  {% endif %}
+{% endblock %}

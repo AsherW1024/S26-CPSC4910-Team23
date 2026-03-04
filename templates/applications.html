@@ -1,0 +1,37 @@
+{% extends layout %}
+{% block content %}
+<div class="container is-max-desktop mt-6">
+  <h1 class="title">Applications</h1>
+
+  <table class="table is-striped is-fullwidth">
+    <thead>
+      <tr>
+        <th>DriverID</th>
+        <th>Organization</th>
+        <th>Submitted</th>
+        <th style="width:220px;"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for a in pending %}
+      <tr>
+        <td>{{ a.DriverID }}</td>
+        <td>{{ a.OrgName }}</td>
+        <td>{{ a.CreatedAt }}</td>
+        <td>
+          <form method="POST" action="/applications/{{ a.ApplicationID }}/approve" style="display:inline;">
+            <button class="button is-small is-success" type="submit">Approve</button>
+          </form>
+          <form method="POST" action="/applications/{{ a.ApplicationID }}/reject" style="display:inline;">
+            <button class="button is-small is-danger" type="submit">Reject</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+      {% if pending|length == 0 %}
+        <tr><td colspan="4">No pending applications.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

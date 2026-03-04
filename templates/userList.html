@@ -1,0 +1,100 @@
+{% extends layout %}
+
+{% block content %}
+<div class="container is-max-desktop mt-6">
+  <h1 class="title">User Profiles</h1>
+
+  <form method="GET" action="/{{ accountType }}/users" class="mb-4">
+    <div class="field has-addons">
+      <div class="control is-expanded">
+        <input class="input" type="text" name="q" placeholder="Search name, email, username..." value="{{ q }}">
+      </div>
+      <div class="control">
+        <button class="button is-info" type="submit">Search</button>
+      </div>
+    </div>
+  </form>
+
+  <table class="table is-striped is-fullwidth">
+    <thead>
+      <tr>
+        {% if use == "website" %}
+        <th>UserType</th><th>Name</th><th>Email</th><th>Username</th><th></th>
+        {% elif use == "organization" %}
+        <th>UserType</th><th>Username</th><th>status</th><th></th><th></th>
+        {% elif use == "application" %}
+        <th>Username</th><th>Name</th><th>Email</th><th>Date Applied</th><th></th>
+        {% endif %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+      <tr>
+        {% if use == "website" %}
+        <td>{{ u.UserType }}</td>
+        <td>{{ u.Name }}</td>
+        <td>{{ u.Email }}</td>
+        <td>{{ u.Username }}</td>
+        {% elif use == "organization" %}
+        <td>{{ u.UserType }}</td>
+        <td>{{ u.Username }}</td>
+        <td>{{ u.Username }}</td>
+        {% elif use == "application" %}
+        <td>{{ u.UserType }}</td>
+        <td>{{ u.Name }}</td>
+        <td>{{ u.Email }}</td>
+        <td>{{ u.DateApplied }}</td>
+        {% endif %}
+        {% if use == "website"%}
+        <td><a class="button is-small" href="/{{ accountType }}/users/{{ u.UserID }}/edit">Edit</a></td>
+        {% elif use == "organization" %}
+          {% if u.UserType == "Driver" %}
+          <td><a class="button is-small" href="/{{ accountType }}/users/{{ u.UserID }}/points">Adjust Points</a></td>
+          {% endif %}
+        <td><a class="button is-small" href="/{{ accountType }}/users/{{ u.UserID }}/edit">Edit</a></td>
+        {% elif use == "application" %}
+        <td>
+          <form method="POST" action="/{{ accountType }}/applications/{{ u.UserID }}/accept"
+                  style="display:inline;" onsubmit="return promptUserAccept();">
+            <input type="hidden" name="acceptReason" id="acceptReason">
+            <button class="button is-small is-success" type="submit">
+              Accept
+            </button>
+          </form>
+        </td>
+        {% endif %}
+        <td>
+          {% if use == "website" %}
+          <form method="POST" action="/{{ accountType }}/users/{{ u.UserID }}/delete"
+                style="display:inline;" onsubmit="return confirmUserDelete();">
+            <button class="button is-small is-danger" type="submit">
+              Delete
+            </button>
+          </form>
+          {% elif use == "organization" %}
+          <form method="POST" action="/{{ accountType }}/users/{{ u.UserID }}/remove"
+                style="display:inline;" onsubmit="return confirmUserRemove();">
+            <button class="button is-small is-danger" type="submit">
+              Remove
+            </button>
+          </form>
+          {% elif use == "application" %}
+          <form method="POST" action="/{{ accountType }}/applications/{{ u.UserID }}/reject"
+                style="display:inline;" onsubmit="return promptUserReject();">
+            <input type="hidden" name="rejectReason" id="rejectReason">
+            <button class="button is-small is-danger" type="submit">
+              Reject
+            </button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+      {% if users|length == 0 %}
+        <tr><td colspan="5">No users found.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+<script src="/static/js/form.js"></script>
+{% endblock %}

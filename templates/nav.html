@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Nav page</title>
+    <script src="/static/js/ui_prefs.js" defer></script>
     <link rel="stylesheet" type="text/css" href="/static/css/navigation.css">
     {% block page_css %}{% endblock %}
 </head>
@@ -12,7 +13,6 @@
         <div class="nav-left">
             <a href="/"> Home </a>	
             <a href="/about"> About us </a>
-            <a href="/catalog"> Catalog </a>
         </div>
         <div class="nav-right">
             <a href="/createOrg"> Create Organization </a>
@@ -23,6 +23,5 @@
     <br> <br>
     
     {% block content %}{% endblock %}
-    
 </body>
 </html>

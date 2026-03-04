@@ -1,0 +1,64 @@
+{% extends layout %}
+
+{% block content %}
+<div class="container is-max-desktop mt-6">
+  <h1 class="title">Organizations</h1>
+
+  <form method="GET" action="{{ action_url or '/orgs' }}" class="mb-4">
+    <div class="field has-addons">
+      <div class="control is-expanded">
+        <input class="input" type="text" name="q" placeholder="Search organization name..." value="{{ q }}">
+      </div>
+
+      <!-- filter -->
+      <div class="control">
+        <div class="select">
+          <select name="mode">
+            <option value="contains" {% if mode == "contains" %}selected{% endif %}>Contains</option>
+            <option value="starts_with" {% if mode == "starts_with" %}selected{% endif %}>Starts with</option>
+            <option value="exact" {% if mode == "exact" %}selected{% endif %}>Exact</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="control">
+        <button class="button is-info" type="submit">Search</button>
+      </div>
+    </div>
+  </form>
+
+  <table class="table is-striped is-fullwidth">
+    <thead>
+      <tr>
+        <th>Organization Name</th>
+        {% if can_manage %}
+          <th></th><th></th>
+        {% endif %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for o in orgs %}
+      <tr>
+        <td>{{ o.Name }}</td>
+
+        {% if can_manage %}
+          <td><a class="button is-small" href="/organization/{{ o.OrganizationID }}/edit">Edit</a></td>
+          <td>
+            <form method="POST" action="/organization/{{ o.OrganizationID }}/delete"
+                  style="display:inline;" onsubmit="return confirmOrgDelete();">
+              <button class="button is-small is-danger" type="submit">Delete</button>
+            </form>
+          </td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+
+      {% if orgs|length == 0 %}
+        <tr><td colspan="3">No organizations found.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+
+<script src="/static/js/form.js"></script>
+{% endblock %}
