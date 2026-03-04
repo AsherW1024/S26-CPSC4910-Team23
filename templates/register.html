@@ -115,26 +115,6 @@
                             </span>
                         </div>
                     </div>
-                    {% if accountType == "Driver" or accountType == "Sponsor" %}
-
-                    <div class="field">
-                        {% if accountType == "Driver"%}
-                            <label class="label">Organization Name</label>
-                        {% elif accountType == "Sponsor" %}
-                            <label class="label">
-                                <span class="required">*</span>Organization Name
-                            </label>
-                        {% endif %}
-                        <div class="control">
-                            <input class=input id="orgInput" placeholder="Start typing organization name...">
-                            <datalist id="orgOptions">
-                                {% for org in organizations %}
-                                    <option>{{ org.Name }}</option>
-                                {% endfor %}
-                            </datalist> 
-                        </div>
-                    </div>
-                    {% endif %}
                     <button class="button is-block is-info is-large is-fullwidth">Register</button>
                 </form>
             </div>

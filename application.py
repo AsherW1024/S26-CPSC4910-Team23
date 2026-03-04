@@ -203,6 +203,9 @@ def registerUser():
 		sponsor = True
 		organization = session['createOrg']
 		session.pop("createOrg", None)
+	
+	if 'Organization' in session:
+		organization = session['Organization']
 
 	accountType = request.form.get("accType")
 	email = request.form.get("email")
@@ -580,100 +583,11 @@ def userEdit(accountType, UserID):
 
 	return render_template("userEdit.html", layout="activenav.html", user=user, accountType=accountType)
 
-@application.route("/sponsor/drivers/create")
-def sponsor_create_driver():
-    guard = require_sponsor()
-    if guard:
-        return guard
-    if not session.get("Organization"):
-        flash("You must belong to an organization to create drivers.", "validation")
-        return redirect(url_for("home"))
-    return render_template("sponsor_create_driver.html", layout="activenav.html")
-
-@application.route("/sponsor/drivers/create", methods=["POST"])
-def sponsor_create_driver_post():
-    guard = require_sponsor()
-    if guard:
-        return guard
-    if not session.get("Organization"):
-        flash("You must belong to an organization to create drivers.", "validation")
-        return redirect(url_for("home"))
-
-    name = request.form.get("name", "").strip()
-    email = request.form.get("email", "").strip()
-    username = request.form.get("username", "").strip()
-    password = request.form.get("password", "")
-
-    if not (name and email and username and password):
-        flash("All fields are required.", "validation")
-        return redirect(url_for("sponsor_create_driver"))
-
-    if paramQueryDb("SELECT UserID FROM Users WHERE Email=%s", (email,)):
-        flash("Email is already in use.", "validation")
-        return redirect(url_for("sponsor_create_driver"))
-
-    if paramQueryDb("SELECT UserID FROM Users WHERE Username=%s", (username,)):
-        flash("Username is already taken.", "validation")
-        return redirect(url_for("sponsor_create_driver"))
-
-    # basic password policy for the temp password too
-    errors = password_policy_errors(password)
-    if errors:
-        flash(" ".join(errors), "validation")
-        return redirect(url_for("sponsor_create_driver"))
-
-    pw_hash = generate_password_hash(password, method="pbkdf2:sha256")
-    updateDb("""
-        INSERT INTO Users (Email, Username, Password_hash, Name, UserType)
-        VALUES (%s, %s, %s, %s, 'Driver')
-    """, (email, username, pw_hash, name))
-
-    new_user = paramQueryDb("SELECT UserID FROM Users WHERE Email=%s", (email,))
-    updateDb("""
-        INSERT INTO Drivers (DriverID, Name, OrganizationName, TotalPoints)
-        VALUES (%s, %s, %s, 0)
-    """, (new_user["UserID"], name, session["Organization"]))
-
-    flash("Driver account created.", "success")
-    return redirect(url_for("sponsor_drivers"))
-
-@application.route("/sponsor/drivers")
-def sponsor_drivers():
-    guard = require_sponsor()
-    if guard:
-        return guard
-    if not session.get("Organization"):
-        flash("You must belong to an organization.", "validation")
-        return redirect(url_for("home"))
-
-    q = request.args.get("q", "").strip()
-    like = f"%{q}%"
-
-    if q:
-        drivers = selectDb("""
-            SELECT u.UserID, u.Name, u.Email, u.Username, d.TotalPoints
-            FROM Users u
-            JOIN Drivers d ON u.UserID=d.DriverID
-            WHERE d.OrganizationName=%s
-              AND (u.Name LIKE %s OR u.Email LIKE %s OR u.Username LIKE %s)
-            ORDER BY u.Name
-        """, (session["Organization"], like, like, like))
-    else:
-        drivers = selectDb("""
-            SELECT u.UserID, u.Name, u.Email, u.Username, d.TotalPoints
-            FROM Users u
-            JOIN Drivers d ON u.UserID=d.DriverID
-            WHERE d.OrganizationName=%s
-            ORDER BY u.Name
-        """, (session["Organization"],))
-
-    return render_template("sponsor_drivers.html", layout="activenav.html", drivers=drivers, q=q)
-
-@application.route("/sponsor/reports/points")
-def sponsor_points_report():
-    guard = require_sponsor()
-    if guard:
-        return guard
+@application.route("/reports/points")
+def pointsReport():
+    #guard = require_sponsor()
+    #if guard:
+     #   return guard
 
     org_id = get_user_org_id()
     if not org_id:
@@ -703,11 +617,11 @@ def sponsor_points_report():
 
     return render_template("sponsor_points_report.html", layout="activenav.html", rows=rows, start=start, end=end)
 
-@application.route("/sponsor/reports/passwords")
-def sponsor_password_report():
-    guard = require_sponsor()
-    if guard:
-        return guard
+@application.route("/reports/passwords")
+def passwordReport():
+    #guard = require_sponsor()
+    #if guard:
+     #   return guard
 
     org_id = get_user_org_id()
     if not org_id:
@@ -1066,7 +980,7 @@ def organizationUsers():
 
 	if q:
 		users = selectDb("""
-			SELECT u.UserID, u.UserType, u.UserID, u.Name, u.Email, u.Username, s.OrganizationName, d.OrganizationName
+			SELECT u.UserID, u.UserType, u.UserID, u.Name, u.Email, u.Username, s.OrganizationName, d.OrganizationName, d.TotalPoints
 			FROM Users u LEFT JOIN Sponsors s ON u.UserID = s.SponsorID LEFT JOIN Drivers d ON u.UserID = d.DriverID
 			WHERE (u.Name LIKE %s OR u.Email LIKE %s OR u.Username LIKE %s) AND 
 				  (u.UserType = "Sponsor" OR u.UserType = "Driver") AND 
@@ -1076,7 +990,7 @@ def organizationUsers():
 		""", (like, like, like, session['Organization'], session['Organization']))
 	else:
 		users = selectDb("""
-			SELECT u.UserID, u.UserType, u.UserID, u.Name, u.Email, u.Username, s.OrganizationName, d.OrganizationName
+			SELECT u.UserID, u.UserType, u.UserID, u.Name, u.Email, u.Username, s.OrganizationName, d.OrganizationName, d.TotalPoints
 			FROM Users u LEFT JOIN Sponsors s ON u.UserID = s.SponsorID LEFT JOIN Drivers d ON u.UserID = d.DriverID
 			WHERE (u.UserType = "Sponsor" OR u.UserType = "Driver") AND 
 				  (s.OrganizationName = %s OR d.OrganizationName = %s)

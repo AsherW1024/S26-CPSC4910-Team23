@@ -20,7 +20,6 @@
                 <a href="/catalog"> Catalog </a>
                 <a href="/organization"> Organization </a>
                     {% if session.get('role') == "Sponsor" %}
-                        <a href="/sponsor/drivers">My Drivers</a>
                         <a href="/sponsor/reports/points">Points Report</a>
                         <a href="/sponsor/reports/passwords">Password Report</a>
                     {% endif %}
@@ -30,21 +29,23 @@
             {% endif %}
         </div>
         <div class="nav-right">
-            {% if session.get('role') == "Admin" or session.get('role') == "Sponsor" %}
+            {% if session.get('role') == "Admin" %}
             <div class="dropdown">
                 <button class="dropbtn" type="button">Create Account</button>
                 <div class="dropdown-content">
-                    {% if session.get('role') == "Admin" %}
-                        <a href="/adminRegister">Admin</a>
-                        <a href="/sponsorRegister">Sponsor</a>
-                        <a href="/register">Driver</a>
-                    {% elif session.get('role') == "Sponsor" %}
-                        <a href="/sponsorRegister">Sponsor</a>
-                        <a href="/register">Driver</a>
-                    {% endif %}
+                    <a href="/adminRegister">Admin</a>
                 </div>
             </div>
             {% endif %}
+            <div class="dropdown">
+                <button class="dropbtn" type="button">Reports</button>
+                <div class="dropdown-content">
+                    <a href="/reports/points">Points Report</a>
+                    {% if session.get('role') == "Admin" %}
+                    <a href="/reports/passwords">Password Report</a>
+                    {% endif %}
+                </div>
+            </div>
             <div class="dropdown">
                 <button class="icon-user dropbtn" type="button">
                     <i class="fa fa-user fa-1x"></i>
@@ -58,8 +59,6 @@
                         <a href="/sponsor/users">Edit Users</a>
                         <div class="dropdown-divider"></div>
                         <a href="/sponsor/drivers">My Drivers</a>
-                        <a href="/sponsor/reports/points">Points Report</a>
-                        <a href="/sponsor/reports/passwords">Password Report</a>
                     {% endif %}
                     <a href="/about"> About us </a>
                     <a href="/logout">Logout</a>
