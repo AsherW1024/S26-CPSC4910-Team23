@@ -1809,6 +1809,30 @@ def filterByRules(data):
 		print(e)
 		return data
 
+"""
+gives a boolean flag to mark a product as either being in a user's wishlist or not
+"""
+def markWishlistedProducts(products):
+	#retrieve product ids of wishlisted items from the db
+	wishlist = []
+	try:
+		userID = session.get("UserID")
+		getWishlistQuery = f"""
+			SELECT *
+			FROM Wishlist
+			WHERE userID={userID}
+		"""
+		rows = queryDb(getWishlistQuery)
+		
+		for row in rows:
+			wishlist.append(row.get("productID"))
+	except Exception as e:
+		print(e)
+		return products
+	
+	#TO-DO: add the flag inside of each product's data in the array
+
+
 @application.route("/get_products", methods=["POST"])
 def get_products():
 	url = "https://dummyjson.com/products/search?limit=300&q="
@@ -1843,6 +1867,9 @@ def get_products():
 
 	#apply price filters
 	result = filterByPrice(data=result, min=minPrice, max=maxPrice)
+
+	#give flag to products that are wishlisted
+	result = markWishlistedProducts(result)
 
 	return jsonify(result)
 
@@ -1944,13 +1971,16 @@ def addToWishList():
 
 		userID = session.get("UserID")
 
+		orgName = paramQueryDb(query="SELECT OrganizationName FROM Drivers WHERE DriverID=%s", params=(userID)).get("OrganizationName")
+		orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName)).get("OrganizationID")
+
 		insertWishlistProductQuery = """
 			INSERT INTO Wishlist
-			(userID, productID)
-			VALUES (%s, %s)
+			(userID, productID, orgID)
+			VALUES (%s, %s, %s)
 		"""
 		try:
-			updateDb(query=insertWishlistProductQuery, params=(userID, productID))
+			updateDb(query=insertWishlistProductQuery, params=(userID, productID, orgID))
 		except Exception as e:
 			print(e)
 			return jsonify({
