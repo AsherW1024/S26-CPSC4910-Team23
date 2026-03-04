@@ -1744,7 +1744,12 @@ def markWishlistedProducts(products):
 		print(e)
 		return products
 	
-	#TO-DO: add the flag inside of each product's data in the array
+	for product in products.get("products"):
+		if product.get("id") in wishlist:
+			product["wishlisted"] = True
+		else:
+			product["wishlisted"] = False
+
 	return products
 
 
@@ -1896,6 +1901,41 @@ def addToWishList():
 		"""
 		try:
 			updateDb(query=insertWishlistProductQuery, params=(userID, productID, orgID))
+		except Exception as e:
+			print(e)
+			return jsonify({
+				"message": "Database query error"
+			}), 400
+
+
+		return jsonify({
+			"message": "Success"
+		}), 200
+	else:
+		return jsonify({
+			"message": "Permission error"
+		}), 400
+
+@application.route("/wishlist/remove", methods=["POST"])
+def removeFromWishList():
+	if "UserID" in session and session.get("role")=="Driver":
+		productData = request.json
+		productID = productData.get("productID")
+
+		userID = session.get("UserID")
+
+		orgName = paramQueryDb(query="SELECT OrganizationName FROM Drivers WHERE DriverID=%s", params=(userID)).get("OrganizationName")
+		orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName)).get("OrganizationID")
+
+		deleteFromWishlistQuery = """
+			DELETE FROM Wishlist
+			WHERE 
+				userID=%s
+				AND productID=%s
+				AND orgID=%s
+		"""
+		try:
+			updateDb(query=deleteFromWishlistQuery, params=(userID, productID, orgID))
 		except Exception as e:
 			print(e)
 			return jsonify({

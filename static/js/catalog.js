@@ -120,6 +120,34 @@ async function addToWishlist(event) {
 	if (request.ok) {
 		wishlistButton.classList.remove("wishlist-button-inactive");
 		wishlistButton.classList.add("wishlist-button-active");
+		wishlistButton.removeEventListener("click", addToWishlist);
+		wishlistButton.addEventListener("click", removeFromWishlist);
+	}
+}
+
+async function removeFromWishlist(event) {
+	let wishlistButton = event.target;
+	let productDiv = wishlistButton.parentElement;
+
+	let productDetailIndex = productDiv.dataset.index;
+
+	let productID = pageProductData[productDetailIndex].id;
+
+	let request = await fetch("/wishlist/remove", {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify({
+			productID: productID
+		})
+	});
+	let response = await request.json();
+	if (request.ok) {
+		wishlistButton.classList.add("wishlist-button-inactive");
+		wishlistButton.classList.remove("wishlist-button-active");
+		wishlistButton.removeEventListener("click", removeFromWishlist);
+		wishlistButton.addEventListener("click", addToWishlist);
 	}
 }
 
@@ -204,10 +232,16 @@ async function queryProducts() {
 		}
 		else if (userRole == "Driver") {
 			let wishlistButton = document.createElement("button");
-			wishlistButton.addEventListener("click", addToWishlist)
-			wishlistButton.classList.add("wishlist-button-inactive");
 			wishlistButton.innerText = "★";
 			productDiv.appendChild(wishlistButton);
+			if (product.wishlisted) {
+				wishlistButton.classList.add("wishlist-button-active");
+				wishlistButton.addEventListener("click", removeFromWishlist)
+			}
+			else {
+				wishlistButton.classList.add("wishlist-button-inactive");
+				wishlistButton.addEventListener("click", addToWishlist)
+			}
 		}
 		productDiv.appendChild(name);
 		productDiv.appendChild(price);
