@@ -117,7 +117,10 @@ async function addToWishlist(event) {
 		})
 	});
 	let response = await request.json();
-	console.log(response);
+	if (request.ok) {
+		wishlistButton.classList.remove("wishlist-button-inactive");
+		wishlistButton.classList.add("wishlist-button-active");
+	}
 }
 
 //make api request in the backend for products
@@ -202,8 +205,8 @@ async function queryProducts() {
 		else if (userRole == "Driver") {
 			let wishlistButton = document.createElement("button");
 			wishlistButton.addEventListener("click", addToWishlist)
-			wishlistButton.classList.add("wishlist-button");
-			wishlistButton.innerText = "Add To Wishlist";
+			wishlistButton.classList.add("wishlist-button-inactive");
+			wishlistButton.innerText = "★";
 			productDiv.appendChild(wishlistButton);
 		}
 		productDiv.appendChild(name);
@@ -248,7 +251,8 @@ function showProductDetails(event) {
 	//no action if the remove or add button was pressed
 	if (event.target.classList.contains("remove-button")) {return}
 	if (event.target.classList.contains("add-button")) {return}
-	if (event.target.classList.contains("wishlist-button")) {return}
+	if (event.target.classList.contains("wishlist-button-inactive")) {return}
+	if (event.target.classList.contains("wishlist-button-active")) {return}
 
 	let productDetailIndex = this.dataset.index;
 	let productDetails = pageProductData[productDetailIndex];
