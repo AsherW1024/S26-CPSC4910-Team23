@@ -1,0 +1,122 @@
+Table Users{
+  userID integer [pk]
+  Email varchar(80)
+  Username varchar(80)
+  Password_hash varchar(128)
+  TimeCreated datetime
+  TimeUpdated datetime
+  LastLogin datetime
+  IsActive boolean
+  CreatedByUserID integer [ref: > Users.userID] 
+  userType varchar(1)
+}
+
+Table Sponsors{
+  SponsorID integer [pk, ref: - Users.userID]
+  Name varchar(80)
+  OrganizationID integer [ref: < Organizations.OrganizationID]
+}
+
+Table Organizations{
+  OrganizationID integer [pk]
+  Name varchar(80)
+  TimeCreated datetime
+}
+
+Table Drivers{
+  DriverID integer [pk, ref: - Users.userID]
+  Name varchar(80)
+  OrganizationID integer [ref: < Organizations.OrganizationID]
+  LicenseNum varchar(80)
+  Points integer
+}
+
+Table Admins{
+  AdminID integer [pk, ref: - Users.userID]
+  Name varchar(80)
+}
+
+Table Catalog_Rules{
+  RuleID integer [pk]
+  OrganizationID integer [ref: - Organizations.OrganizationID]
+  CreatedBy  integer [ref: > Sponsors.SponsorID]
+  PointMin integer
+  PointMax integer
+  TimeCreated datetime
+}
+
+Table Category_Exclusion_List{
+  EntryID integer [pk]
+  RuleID integer [ref: > Catalog_Rules.RuleID]
+  CategoryName varchar(80)
+ }
+
+Table Catalog_Items{
+  OrganizationID integer [pk, ref: > Organizations.OrganizationID]
+  ItemID integer [pk, ref: > Items.ItemID]
+  ItemPrice double
+  QuantityAvailable integer
+  IsActive boolean
+  AddedBy integer [ref: > Sponsors.SponsorID]
+  TimeCreated datetime
+  TimeUpdated datetime
+}
+
+Table Items{
+  ItemID integer [pk]
+  ItemName varchar(80)
+  ItemDescription varchar(256)
+}
+
+Table Point_Log {
+  EntryID integer [pk]
+  Driver integer [ref: > Drivers.DriverID]
+  ChangedBy integer [ref: > Sponsors.SponsorID]
+  Delta integer
+  PreviousTotal integer
+  NewTotal integer
+  Reason varchar(120)
+  OrderID integer [ref: > Orders.OrderID]
+  Date datetime
+}
+
+Table Orders {
+  OrderID integer [pk]
+  Driver integer [ref: > Drivers.DriverID]
+  Total float
+  Address varchar(200)
+  Status varchar(20) 
+  TimeCreated datetime
+  TimeUpdated datetime
+  PointsSpent integer
+}
+
+Table Order_Items_Mapping {
+  OrderID integer [pk, ref: - Orders.OrderID]
+  ItemID integer [pk, ref: - Items.ItemID]
+  Quantity integer
+  UnitPriceAtPurchase float
+}
+
+Table Categories {
+  CategoryID integer [pk]
+  Name varchar(80)
+}
+
+Table Item_Categories {
+  ItemID integer [pk, ref: > Items.ItemID]
+  CategoryID integer [pk, ref: > Categories.CategoryID]
+}
+
+Table Login_Events {
+  EventID integer [pk]
+  UserID integer [ref: > Users.userID]
+  Timestamp datetime
+  Success boolean
+  IPAddress varchar(45)
+  UserAgent varchar(200)
+}
+
+
+
+//POSITION({"Users":{"x":196.83573491190475,"y":-48.99999999999999,"w":230},"Sponsors":{"x":553.9959560981182,"y":-48.99999999999999,"w":230},"Organizations":{"x":201.90491547554467,"y":376.5815015747835,"w":230},"Drivers":{"x":-139.03525071012757,"y":312.21879200854784,"w":230},"Admins":{"x":-157.1204189263537,"y":-49.13735086817408,"w":230},"Catalog_Rules":{"x":872.970396081972,"y":344.4106345116777,"w":230},"Category_Exclusion_List":{"x":1199.2556910791377,"y":312.22644306247685,"w":286},"Catalog_Items":{"x":554.8250662672325,"y":512.8392797678439,"w":230},"Items":{"x":881.0462490567973,"y":608.1804406956222,"w":230},"Point_Log":{"x":163.00000000000003,"y":663,"w":230},"Orders":{"x":528,"y":723,"w":230},"Order_Items_Mapping":{"x":1268.1813046167772,"y":725.4545099873463,"w":254}})

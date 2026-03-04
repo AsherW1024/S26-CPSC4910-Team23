@@ -4,6 +4,7 @@ from config import db_config
 import os
 
 application = Flask(__name__)
+application.secret_key = os.environ.get("SECRET_KEY", "dev-only-change-me")  # Replace with your own secret key for production (so that admins do not randomly lose access to their accounts)
 
 #application.secret_key = os.urandom(24)  # Use a secure random key in production
 
@@ -30,8 +31,18 @@ def queryDb(query: str):
 	try:
 		with connection.cursor() as cursor:
 			cursor.execute(query)
-			results = cursor.fetchall()
-		return results[0]
+			return cursor.fetchone()  # returns None if no rows match the query
+	except Exception as e:
+		print(e)
+	finally:
+		connection.close()
+	
+def paramQueryDb(query: str, params=None):
+	connection = getDbConnection()
+	try:
+		with connection.cursor() as cursor:
+			cursor.execute(query, params)
+			return cursor.fetchone()
 	except Exception as e:
 		print(e)
 	finally:
@@ -54,11 +65,56 @@ for example.
 """
 @application.route("/about")
 def about():
-	#query db to find out how many accounts are in accounts table
-	accountCount = queryDb("select count(*), count(account_id) from accounts")
-	accountCount = accountCount['count(*)']
+    # safer: alias the count column so you don't depend on 'count(*)'
+    accountCountRow = queryDb("SELECT COUNT(*) AS cnt FROM accounts")
+    accountCount = accountCountRow["cnt"] if accountCountRow else 0
 
-	return render_template("about.html", accountCount=accountCount)
+    about_row = paramQueryDb("SELECT body FROM AboutContent ORDER BY id DESC LIMIT 1")
+    body = about_row["body"] if about_row else ""
+
+    is_admin = session.get("role") == "admin"
+    layout = "activenav.html" if "UserID" in session else "nav.html"
+
+    return render_template(
+        "about.html",
+        layout=layout,
+        accountCount=accountCount,
+        body=body,
+        is_admin=is_admin
+    )
+
+@application.route("/login")
+def login():
+	return render_template("login.html")
+
+@application.route("/login", methods=["POST"])
+def loginUser():
+
+	identifier = request.form.get("identifier")
+	exists = paramQueryDb("SELECT UserID AS id, Password_hash, 'driver' AS role FROM Users WHERE Email=%s OR Username=%s",
+                      (identifier, identifier))
+
+	if not exists:
+		exists = paramQueryDb("SELECT AdminID AS id, Password_hash, 'admin' AS role FROM Admins WHERE Email=%s OR Username=%s",
+                          (identifier, identifier))
+
+	if not exists:
+		exists = paramQueryDb("SELECT SponsorID AS id, Password_hash, 'sponsor' AS role FROM Sponsors WHERE Email=%s OR Username=%s",
+                          (identifier, identifier))
+
+	if not exists:
+		flash("Please enter the correct credentials", "username")
+		return redirect(url_for("login"))
+
+	password = request.form.get("password")
+	hashPassword = exists["Password_hash"]
+
+	if not exists or not check_password_hash(hashPassword, password):
+		flash("Please enter the correct credentials", "password")
+		return redirect(url_for("login"))
+
+	session['UserID'] = exists['id']
+	session['role'] = exists['role']
 
 @application.route("/login")
 def login():

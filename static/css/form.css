@@ -1,0 +1,25 @@
+.error {
+    display: block;
+    visibility: hidden;
+    font-size: 1rem;
+}
+
+.input:not(:placeholder-shown):not(:focus):invalid ~ .error {
+    visibility: visible;
+}
+
+.input:not(:placeholder-shown):not(:focus):invalid {
+    border-color: red;
+}
+
+.username {
+    color: red;
+}
+
+.password {
+    color: red;
+}
+
+.registeredOrg {
+    color: red;
+}
