@@ -1745,6 +1745,7 @@ def markWishlistedProducts(products):
 		return products
 	
 	#TO-DO: add the flag inside of each product's data in the array
+	return products
 
 
 @application.route("/get_products", methods=["POST"])
