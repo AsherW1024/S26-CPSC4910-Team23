@@ -1951,6 +1951,12 @@ def removeFromWishList():
 			"message": "Permission error"
 		}), 400
 
+@application.route("/wishlist")
+def wishlist():
+	if "UserID" in session and session.get("role")=="Driver":
+		return render_template("wishlist.html", layout="activenav.html")
+	return redirect(url_for("home"))
+
 """
 This lets us test locally. Should not execute in AWS
 """

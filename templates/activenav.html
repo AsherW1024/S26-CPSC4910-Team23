@@ -53,7 +53,9 @@
                 <div class="dropdown-content">
                     <a href="/profile">Profile</a>
                     <a href="/settings">Settings</a>
-                    {% if session.get('role') == "Admin" %}
+                    {% if session.get('role') == "Driver" %}
+                        <a href="/wishlist">Wishlist</a>
+                    {% elif session.get('role') == "Admin" %}
                         <a href="/admin/users">Edit Users</a>
                     {% elif session.get('role') == "Sponsor" %}
                         <a href="/sponsor/users">Edit Users</a>
