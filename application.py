@@ -1944,6 +1944,43 @@ def removeFromWishList():
 @application.route("/wishlist")
 def wishlist():
 	if "UserID" in session and session.get("role")=="Driver":
+		#get data needed for queries
+		userID = session.get("UserID")
+		orgName = session.get("Organization")
+
+		#get orgID from Organizations table
+		try:
+			getOrgIDQuery = """
+				SELECT OrganizationID
+				FROM Organizations
+				WHERE Name=%s
+			"""
+			orgID = paramQueryDb(query=getOrgIDQuery, params=(orgName)).get("OrganizationID")
+		except Exception as e:
+			print(f"Problem with getOrgIDQuery in wishlist function: {e}")
+			orgID = None
+
+		try:
+			getWishlistQuery = f"""
+				SELECT productID
+				FROM Wishlist
+				WHERE
+					userID={userID}
+					AND orgID={orgID}
+			"""
+			rows = queryDb(query=getWishlistQuery) or []
+
+			wishlistProductIDs = []
+			for row in rows:
+				wishlistProductIDs.append(row.get("productID"))
+		except Exception as e:
+			print(f"Issue with retrieving wishlist product ids in wishlist(): {e}")
+			wishlistProductIDs = []
+
+		#query the dummy json api to retrieve their product information
+
+		#collect the product data into one datastructure to send into the html
+
 		return render_template("wishlist.html", layout="activenav.html")
 	return redirect(url_for("home"))
 
