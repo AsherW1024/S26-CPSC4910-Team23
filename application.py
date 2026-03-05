@@ -1994,7 +1994,6 @@ def wishlist():
 		for product in productData:
 			if product.get("id") in wishlistProductIDs:
 				wishlistData.append(product)
-		print(wishlistData)
 
 		return render_template("wishlist.html", layout="activenav.html", wishlistData=wishlistData)
 	return redirect(url_for("home"))

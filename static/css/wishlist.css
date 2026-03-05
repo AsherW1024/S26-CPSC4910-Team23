@@ -13,7 +13,15 @@
 	padding: 0;
 }
 .wishlist {
-	width: 90%;
-	background-color: rgb(194, 194, 194);
-	height: 10px;
+	width: 95%;
+	background-color: rgb(240, 240, 240);
+	border-radius: 20px;
+	height: fit-content;
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+	gap: 25px;
+	padding: 20px;
+}
+.product * {
+	text-align: center;
 }
