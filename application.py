@@ -44,10 +44,6 @@ def hash_reset_token(token: str) -> str:
     """Hash token before storing in DB (never store raw reset tokens)."""
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
-def get_request_ip():
-    # basic (good enough for class project); reverse-proxy setups may vary
-    return request.headers.get("X-Forwarded-For", request.remote_addr)
-
 def get_user_org_id():
     """Return org id for the currently logged-in user (sponsor/driver/admin)."""
     if "Organization" not in session or not session["Organization"]:
@@ -615,7 +611,7 @@ def pointsReport():
         LIMIT 500
     """, tuple(params))
 
-    return render_template("sponsor_points_report.html", layout="activenav.html", rows=rows, start=start, end=end)
+    return render_template("pointTrackingReport.html", layout="activenav.html", rows=rows, start=start, end=end)
 
 @application.route("/reports/passwords")
 def passwordReport():
@@ -623,16 +619,10 @@ def passwordReport():
     #if guard:
      #   return guard
 
-    org_id = get_user_org_id()
-    if not org_id:
-        flash("Organization not found.", "validation")
-        return redirect(url_for("home"))
-
     start = request.args.get("start", "").strip()
     end = request.args.get("end", "").strip()
 
-    params = [org_id]
-    where = "WHERE pcl.OrganizationID=%s"
+    params = []
 
     if start:
         where += " AND pcl.EventTime >= %s"
@@ -642,18 +632,17 @@ def passwordReport():
         params.append(end + " 23:59:59")
 
     rows = selectDb(f"""
-        SELECT pcl.EventTime, pcl.EventType,
+        SELECT pa.DateAdjusted, pa.TypeOfChange,
                a.Name AS ActorName,
                t.Name AS TargetName
-        FROM PasswordChangeLog pcl
-        JOIN Users a ON a.UserID = pcl.ActorUserID
-        JOIN Users t ON t.UserID = pcl.TargetUserID
-        {where}
+        FROM PasswordAdjustments pa
+        JOIN Users u ON u.Username = pa.AdjustedUName
+        JOIN Users x ON x.Username = pa.AdjustedByUName
         ORDER BY pcl.EventTime DESC
         LIMIT 500
     """, tuple(params))
 
-    return render_template("sponsor_password_report.html", layout="activenav.html", rows=rows, start=start, end=end)
+    return render_template("passwordAdjustmentReport.html", layout="activenav.html", rows=rows, start=start, end=end)
 
 @application.route("/<accountType>/users/<int:UserID>/edit", methods=["POST"])
 def userEditPost(accountType, UserID):	
@@ -707,7 +696,7 @@ def delete_user(accountType, UserID):
 	updateDb("DELETE FROM Users WHERE UserID = %s", (UserID,))
 	
 	flash("User deleted successfully.", "success")
-	return redirect(f"/{accountType}")
+	return redirect(f"/{accountType}/users")
 
 
 #The different website pages
@@ -828,9 +817,9 @@ def registerProfileEdits():
     PhoneNumber = request.form.get("phoneNum", "").strip()
 
     # NEW security fields
-    CurrentPassword = request.form.get("current_password", "")
-    NewPassword = request.form.get("new_password", "")
-    ConfirmNewPassword = request.form.get("confirm_new_password", "")
+    CurrentPassword = request.form.get("currentPassword", "")
+    NewPassword = request.form.get("newPassword", "")
+    ConfirmNewPassword = request.form.get("confirmNewPassword", "")
 
     # Fetch current user record
     user = paramQueryDb("""
@@ -851,7 +840,7 @@ def registerProfileEdits():
         exists = paramQueryDb("SELECT UserID FROM Users WHERE Username=%s AND UserID<>%s",
                              (Username, session["UserID"]))
         if exists:
-            flash("That username is already taken.", "validation")
+            flash("That username is already taken.", "username")
             return redirect(url_for("editProfile"))
         update_fields.append("Username=%s")
         update_vals.append(Username)
@@ -860,12 +849,12 @@ def registerProfileEdits():
         exists = paramQueryDb("SELECT UserID FROM Users WHERE Email=%s AND UserID<>%s",
                              (Email, session["UserID"]))
         if exists:
-            flash("That email is already in use.", "validation")
+            flash("That email is already in use.", "email")
             return redirect(url_for("editProfile"))
 
         # Require current password for email change
         if not CurrentPassword or not check_password_hash(user["Password_hash"], CurrentPassword):
-            flash("Current password is required to change email.", "validation")
+            flash("Current password is required to change email.", "password")
             return redirect(url_for("editProfile"))
 
         update_fields.append("Email=%s")
@@ -883,26 +872,27 @@ def registerProfileEdits():
     # Password change (requires current password)
     if NewPassword or ConfirmNewPassword:
         if not CurrentPassword or not check_password_hash(user["Password_hash"], CurrentPassword):
-            flash("Current password is required to change password.", "validation")
-            return redirect(url_for("editProfile"))
-        if NewPassword != ConfirmNewPassword:
-            flash("New password and confirmation do not match.", "validation")
+            flash("Current password is required to change password.", "password")
             return redirect(url_for("editProfile"))
 
         errors = password_policy_errors(NewPassword)
         if errors:
-            flash(" ".join(errors), "validation")
+            flash(" ".join(errors), "passwordErrors")
             return redirect(url_for("editProfile"))
+
+        if NewPassword != ConfirmNewPassword:
+            flash("New password and confirmation do not match.", "confirmPassword")
+            return redirect(url_for("editProfile"))
+
 
         update_fields.append("Password_hash=%s")
         update_vals.append(generate_password_hash(NewPassword, method="pbkdf2:sha256"))
 
         # Log password change event
-        org_id = get_user_org_id()
         updateDb("""
-            INSERT INTO PasswordChangeLog (OrganizationID, ActorUserID, TargetUserID, EventType, EventTime, ActorIP)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """, (org_id, session["UserID"], session["UserID"], "change", datetime.now(), get_request_ip()))
+            INSERT INTO PasswordAdjustments (AdjustedUName, AdjustedByUName, TypeOfChange, DateAdjusted)
+            VALUES (%s, %s, %s, %s)
+        """, (user.get("Username"), user.get("Username"), "change", datetime.now()))
 
     if not update_fields:
         flash("No changes detected.", "validation")

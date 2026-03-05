@@ -17,12 +17,7 @@
             {% if session.get('Organization') == None and session.get('role') == "Driver" %}
                 <a href="/organization/apply"> Apply </a>
             {% elif session.get('role') != "Admin" %}
-                <a href="/catalog"> Catalog </a>
                 <a href="/organization"> Organization </a>
-                    {% if session.get('role') == "Sponsor" %}
-                        <a href="/sponsor/reports/points">Points Report</a>
-                        <a href="/sponsor/reports/passwords">Password Report</a>
-                    {% endif %}
             {% elif session.get('role') == "Admin" %}
                 <a href="/catalog"> Catalog </a>
                 <a href="/organizations"> Organizations </a>

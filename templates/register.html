@@ -92,13 +92,18 @@
                             <span class="required">*</span>Password
                         </label>
                         <div class="control has-icons-left">
-                            <input class="input" type="password" name="password" placeholder="Password input" pattern=".{10,128}" required>
+                            <input class="input" type="password" id="password" name="password" placeholder="Password input" pattern=".{10,128}" required>
                             <span class="icon is-small is-left">
                                 <i class="fas fa-lock"></i>
                             </span>
-                            <span class="error">
-                                Must be 10+ chars and include upper, lower, number, and special character.
-                            </span>
+                            <div id="passwordRequirements" >
+                                <p id="minLength" class="req invalid"> At least 10 characters </p>
+                                <p id="maxLength" class="req invalid" hidden> At most 128 characters </p>
+                                <p id="upper" class="req invalid"> Contains at least 1 uppercase letter </p>
+                                <p id="lower" class="req invalid"> Contains at least 1 lowercase letter </p>
+                                <p id="number" class="req invalid"> Contains at least 1 number </p>
+                                <p id="special" class="req invalid"> Contains at least 1 special character </p>
+                            </div>
                         </div>
                     </div>
                     <div class="field">
