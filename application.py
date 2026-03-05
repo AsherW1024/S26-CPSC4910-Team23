@@ -1978,10 +1978,25 @@ def wishlist():
 			wishlistProductIDs = []
 
 		#query the dummy json api to retrieve their product information
+		if len(wishlistProductIDs)<1:
+			return render_template("wishlist.html", layout="activenav.html", wishlistData=[])
 
-		#collect the product data into one datastructure to send into the html
+		api_url = "https://dummyjson.com/products/?limit=300"
+		response = requests.get(api_url)
 
-		return render_template("wishlist.html", layout="activenav.html")
+		if response.status_code != 200:
+			return render_template("wishlist.html", layout="activenav.html", wishlistData=[])
+
+		productData = response.json().get("products")
+
+		#collect the product data into one list to send into the html
+		wishlistData = []
+		for product in productData:
+			if product.get("id") in wishlistProductIDs:
+				wishlistData.append(product)
+		print(wishlistData)
+
+		return render_template("wishlist.html", layout="activenav.html", wishlistData=wishlistData)
 	return redirect(url_for("home"))
 
 """
