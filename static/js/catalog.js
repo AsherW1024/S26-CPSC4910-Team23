@@ -290,7 +290,6 @@ function showProductDetails(event) {
 
 	let productDetailIndex = this.dataset.index;
 	let productDetails = pageProductData[productDetailIndex];
-	console.log(productDetails)
 
 	let productDetailsHtml = `
 		<div id="popup-content-bg">

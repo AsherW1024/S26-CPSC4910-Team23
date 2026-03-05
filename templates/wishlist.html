@@ -12,21 +12,23 @@
 		{%if wishlistData%}
 		<div class="wishlist">
 			{%for product in wishlistData%}
-			<div class="product">
+			<div class="product" data-index="{{loop.index0}}">
 				<img src="{{product.thumbnail}}">
 				<h4 class="product-title">{{product.title}}</h4>
 				<p>{{product.price}} Points</p>
 				<p>{{product.rating}}/5 ★</p>
 				<p>{{product.availabilityStatus}}</p>
 			</div>
+			<div id="popup-overlay-bg" hidden></div>
 			{%endfor%}
 		</div>
 		{%else%}
 		<p>No wishlisted items yet!</p> 
-		<p>To add a product to your wishlist, press the start button on the catalog page.</p>
+		<p>To add a product to your wishlist, press the star button on the catalog page.</p>
 		{%endif%}
 </div>
 <script>
 	const pageProductData = {{wishlistData | tojson}};
 </script>
+<script src="/static/js/wishlist.js"></script>
 {% endblock %}
