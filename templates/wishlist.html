@@ -14,9 +14,9 @@
 			{%for product in wishlistData%}
 			<div class="product">
 				<img src="{{product.thumbnail}}">
-				<h4>{{product.title}}</h4>
-				<p>{{product.price}}</p>
-				<p>{{product.rating}}/5 ★s</p>
+				<h4 class="product-title">{{product.title}}</h4>
+				<p>{{product.price}} Points</p>
+				<p>{{product.rating}}/5 ★</p>
 				<p>{{product.availabilityStatus}}</p>
 			</div>
 			{%endfor%}
@@ -26,4 +26,7 @@
 		<p>To add a product to your wishlist, press the start button on the catalog page.</p>
 		{%endif%}
 </div>
+<script>
+	const pageProductData = {{wishlistData | tojson}};
+</script>
 {% endblock %}

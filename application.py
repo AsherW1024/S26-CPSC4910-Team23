@@ -1498,8 +1498,12 @@ def adjustPrice(data):
 
 	#make the price equal to the price in dollars multiplied by the point value
 	#rounded to nearest whole point, always rounded up
-	for product in data["products"]:
-		product["price"] = math.ceil(product["price"]/float(point_value))
+	if "products" in data:
+		for product in data["products"]:
+			product["price"] = math.ceil(product["price"]/float(point_value))
+	else:
+		for product in data:
+			product["price"] = math.ceil(product["price"]/float(point_value))
 
 	return(data)
 
@@ -1994,6 +1998,8 @@ def wishlist():
 		for product in productData:
 			if product.get("id") in wishlistProductIDs:
 				wishlistData.append(product)
+
+		wishlistData = adjustPrice(wishlistData)
 
 		return render_template("wishlist.html", layout="activenav.html", wishlistData=wishlistData)
 	return redirect(url_for("home"))
