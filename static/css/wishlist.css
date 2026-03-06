@@ -11,6 +11,7 @@
 .title {
 	margin: 0;
 	padding: 0;
+	font-size: 75px !important;
 }
 .wishlist {
 	width: 95%;
@@ -126,8 +127,14 @@
 	padding-bottom: 15px;
 }
 .popup-label {
-	font-size: 20px !important;
+	font-size: 25px !important;
 }
 .popup-data {
-	font-size: 20px;
+	font-size: 25px;
+}
+.popup-sub-label {
+	font-size: 20px !important;
+}
+.popup-sub-data {
+	font-size: 20px !important;
 }

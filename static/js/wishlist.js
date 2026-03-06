@@ -43,7 +43,7 @@ function showProductDetails(event) {
 				<div id="popup-brand">
 					<div class="side-by-side">
 						<h3 class="popup-label">Brand:</h3>
-						<p class="popup-data">${productDetails.brand}</p>
+						<p class="popup-data">${productDetails.brand==undefined ? "N/A" : productDetails.brand}</p>
 					</div>
 				</div>
 				<div id="popup-description">
@@ -55,16 +55,16 @@ function showProductDetails(event) {
 				<div id="popup-dimensions">
 					<h3 class="popup-label">Dimensions:</h3>
 					<div class="side-by-side">
-						<h4>Depth:</h4>
-						<p>${productDetails.dimensions["depth"]} in</p>
+						<h4 class="popup-sub-label">Depth:</h4>
+						<p class="popup-sub-data">${productDetails.dimensions["depth"]} in</p>
 					</div>
 					<div class="side-by-side">
-						<h4>height:</h4>
-						<p>${productDetails.dimensions["height"]} in</p>
+						<h4 class="popup-sub-label">height:</h4>
+						<p class="popup-sub-data">${productDetails.dimensions["height"]} in</p>
 					</div>
 					<div class="side-by-side">
-						<h4>width:</h4>
-						<p>${productDetails.dimensions["width"]} in</p>
+						<h4 class="popup-sub-label">width:</h4>
+						<p class="popup-sub-data">${productDetails.dimensions["width"]} in</p>
 					</div>
 				</div>
 				<div id="popup-rating">
