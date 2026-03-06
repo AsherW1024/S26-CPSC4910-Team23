@@ -23,37 +23,37 @@ function showProductDetails(event) {
 			<div id="popup-content-div">
 				<button id="popup-close">X</button>
 				<div id="popup-images"></div>
-				<h2>${productDetails.title}</H3>
+				<h2 class="product-name">${productDetails.title}</H3>
 				<div id="popup-price">
 					<div class="side-by-side">
-						<h3>Point Cost:</h3>
-						<p>${productDetails.price} Points</p>
+						<h3 class="popup-label">Point Cost:</h3>
+						<p class="popup-data">${productDetails.price} Points</p>
 					</div>
 				</div>
 				<div id="popup-availability">
 					<div class="side-by-side">
-						<h3>Availability:</h3>
-						<p>${productDetails.availabilityStatus}</p>
+						<h3 class="popup-label">Availability:</h3>
+						<p class="popup-data">${productDetails.availabilityStatus}</p>
 					</div>
 					<div class="side-by-side">
-						<h3>Stock:</h3>
-						<p>${productDetails.stock}</p>
+						<h3 class="popup-label">Stock:</h3>
+						<p class="popup-data">${productDetails.stock}</p>
 					</div>
 				</div>
 				<div id="popup-brand">
 					<div class="side-by-side">
-						<h3>Brand:</h3>
-						<p>${productDetails.brand}</p>
+						<h3 class="popup-label">Brand:</h3>
+						<p class="popup-data">${productDetails.brand}</p>
 					</div>
 				</div>
 				<div id="popup-description">
 					<div class="side-by-side">
-						<h3>Description:</h3>
-						<p>${productDetails.description}</p>
+						<h3 class="popup-label">Description:</h3>
+						<p class="popup-data">${productDetails.description}</p>
 					</div>
 				</div>
 				<div id="popup-dimensions">
-					<h3>Dimensions:</h3>
+					<h3 class="popup-label">Dimensions:</h3>
 					<div class="side-by-side">
 						<h4>Depth:</h4>
 						<p>${productDetails.dimensions["depth"]} in</p>
@@ -68,11 +68,11 @@ function showProductDetails(event) {
 					</div>
 				</div>
 				<div id="popup-rating">
-					<h3>Overall Rating</h3>
-					<p>${productDetails.rating}/5</p>
+					<h3 class="popup-label">Overall Rating</h3>
+					<p class="popup-data">${productDetails.rating}/5 ★</p>
 				</div>
 				<div id="popup-reviews">
-					<h3>Reviews</h3>
+					<h3 class="popup-label">Reviews</h3>
 				</div>
 			</div>
 		</div>
@@ -97,7 +97,7 @@ function showProductDetails(event) {
 		let reviewName = document.createElement("h4");
 		reviewName.innerText = review.reviewerName;
 		let reviewScore = document.createElement("p");
-		reviewScore.innerText = `${review.rating}/5`;
+		reviewScore.innerText = `${review.rating}/5 ★`;
 		let reviewComment = document.createElement("p");
 		reviewComment.innerText = review.comment;
 
