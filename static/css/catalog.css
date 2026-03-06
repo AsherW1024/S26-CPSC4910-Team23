@@ -134,12 +134,13 @@ p{
 	border: none;
 	box-shadow: inset;
 	border-radius: 50%;
-	position: fixed;
-	top: 13%;
-	right: 13%;
+	position: sticky;
+	top: 4%;
+	float: right;
+	margin-right: -25px;
 	font-size: 2em;
-	padding-left: 11px;
-	padding-right: 11px;
+	padding-left: 14px;
+	padding-right: 14px;
 	padding-top: 0px;
 	padding-bottom: 0px;
 }
@@ -262,4 +263,24 @@ p{
 	position: absolute;
 	right: 0px;
 	top: 0px;
+}
+.product-name {
+	text-align: center;
+	font-size: 60px !important;
+	margin: 50px !important;
+	font-weight: bolder !important;
+	border-bottom: 1px solid;
+	padding-bottom: 15px;
+}
+.popup-label {
+	font-size: 25px !important;
+}
+.popup-data {
+	font-size: 25px;
+}
+.popup-sub-label {
+	font-size: 20px !important;
+}
+.popup-sub-data {
+	font-size: 20px !important;
 }
