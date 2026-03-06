@@ -625,7 +625,14 @@ def pointsReport():
 		LIMIT 500
 		""", tuple(params))
 
-	return render_template("pointTrackingReport.html", layout="activenav.html", rows=rows, start=start, end=end)
+	if session.get("role") == "Admin" and session.get("Organization") == None:
+		nav = "activenav.html"
+	elif session.get("role") == "Admin" and session.get("Organization") != None:
+		nav = "orgnav.html"
+	else:
+		nav = "orgnav.html"
+
+	return render_template("pointTrackingReport.html", layout=nav, rows=rows, start=start, end=end)
 
 @application.route("/reports/passwords")
 def passwordReport():
@@ -663,7 +670,14 @@ def passwordReport():
         LIMIT 500
     """, tuple(params))
 
-    return render_template("passwordAdjustmentReport.html", layout="activenav.html", rows=rows, start=start, end=end)
+	if session.get("role") == "Admin" and session.get("Organization") == None:
+		nav = "activenav.html"
+	elif session.get("role") == "Admin" and session.get("Organization") != None:
+		nav = "orgnav.html"
+	else:
+		nav = "orgnav.html"
+
+    return render_template("passwordAdjustmentReport.html", layout=nav, rows=rows, start=start, end=end)
 
 @application.route("/<accountType>/users/<int:UserID>/edit", methods=["POST"])
 def userEditPost(accountType, UserID):	
@@ -724,6 +738,8 @@ def deleteUser(accountType, UserID):
 @application.route("/")
 def home():
 	if 'UserID' in session:
+		if session.get("Organization") != None and session.get("Role") == "Admin":
+			session["Organization"]	= None		
 		return render_template("home.html", layout = "activenav.html")
 	return render_template("home.html", layout = "nav.html")
 
