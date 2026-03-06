@@ -94,3 +94,7 @@ html[data-theme="dark"] body {
 body, input, select, textarea, button {
   font-size: 1rem;
 }
+
+.no-nav {
+  margin-top: 0rem !important;
+}

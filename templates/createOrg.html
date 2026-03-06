@@ -2,33 +2,44 @@
 <html lang="en">
 <head>
 	<meta charset="UTF-8">
+    <script src="/static/js/ui_prefs.js" defer></script>
 	<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.2/css/bulma.min.css">
     <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" type="text/css" href="/static/css/form.css">
 	<title>Register</title>
 </head>
 <body>
-    <div>
-        <h3 class="title is-3">Organization Registration</h3>
-        <h5 class="title is-5">Please fill out the form below.</h5>
-        <h5 class="title is-5">All fields marked by an asterisk are required</h5>
-    </div>
-    <div>
-        <div class="box">
-            <form method="POST" action="/createOrg">
-                <div class="field">
-                    <label class="label">
-                        <span class="required">*</span>Organization Name
-                    </label>
-                    <div class="control has-icons-left">
-                        <input class="input" type="text" name="organizationName" placeholder="Organization Name input" pattern="[a-zA-Z ]{4,80}" required>
-                        <span class="error">
-                            Please enter letters with a minimum of 4 characters
-                        </span>
+     <div class="container is-max-desktop mt-6 no-nav">
+        <!-- Back button: return to previous page, fallback to /home -->
+        <div class="back-button-row">
+            <button type="button"
+                class="button is-light back-button"
+                onclick="if (document.referrer) { window.history.back(); } else { window.location.href='/home'; }">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+        </div>
+        <div>
+            <h3 class="title is-3">Organization Registration</h3>
+            <h5 class="title is-5">Please fill out the form below.</h5>
+            <h5 class="title is-5">All fields marked by an asterisk are required</h5>
+        </div>
+        <div>
+            <div class="box">
+                <form method="POST" action="/createOrg">
+                    <div class="field">
+                        <label class="label">
+                            <span class="required">*</span>Organization Name
+                        </label>
+                        <div class="control has-icons-left">
+                            <input class="input" type="text" name="organizationName" placeholder="Organization Name input" pattern="[a-zA-Z ]{4,80}" required>
+                            <span class="error">
+                                Please enter letters with a minimum of 4 characters
+                            </span>
+                        </div>
                     </div>
-                </div>
-                <button class="button is-block is-info is-large is-fullwidth">Register Organization</button>
-            </form>
+                    <button class="button is-block is-info is-large is-fullwidth">Register Organization</button>
+                </form>
+            </div>
         </div>
     </div>
 </body>
