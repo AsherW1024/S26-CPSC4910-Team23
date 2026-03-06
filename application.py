@@ -491,6 +491,7 @@ def reset_password_post(token):
 def logout():
 	session.pop("UserID", None)
 	session.pop("role", None)
+	session.pop("Organization", None)
 	session.pop("attempts", None)
 	session.pop("lockoutTime", None)
 	return redirect(url_for("home"))
@@ -581,37 +582,57 @@ def userEdit(accountType, UserID):
 
 @application.route("/reports/points")
 def pointsReport():
-    #guard = require_sponsor()
-    #if guard:
-     #   return guard
+	#guard = require_sponsor()
+	#if guard:
+	#   return guard
 
-    org_id = get_user_org_id()
-    if not org_id:
-        flash("Organization not found.", "validation")
-        return redirect(url_for("home"))
+	if "Organization" in session and session["Organization"] != None:
+		org_id = get_user_org_id()
+		if not org_id:
+			flash("Organization not found.", "validation")
+			return redirect(url_for("home"))
 
-    start = request.args.get("start", "").strip()
-    end = request.args.get("end", "").strip()
+	start = request.args.get("start", "").strip()
+	end = request.args.get("end", "").strip()
 
-    params = [org_id]
-    where = "WHERE OrganizationID=%s"
+	where = ""
 
-    if start:
-        where += " AND DateAdjusted >= %s"
-        params.append(start + " 00:00:00")
-    if end:
-        where += " AND DateAdjusted <= %s"
-        params.append(end + " 23:59:59")
+	if ("Organization" in session and session["Organization"] != None) or start or end:
+		where += "WHERE "
 
-    rows = selectDb(f"""
-        SELECT DriverUName, AdjustedByUName, AdjustmentPoints, AdjustmentReason, DateAdjusted
-        FROM PointAdjustments
-        {where}
-        ORDER BY DateAdjusted DESC
-        LIMIT 500
-    """, tuple(params))
+	if "Organization" in session and session["Organization"] != None:
+		params = [org_id]
+		where += "OrganizationID=%s"
+		if start or end:
+			where += " AND "
+	else:
+		params = []
 
-    return render_template("pointTrackingReport.html", layout="activenav.html", rows=rows, start=start, end=end)
+	if start:
+		where += "DateAdjusted >= %s"
+		params.append(start + " 00:00:00")
+		if end:
+			where += " AND "
+	if end:
+		where += "DateAdjusted <= %s"
+		params.append(end + " 23:59:59")
+
+	rows = selectDb(f"""
+		SELECT DriverUName, AdjustedByUName, AdjustmentType, AdjustmentPoints, AdjustmentReason, DateAdjusted
+		FROM PointAdjustments
+		{where}
+		ORDER BY DateAdjusted DESC
+		LIMIT 500
+		""", tuple(params))
+
+	if session.get("role") == "Admin" and session.get("Organization") == None:
+		nav = "activenav.html"
+	elif session.get("role") == "Admin" and session.get("Organization") != None:
+		nav = "orgnav.html"
+	else:
+		nav = "orgnav.html"
+
+	return render_template("pointTrackingReport.html", layout=nav, rows=rows, start=start, end=end)
 
 @application.route("/reports/passwords")
 def passwordReport():
@@ -623,26 +644,40 @@ def passwordReport():
     end = request.args.get("end", "").strip()
 
     params = []
+    where = ""
+
+    if start or end:
+        where = "WHERE "
 
     if start:
-        where += " AND pcl.EventTime >= %s"
+        where += "pa.DateAdjusted >= %s"
         params.append(start + " 00:00:00")
+        if end:
+            where += " AND "
     if end:
-        where += " AND pcl.EventTime <= %s"
+        where += "pa.DateAdjusted <= %s"
         params.append(end + " 23:59:59")
 
     rows = selectDb(f"""
         SELECT pa.DateAdjusted, pa.TypeOfChange,
-               a.Name AS ActorName,
-               t.Name AS TargetName
+               x.Name AS ActorName,
+               u.Name AS TargetName
         FROM PasswordAdjustments pa
         JOIN Users u ON u.Username = pa.AdjustedUName
         JOIN Users x ON x.Username = pa.AdjustedByUName
-        ORDER BY pcl.EventTime DESC
+		{where}
+        ORDER BY pa.DateAdjusted DESC
         LIMIT 500
     """, tuple(params))
 
-    return render_template("passwordAdjustmentReport.html", layout="activenav.html", rows=rows, start=start, end=end)
+	if session.get("role") == "Admin" and session.get("Organization") == None:
+		nav = "activenav.html"
+	elif session.get("role") == "Admin" and session.get("Organization") != None:
+		nav = "orgnav.html"
+	else:
+		nav = "orgnav.html"
+
+    return render_template("passwordAdjustmentReport.html", layout=nav, rows=rows, start=start, end=end)
 
 @application.route("/<accountType>/users/<int:UserID>/edit", methods=["POST"])
 def userEditPost(accountType, UserID):	
@@ -685,7 +720,7 @@ def userEditPost(accountType, UserID):
 		return redirect(url_for("organizationUsers"))
 
 @application.route("/<accountType>/users/<int:UserID>/delete", methods=["POST"])
-def delete_user(accountType, UserID):
+def deleteUser(accountType, UserID):
 	user = paramQueryDb("SELECT UserType FROM Users WHERE UserID = %s", (UserID,))
 	if user["UserType"] == "Admin": 
 		updateDb("DELETE FROM Admins WHERE AdminID = %s", (UserID,))
@@ -703,6 +738,8 @@ def delete_user(accountType, UserID):
 @application.route("/")
 def home():
 	if 'UserID' in session:
+		if session.get("Organization") != None and session.get("Role") == "Admin":
+			session["Organization"]	= None		
 		return render_template("home.html", layout = "activenav.html")
 	return render_template("home.html", layout = "nav.html")
 
@@ -1050,9 +1087,9 @@ def adjustDriverPointsPost(UserID):
 		return redirect(url_for("organizationUsers"))
 
 	currentPoints = int(driver.get("TotalPoints") or 0)
-	if adjustmentType == "award":
+	if adjustmentType == "Award":
 		newTotal = currentPoints + points
-	elif adjustmentType == "deduct":
+	elif adjustmentType == "Deduct":
 		newTotal = currentPoints - points
 		if newTotal < 0:
 			newTotal = 0  # clamp (or change to block if your rules require)
@@ -1065,9 +1102,9 @@ def adjustDriverPointsPost(UserID):
 	organization = paramQueryDb("""SELECT OrganizationID FROM Organizations WHERE Name = %s""", (session["Organization"],))
 	try:
 		updateDb("""
-		INSERT INTO PointAdjustments(OrganizationID, AdjustedByUName, DriverUName, AdjustmentPoints, AdjustmentReason, DateAdjusted)
+		INSERT INTO PointAdjustments(OrganizationID, AdjustedByUName, DriverUName, AdjustmentType, AdjustmentPoints, AdjustmentReason, DateAdjusted)
 		VALUES (%s, %s, %s, %s, %s, %s)
-		""", (organization.get("OrganizationID"), user.get("Username"), driver["Username"], points, reason, datetime.now()))
+		""", (organization.get("OrganizationID"), user.get("Username"), driver["Username"], adjustmentType, points, reason, datetime.now()))
 	except Exception as e:
 		# If table doesn't exist, keep app working
 		print("PointDeductions insert skipped:", e)
