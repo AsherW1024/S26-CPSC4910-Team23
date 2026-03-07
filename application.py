@@ -636,39 +636,39 @@ def pointsReport():
 
 @application.route("/reports/passwords")
 def passwordReport():
-    #guard = require_sponsor()
-    #if guard:
-     #   return guard
+	#guard = require_sponsor()
+	#if guard:
+	#   return guard
 
-    start = request.args.get("start", "").strip()
-    end = request.args.get("end", "").strip()
+	start = request.args.get("start", "").strip()
+	end = request.args.get("end", "").strip()
 
-    params = []
-    where = ""
+	params = []
+	where = ""
 
-    if start or end:
-        where = "WHERE "
+	if start or end:
+		where = "WHERE "
 
-    if start:
-        where += "pa.DateAdjusted >= %s"
-        params.append(start + " 00:00:00")
-        if end:
-            where += " AND "
-    if end:
-        where += "pa.DateAdjusted <= %s"
-        params.append(end + " 23:59:59")
+	if start:
+		where += "pa.DateAdjusted >= %s"
+		params.append(start + " 00:00:00")
+		if end:
+			where += " AND "
+	if end:
+		where += "pa.DateAdjusted <= %s"
+		params.append(end + " 23:59:59")
 
-    rows = selectDb(f"""
-        SELECT pa.DateAdjusted, pa.TypeOfChange,
-               x.Name AS ActorName,
-               u.Name AS TargetName
-        FROM PasswordAdjustments pa
-        JOIN Users u ON u.Username = pa.AdjustedUName
-        JOIN Users x ON x.Username = pa.AdjustedByUName
+	rows = selectDb(f"""
+		SELECT pa.DateAdjusted, pa.TypeOfChange,
+			x.Name AS ActorName,
+			u.Name AS TargetName
+		FROM PasswordAdjustments pa
+		JOIN Users u ON u.Username = pa.AdjustedUName
+		JOIN Users x ON x.Username = pa.AdjustedByUName
 		{where}
-        ORDER BY pa.DateAdjusted DESC
-        LIMIT 500
-    """, tuple(params))
+		ORDER BY pa.DateAdjusted DESC
+		LIMIT 500
+	""", tuple(params))
 
 	if session.get("role") == "Admin" and session.get("Organization") == None:
 		nav = "activenav.html"
@@ -677,7 +677,7 @@ def passwordReport():
 	else:
 		nav = "orgnav.html"
 
-    return render_template("passwordAdjustmentReport.html", layout=nav, rows=rows, start=start, end=end)
+	return render_template("passwordAdjustmentReport.html", layout=nav, rows=rows, start=start, end=end)
 
 @application.route("/<accountType>/users/<int:UserID>/edit", methods=["POST"])
 def userEditPost(accountType, UserID):	

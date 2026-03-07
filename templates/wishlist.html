@@ -13,6 +13,7 @@
 		<div class="wishlist">
 			{%for product in wishlistData%}
 			<div class="product" data-index="{{loop.index0}}">
+				<button class="remove-from-wishlist-button"></button>
 				<img src="{{product.thumbnail}}">
 				<h4 class="product-title">{{product.title}}</h4>
 				<p>{{product.price}} Points</p>
