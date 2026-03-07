@@ -57,11 +57,11 @@ function showProductDetails(event) {
 						<p class="popup-sub-data">${productDetails.dimensions["depth"]} in</p>
 					</div>
 					<div class="side-by-side">
-						<h4 class="popup-sub-label">height:</h4>
+						<h4 class="popup-sub-label">Height:</h4>
 						<p class="popup-sub-data">${productDetails.dimensions["height"]} in</p>
 					</div>
 					<div class="side-by-side">
-						<h4 class="popup-sub-label">width:</h4>
+						<h4 class="popup-sub-label">Width:</h4>
 						<p class="popup-sub-data">${productDetails.dimensions["width"]} in</p>
 					</div>
 				</div>

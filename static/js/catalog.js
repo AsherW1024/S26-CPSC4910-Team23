@@ -151,6 +151,17 @@ async function removeFromWishlist(event) {
 	}
 }
 
+function showWishlistButton(event) {
+	let productDiv = event.target;
+	let wishlistButton = productDiv.querySelector("button");
+	wishlistButton.style.display = "grid";
+}
+function hideWishlistButton(event) {
+	let productDiv = event.target;
+	let wishlistButton = productDiv.querySelector("button");
+	wishlistButton.style.display = "none";
+}
+
 //make api request in the backend for products
 //update screen with results
 async function queryProducts() {
@@ -236,18 +247,20 @@ async function queryProducts() {
 			productDiv.appendChild(wishlistButton);
 			if (product.wishlisted) {
 				wishlistButton.classList.add("wishlist-button-active");
-				wishlistButton.addEventListener("click", removeFromWishlist)
+				wishlistButton.addEventListener("click", removeFromWishlist);
 			}
 			else {
 				wishlistButton.classList.add("wishlist-button-inactive");
-				wishlistButton.addEventListener("click", addToWishlist)
+				wishlistButton.addEventListener("click", addToWishlist);
 			}
+			productDiv.addEventListener("mouseenter", showWishlistButton);
+			productDiv.addEventListener("mouseleave", hideWishlistButton);
 		}
 		productDiv.appendChild(name);
 		productDiv.appendChild(price);
 
 		//give product div an event listener that opens up the advanced details
-		productDiv.addEventListener("click", showProductDetails)
+		productDiv.addEventListener("click", showProductDetails);
 
 		//append elements to the grid;
 		grid.appendChild(productDiv);
@@ -332,11 +345,11 @@ function showProductDetails(event) {
 						<p class="popup-sub-data">${productDetails.dimensions["depth"]} in</p>
 					</div>
 					<div class="side-by-side">
-						<h4 class="popup-sub-label">height:</h4>
+						<h4 class="popup-sub-label">Height:</h4>
 						<p class="popup-sub-data">${productDetails.dimensions["height"]} in</p>
 					</div>
 					<div class="side-by-side">
-						<h4 class="popup-sub-label">width:</h4>
+						<h4 class="popup-sub-label">Width:</h4>
 						<p class="popup-sub-data">${productDetails.dimensions["width"]} in</p>
 					</div>
 				</div>
