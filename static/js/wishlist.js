@@ -1,4 +1,5 @@
 productDivs = document.querySelectorAll(".product");
+removeButtons = document.querySelectorAll(".remove-from-wishlist-button");
 
 //close detailed product view
 function closePopup() {
@@ -10,10 +11,7 @@ function closePopup() {
 //popup that displays advanced details about the product
 function showProductDetails(event) {
 	//no action if the remove or add button was pressed
-	if (event.target.classList.contains("remove-button")) {return}
-	if (event.target.classList.contains("add-button")) {return}
-	if (event.target.classList.contains("wishlist-button-inactive")) {return}
-	if (event.target.classList.contains("wishlist-button-active")) {return}
+	if (event.target.classList.contains("remove-from-wishlist-button")) {return}
 
 	let productDetailIndex = this.dataset.index;
 	let productDetails = pageProductData[productDetailIndex];
@@ -117,7 +115,45 @@ function showProductDetails(event) {
 	popupEl.hidden = false;
 }
 
+async function removeFromWishlist(event) {
+	productDiv = event.target.parentElement;
+	productIndex = productDiv.dataset.index;
+	productId = pageProductData[productIndex].id;
+
+	let request = await fetch("/wishlist/remove", {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify({
+			productID: productId
+		})
+	});
+	if (request.ok) {
+		productDiv.remove()
+	}
+}
+
+function showRemoveButton(event) {
+	let productDiv = event.target.closest(".product");
+	let removeButton = productDiv.querySelector(".remove-from-wishlist-button");
+	removeButton.style.display = "flex";
+}
+
+function hideRemoveButton(event) {
+	let productDiv = event.target.closest(".product");
+	let removeButton = productDiv.querySelector(".remove-from-wishlist-button");
+	removeButton.style.display = "none";
+}
+
+//event listener for remove from wishlist button on each product div
+for (const removeButton of removeButtons) {
+	removeButton.addEventListener("click", removeFromWishlist);
+}
+
 //give event listener for product details to each product div
 for (const productDiv of productDivs) {
-	productDiv.addEventListener("click", showProductDetails)
+	productDiv.addEventListener("click", showProductDetails);
+	productDiv.addEventListener("mouseenter", showRemoveButton);
+	productDiv.addEventListener("mouseleave", hideRemoveButton);
 }
