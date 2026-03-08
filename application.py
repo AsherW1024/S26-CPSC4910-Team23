@@ -580,17 +580,14 @@ def userEdit(accountType, UserID):
 
 	return render_template("userEdit.html", layout="activenav.html", user=user, accountType=accountType)
 
-@application.route("/reports/points")
-def pointsReport():
-	#guard = require_sponsor()
-	#if guard:
-	#   return guard
-
-	if "Organization" in session and session["Organization"] != None:
-		org_id = get_user_org_id()
-		if not org_id:
-			flash("Organization not found.", "validation")
-			return redirect(url_for("home"))
+@application.route("/reports/<ReportType>")
+def report(ReportType):
+	if ReportType in ["points", "applications"]:
+		if "Organization" in session and session["Organization"] != None:
+			org_id = get_user_org_id()
+			if not org_id:
+				flash("Organization not found.", "validation")
+				return redirect(url_for("home"))
 
 	start = request.args.get("start", "").strip()
 	end = request.args.get("end", "").strip()
@@ -600,11 +597,14 @@ def pointsReport():
 	if ("Organization" in session and session["Organization"] != None) or start or end:
 		where += "WHERE "
 
-	if "Organization" in session and session["Organization"] != None:
-		params = [org_id]
-		where += "OrganizationID=%s"
-		if start or end:
-			where += " AND "
+	if ReportType in ["points", "applications"]:
+		if "Organization" in session and session["Organization"] != None:
+			params = [org_id]
+			where += "OrganizationID=%s"
+			if start or end:
+				where += " AND "
+		else:
+			params = []
 	else:
 		params = []
 
@@ -617,6 +617,7 @@ def pointsReport():
 		where += "DateAdjusted <= %s"
 		params.append(end + " 23:59:59")
 
+<<<<<<< Updated upstream
 	rows = selectDb(f"""
 		SELECT DriverUName, AdjustedByUName, AdjustmentType, AdjustmentPoints, AdjustmentReason, DateAdjusted
 		FROM PointAdjustments
@@ -669,6 +670,51 @@ def passwordReport():
 		ORDER BY pa.DateAdjusted DESC
 		LIMIT 500
 	""", tuple(params))
+=======
+	if ReportType == "passwords":
+		report = "passwordAdjustmentReport.html"
+		rows = selectDb(f"""
+        SELECT pa.DateAdjusted, pa.TypeOfChange,
+               x.Name AS ActorName,
+               u.Name AS TargetName
+        FROM PasswordAdjustments pa
+        JOIN Users u ON u.Username = pa.AdjustedUName
+        JOIN Users x ON x.Username = pa.AdjustedByUName
+		{where}
+        ORDER BY pa.DateAdjusted DESC
+        LIMIT 500
+    """, tuple(params))
+	elif ReportType == "points":
+		report = "pointTrackingReport.html"
+		rows = selectDb(f"""
+			SELECT DriverUName, AdjustedByUName, AdjustmentType, AdjustmentPoints, AdjustmentReason, DateAdjusted
+			FROM PointAdjustments
+			{where}
+			ORDER BY DateAdjusted DESC
+			LIMIT 500
+			""", tuple(params))
+	elif ReportType == "applications":
+		rows = selectDb(f"""
+			SELECT a.DriverUName, a.ReviewedByUName, a.ApplicationStatus, a.ReviewReason, a.DateApplied, o.Name
+			FROM OrganizationApplications a
+			JOIN Organizations o ON a.OrganizationID = o.OrganizationID
+			{where}
+			ORDER BY DateApplied DESC
+			LIMIT 500
+			""", tuple(params))
+	elif ReportType == "logins":
+		rows = selectDb(f"""
+			SELECT LoginDate, LoginUser, 
+			CASE
+				WHEN LoginResult = 1 THEN "Successful Login"
+				WHEN LoginResult = 0 THEN "Failed Login"
+			END AS LoginStatus
+			FROM Logins
+			{where}
+			ORDER BY LoginDate DESC
+			LIMIT 500
+			""", tuple(params))
+>>>>>>> Stashed changes
 
 	if session.get("role") == "Admin" and session.get("Organization") == None:
 		nav = "activenav.html"
@@ -677,7 +723,11 @@ def passwordReport():
 	else:
 		nav = "orgnav.html"
 
+<<<<<<< Updated upstream
 	return render_template("passwordAdjustmentReport.html", layout=nav, rows=rows, start=start, end=end)
+=======
+	return render_template("logReports.html", layout=nav, rows=rows, start=start, end=end, ReportType=ReportType)
+>>>>>>> Stashed changes
 
 @application.route("/<accountType>/users/<int:UserID>/edit", methods=["POST"])
 def userEditPost(accountType, UserID):	

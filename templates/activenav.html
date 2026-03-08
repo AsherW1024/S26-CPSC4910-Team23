@@ -32,15 +32,17 @@
                 </div>
             </div>
             {% endif %}
+            {% if session.get('role') == "Admin" %}
             <div class="dropdown">
                 <button class="dropbtn" type="button">Reports</button>
                 <div class="dropdown-content">
-                    <a href="/reports/points">Points Report</a>
-                    {% if session.get('role') == "Admin" %}
+                    <a href="/reports/applications">Application Report</a>
+                    <a href="/reports/logins">Login Report</a>
                     <a href="/reports/passwords">Password Report</a>
-                    {% endif %}
+                    <a href="/reports/points">Points Report</a>
                 </div>
             </div>
+            {% endif %}
             <div class="dropdown">
                 <button class="icon-user dropbtn" type="button">
                     <i class="fa fa-user fa-1x"></i>
