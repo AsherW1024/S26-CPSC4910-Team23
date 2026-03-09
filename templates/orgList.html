@@ -53,7 +53,7 @@
           <td><a class="button is-small" href="/organizations/{{ o.OrganizationID }}/view">View</a></td>
           <td>
             <form method="POST" action="/organizations/{{ o.OrganizationID }}/edit"
-              style="display:inline;" onsubmit="return promptOrgRename(o.OrganizationID);">
+              style="display:inline;" onsubmit="return promptOrgRename({{ o.OrganizationID }});">
               <input type="hidden" name="newName" id="newName_{{ o.OrganizationID }}">
               <button class="button is-small is-success" type="submit">
                 Edit

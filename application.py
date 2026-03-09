@@ -812,6 +812,7 @@ def deleteUser(accountType, UserID):
 @application.route("/")
 def home():
 	if 'UserID' in session:
+		getOrganization()
 		if session.get("Organization") != None and session.get("Role") == "Admin":
 			session["Organization"]	= None		
 		return render_template("home.html", layout = "activenav.html")
@@ -1073,7 +1074,7 @@ def organizationView(OrgID):
 
 @application.route("/organizations/<int:OrgID>/edit", methods=["POST"])
 def organizationEdit(OrgID):
-	newName = request.form.get("orgName")
+	newName = request.form.get("newName")
 	updateDb("UPDATE Organizations SET Name = %s WHERE OrganizationID = %s", (newName, OrgID))
 	return redirect(url_for("organizations"))
 
@@ -1087,7 +1088,8 @@ def organizationDelete(OrgID):
 
 @application.route("/organization")
 def organization():
-	if "Organization" in session or session.get('role') == "Admin":
+	getOrganization()
+	if ("Organization" in session and session["Organization"] != None) or session.get('role') == "Admin":
 		return render_template("organization.html", layout="orgnav.html", organizationName=session["Organization"])
 	else:
 		return render_template("organization.html", layout="orgnav.html", organizationName="None")
@@ -1254,7 +1256,7 @@ def apply():
 	orgs = selectDb("SELECT OrganizationID, Name FROM Organizations ORDER BY Name DESC", ())
 	application = selectDb("""SELECT o.Name, a.ApplicationStatus 
 							FROM OrganizationApplications a JOIN Organizations o ON a.OrganizationID = o.OrganizationID
-							WHERE a.DriverUName = %s""", (username,))
+							WHERE a.DriverUName = %s and a.ApplicationStatus = %s""", (username, "Pending"))
 	if application:
 		app = application[0]
 	else:
@@ -1273,12 +1275,12 @@ def organization_leave():
 
     updateDb(
         "UPDATE Drivers SET OrganizationID=%s WHERE DriverID=%s",
-        (0, session["UserID"])
+        (None, session["UserID"])
     )
 
     session.pop("Organization", None)
     flash("You left the organization.", "success")
-    return redirect(url_for("organization"))
+    return redirect(url_for("home"))
 
 @application.route("/organization/apply", methods=["POST"])
 def applyPost():
@@ -1288,7 +1290,7 @@ def applyPost():
 	timeApplied = datetime.now()
 	updateDb("""INSERT INTO OrganizationApplications (OrganizationID, DriverUName, ApplicationStatus, DateApplied)
 				VALUES (%s, %s, %s, %s)""", (org["OrganizationID"], user['Username'], "Pending", timeApplied))
-	flash(f"You have applied for enrollment in {{ organization }}", "enrolled")
+	flash(f"You have applied for enrollment in { organization } ", "enrolled")
 	return redirect(url_for("apply"))
 
 @application.route("/organization/apply/cancel")

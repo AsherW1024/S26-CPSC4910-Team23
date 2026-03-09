@@ -25,6 +25,10 @@ function confirmUserRemove() {
     return confirm("Are you sure you want to remove this user?");
 }
 
+function confirmOrgLeave() {
+    return confirm("Are you sure you want to leave this organization?");
+}
+
 function promptOrgRename(OrgID) {
     const message = prompt("Enter a new name for this organization:");
 

@@ -46,7 +46,6 @@
                     {% endif %}
                     </div>
                 </div>
-            {% endif %}
             <div class="dropdown">
                 <button class="dropbtn" type="button">Reports</button>
                 <div class="dropdown-content">
@@ -58,6 +57,12 @@
                     <a href="/reports/points">Points Report</a>
                 </div>
             </div>
+            {% elif session.get('role') == "Driver" %}
+                <form id="leaveform" method="POST" action="/organization/leave"
+                  style="display:inline;" onsubmit="return confirmOrgLeave();">
+                    <a onclick="document.getElementById('leaveform').submit()">Leave Organization</a>
+                </form>
+            {% endif %}
             <div class="dropdown">
                 <button class="icon-user dropbtn" type="button">
                     <i class="fa fa-user fa-1x"></i>
