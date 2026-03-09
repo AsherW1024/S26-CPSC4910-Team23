@@ -294,6 +294,20 @@ function closePopup() {
 	popupEl.hidden = true;
 }
 
+async function addProductToCart(event) {
+	const cartButton = event.target.closest(".cart");
+	const productID = cartButton.dataset.productId;
+	let response = await fetch ("/cart/add", {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify({
+			productID: productID
+		})
+	});
+}
+
 function showProductDetails(event) {
 	//no action if the remove or add button was pressed
 	if (event.target.classList.contains("remove-button")) {return}
@@ -303,10 +317,12 @@ function showProductDetails(event) {
 
 	let productDetailIndex = this.dataset.index;
 	let productDetails = pageProductData[productDetailIndex];
+	const userRole = getUserRole();
 
 	let productDetailsHtml = `
 		<div id="popup-content-bg">
 			<div id="popup-content-div">
+				<button class="cart" data-product-id="${productDetails.id}"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Ic_shopping_cart_48px.svg/640px-Ic_shopping_cart_48px.svg.png"></button>
 				<button id="popup-close">X</button>
 				<div id="popup-images"></div>
 				<h2 class="product-name">${productDetails.title}</H3>
@@ -367,6 +383,10 @@ function showProductDetails(event) {
 	//add product popup html to page
 	let popupEl = document.getElementById("popup-overlay-bg");
 	popupEl.innerHTML = productDetailsHtml;
+
+	//add event listener for cart button
+	let cartButton = document.querySelector(".cart");
+	cartButton.addEventListener("click", addProductToCart);
 
 	//add each image
 	let imageDiv = document.getElementById("popup-images");

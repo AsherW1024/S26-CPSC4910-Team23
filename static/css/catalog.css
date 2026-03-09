@@ -284,3 +284,18 @@ p{
 .popup-sub-data {
 	font-size: 20px !important;
 }
+.cart{
+	background-color: rgb(214, 214, 214);
+	border: none;
+	box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+	position: sticky;
+	top: 4%;
+	float: left;
+	margin-left: -25px;
+	font-size: 2em;
+	max-width: 8%;
+	height: auto;
+	border-radius: 8%;
+	padding: 10px;
+	padding-bottom: 0;
+}

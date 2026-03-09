@@ -2114,7 +2114,7 @@ def removeFromWishList():
 
 		#orgName = paramQueryDb(query="SELECT OrganizationName FROM Drivers WHERE DriverID=%s", params=(userID)).get("OrganizationName")
 		#orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName)).get("OrganizationID")
-		orgID = session["OrgID"]
+		orgID = session.get("OrgID")
 
 		deleteFromWishlistQuery = """
 			DELETE FROM Wishlist
@@ -2199,6 +2199,26 @@ def wishlist():
 		return render_template("wishlist.html", layout="activenav.html", wishlistData=wishlistData)
 	return redirect(url_for("home"))
 
+@application.route("/cart/add", methods=["POST"])
+def addToCart():
+	if "UserID" in session:
+		userID = session.get("UserID")
+		orgID = session.get("OrgID")
+		productID = request.json.get("productID")
+
+		try:
+			addToCartQuery = """
+				INSERT INTO Cart
+				(userID, orgID, productID, amount)
+				VALUES (%s, %s, %s, %s)
+			"""
+			updateDb(query=addToCartQuery, params=(userID, orgID, productID, 1))
+		except Exception as e:
+			print(f"Issue with query in '/car/add': {e}")
+			return jsonify({"message": "Issue updating cart"}), 400
+		
+		return jsonify({"message": "Success"}), 200
+	return jsonify({"message": "Permission error"}), 400
 """
 This lets us test locally. Should not execute in AWS
 """
