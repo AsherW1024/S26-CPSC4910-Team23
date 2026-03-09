@@ -505,24 +505,42 @@ def adminUserList():
 	q = request.args.get("q", "").strip()
 	like = f"%{q}%"
 
+	page = request.args.get("page", 1, type=int)
+	rowsPerPage = request.args.get("pageCount", 10, type=int)
+	offset = (page - 1) * rowsPerPage
+
 	if q:
+		rowTotal = selectDb("""
+			SELECT COUNT(*) AS totalRows
+			FROM Users 
+			WHERE (Email LIKE %s OR Username LIKE %s OR Name = %s) AND UserID <> %s 
+			ORDER BY Name
+		""", (like, like, like, session["UserID"]))
 		users = selectDb("""
 			SELECT UserType, UserID, Username, Email, Name
 			FROM Users 
 			WHERE (Email LIKE %s OR Username LIKE %s OR Name = %s) AND UserID <> %s 
 			ORDER BY Name
-			LIMIT 50
-		""", (like, like, like, session["UserID"]))
+			LIMIT %s OFFSET %s
+		""", (like, like, like, session["UserID"],  rowsPerPage, offset))
 	else:
+		rowTotal = selectDb("""
+			SELECT COUNT(*) AS totalRows
+			FROM Users 
+			WHERE UserID <> %s
+			ORDER BY Name
+		""", (session["UserID"],))
 		users = selectDb("""
 			SELECT UserType, UserID, Username, Email, Name
 			FROM Users 
 			WHERE UserID <> %s
 			ORDER BY Name
-			LIMIT 50
-		""", (session["UserID"],))
+			LIMIT %s OFFSET %s
+		""", (session["UserID"], rowsPerPage, offset))
+
+	numPages = math.ceil(rowTotal[0]["totalRows"] / rowsPerPage)
 	
-	return render_template("userList.html", layout="activenav.html", users=users, q=q, accountType='admin', use="website")
+	return render_template("userList.html", layout="activenav.html", users=users, q=q, accountType='admin', use="website" , page=page, pageNum=range(1, numPages + 1), pageRows=rowsPerPage)
 
 @application.route("/sponsor/users")
 def sponsorUserList():
@@ -533,7 +551,19 @@ def sponsorUserList():
 	q = request.args.get("q", "").strip()
 	like = f"%{q}%"
 
+	page = request.args.get("page", 1, type=int)
+	rowsPerPage = request.args.get("pageCount", 10, type=int)
+	offset = (page - 1) * rowsPerPage
+
 	if q:
+		rowTotal = selectDb("""
+			SELECT COUNT(*) AS totalRows
+			FROM Users
+			WHERE (Name LIKE %s OR Email LIKE %s OR Username LIKE %s) AND 
+				  (UserType = "Sponsor" OR UserType = "Driver") AND
+				  (UserID <> %s)
+			ORDER BY Name
+		""", (like, like, like, session["UserID"]))
 		users = selectDb("""
 			SELECT UserType, UserID, Name, Email, Username
 			FROM Users
@@ -541,19 +571,28 @@ def sponsorUserList():
 				  (UserType = "Sponsor" OR UserType = "Driver") AND
 				  (UserID <> %s)
 			ORDER BY Name
-			LIMIT 50
-		""", (like, like, like, session["UserID"]))
+			LIMIT %s OFFSET %s
+		""", (like, like, like, session["UserID"], rowsPerPage, offset))
 	else:
+		rowTotal = selectDb("""
+			SELECT SELECT COUNT(*) AS totalRows
+			FROM Users
+			WHERE (UserType = "Sponsor" OR UserType = "Driver") AND 
+				  (UserID <> %s)
+			ORDER BY Name
+		""", (session["UserID"],))
 		users = selectDb("""
 			SELECT UserType, UserID, Name, Email, Username
 			FROM Users
 			WHERE (UserType = "Sponsor" OR UserType = "Driver") AND 
 				  (UserID <> %s)
 			ORDER BY Name
-			LIMIT 50
-		""", (session["UserID"],))
+			LIMIT %s OFFSET %s
+		""", (session["UserID"], rowsPerPage, offset))
 
-	return render_template("userList.html", layout="activenav.html", users=users, q=q, accountType='sponsor', use="website")
+	numPages = math.ceil(rowTotal[0]["totalRows"] / rowsPerPage)
+
+	return render_template("userList.html", layout="activenav.html", users=users, q=q, accountType='sponsor', use="website", page=page, pageNum=range(1, numPages + 1), pageRows=rowsPerPage)
 	
 @application.route("/<accountType>/users/<int:UserID>/edit")
 def userEdit(accountType, UserID):
@@ -592,6 +631,10 @@ def report(ReportType):
 	start = request.args.get("start", "").strip()
 	end = request.args.get("end", "").strip()
 
+	page = request.args.get("page", 1, type=int)
+	rowsPerPage = request.args.get("pageCount", 10, type=int)
+	offset = (page - 1) * rowsPerPage
+
 	where = ""
 
 	if ("Organization" in session and session["Organization"] != None) or start or end:
@@ -617,92 +660,71 @@ def report(ReportType):
 		where += "DateAdjusted <= %s"
 		params.append(end + " 23:59:59")
 
-<<<<<<< Updated upstream
-	rows = selectDb(f"""
-		SELECT DriverUName, AdjustedByUName, AdjustmentType, AdjustmentPoints, AdjustmentReason, DateAdjusted
-		FROM PointAdjustments
-		{where}
-		ORDER BY DateAdjusted DESC
-		LIMIT 500
-		""", tuple(params))
-
-	if session.get("role") == "Admin" and session.get("Organization") == None:
-		nav = "activenav.html"
-	elif session.get("role") == "Admin" and session.get("Organization") != None:
-		nav = "orgnav.html"
-	else:
-		nav = "orgnav.html"
-
-	return render_template("pointTrackingReport.html", layout=nav, rows=rows, start=start, end=end)
-
-@application.route("/reports/passwords")
-def passwordReport():
-	#guard = require_sponsor()
-	#if guard:
-	#   return guard
-
-	start = request.args.get("start", "").strip()
-	end = request.args.get("end", "").strip()
-
-	params = []
-	where = ""
-
-	if start or end:
-		where = "WHERE "
-
-	if start:
-		where += "pa.DateAdjusted >= %s"
-		params.append(start + " 00:00:00")
-		if end:
-			where += " AND "
-	if end:
-		where += "pa.DateAdjusted <= %s"
-		params.append(end + " 23:59:59")
-
-	rows = selectDb(f"""
-		SELECT pa.DateAdjusted, pa.TypeOfChange,
-			x.Name AS ActorName,
-			u.Name AS TargetName
-		FROM PasswordAdjustments pa
-		JOIN Users u ON u.Username = pa.AdjustedUName
-		JOIN Users x ON x.Username = pa.AdjustedByUName
-		{where}
-		ORDER BY pa.DateAdjusted DESC
-		LIMIT 500
-	""", tuple(params))
-=======
 	if ReportType == "passwords":
-		report = "passwordAdjustmentReport.html"
+		rowTotal = selectDb(f"""
+			SELECT COUNT(*) AS totalRows
+			FROM PasswordAdjustments pa
+			JOIN Users u ON u.Username = pa.AdjustedUName
+			JOIN Users x ON x.Username = pa.AdjustedByUName
+			{where}
+			ORDER BY pa.DateAdjusted DESC
+			""", tuple(params))
+		params.append(rowsPerPage)
+		params.append(offset)
 		rows = selectDb(f"""
-        SELECT pa.DateAdjusted, pa.TypeOfChange,
-               x.Name AS ActorName,
-               u.Name AS TargetName
-        FROM PasswordAdjustments pa
-        JOIN Users u ON u.Username = pa.AdjustedUName
-        JOIN Users x ON x.Username = pa.AdjustedByUName
-		{where}
-        ORDER BY pa.DateAdjusted DESC
-        LIMIT 500
-    """, tuple(params))
+			SELECT pa.DateAdjusted, pa.TypeOfChange,
+				x.Name AS ActorName,
+				u.Name AS TargetName
+			FROM PasswordAdjustments pa
+			JOIN Users u ON u.Username = pa.AdjustedUName
+			JOIN Users x ON x.Username = pa.AdjustedByUName
+			{where}
+			ORDER BY pa.DateAdjusted DESC
+			LIMIT %s OFFSET %s
+			""", tuple(params))
 	elif ReportType == "points":
-		report = "pointTrackingReport.html"
+		rowTotal = selectDb(f"""
+			SELECT COUNT(*) AS totalRows
+			FROM PointAdjustments
+			{where}
+			ORDER BY DateAdjusted DESC
+			""", tuple(params))
+		params.append(rowsPerPage)
+		params.append(offset)
 		rows = selectDb(f"""
 			SELECT DriverUName, AdjustedByUName, AdjustmentType, AdjustmentPoints, AdjustmentReason, DateAdjusted
 			FROM PointAdjustments
 			{where}
 			ORDER BY DateAdjusted DESC
-			LIMIT 500
+			LIMIT %s OFFSET %s
 			""", tuple(params))
 	elif ReportType == "applications":
+		rowTotal = selectDb(f"""
+			SELECT COUNT(*) AS totalRows
+			FROM OrganizationApplications a
+			JOIN Organizations o ON a.OrganizationID = o.OrganizationID
+			{where}
+			ORDER BY DateApplied DESC
+			""", tuple(params))
+		params.append(rowsPerPage)
+		params.append(offset)
 		rows = selectDb(f"""
 			SELECT a.DriverUName, a.ReviewedByUName, a.ApplicationStatus, a.ReviewReason, a.DateApplied, o.Name
 			FROM OrganizationApplications a
 			JOIN Organizations o ON a.OrganizationID = o.OrganizationID
 			{where}
 			ORDER BY DateApplied DESC
-			LIMIT 500
+			LIMIT %s OFFSET %s
 			""", tuple(params))
 	elif ReportType == "logins":
+		rowTotal = selectDb(f"""
+			SELECT COUNT(*) AS totalRows
+			FROM Logins
+			{where}
+			ORDER BY LoginDate DESC
+			""", tuple(params))
+		params.append(rowsPerPage)
+		params.append(offset)
 		rows = selectDb(f"""
 			SELECT LoginDate, LoginUser, 
 			CASE
@@ -712,9 +734,10 @@ def passwordReport():
 			FROM Logins
 			{where}
 			ORDER BY LoginDate DESC
-			LIMIT 500
+			LIMIT %s OFFSET %s
 			""", tuple(params))
->>>>>>> Stashed changes
+
+	numPages = math.ceil(rowTotal[0]["totalRows"] / rowsPerPage)
 
 	if session.get("role") == "Admin" and session.get("Organization") == None:
 		nav = "activenav.html"
@@ -723,11 +746,7 @@ def passwordReport():
 	else:
 		nav = "orgnav.html"
 
-<<<<<<< Updated upstream
-	return render_template("passwordAdjustmentReport.html", layout=nav, rows=rows, start=start, end=end)
-=======
-	return render_template("logReports.html", layout=nav, rows=rows, start=start, end=end, ReportType=ReportType)
->>>>>>> Stashed changes
+	return render_template("logReports.html", layout=nav, rows=rows, start=start, end=end, ReportType=ReportType, page=page, pageNum=range(1, numPages + 1), pageRows=rowsPerPage)
 
 @application.route("/<accountType>/users/<int:UserID>/edit", methods=["POST"])
 def userEditPost(accountType, UserID):	
@@ -1005,24 +1024,41 @@ def organizations():
 	
 	q = request.args.get("q", "").strip()
 	like = f"%{q}%"
+	
+	page = request.args.get("page", 1, type=int)
+	rowsPerPage = request.args.get("pageCount", 10, type=int)
+	offset = (page - 1) * rowsPerPage
 
 	if q:
+		rowTotal = selectDb("""
+			SELECT COUNT(*) AS totalRows
+			FROM Organizations 
+			WHERE Name LIKE %s
+			ORDER BY Name
+		""", (like,))
 		orgs = selectDb("""
 			SELECT OrganizationID, Name
 			FROM Organizations 
 			WHERE Name LIKE %s
 			ORDER BY Name
-			LIMIT 50
-		""", (like,))
+			LIMIT %s OFFSET %s
+		""", (like, rowsPerPage, offset))
 	else:
+		rowTotal = selectDb("""
+			SELECT COUNT(*) AS totalRows
+			FROM Organizations
+			ORDER BY Name
+		""")
 		orgs = selectDb("""
 			SELECT OrganizationID, Name
 			FROM Organizations
 			ORDER BY Name
-			LIMIT 50
-		""")
+			LIMIT %s OFFSET %s
+		""", (rowsPerPage, offset))
+
+	numPages = math.ceil(rowTotal[0]["totalRows"] / rowsPerPage)
 	
-	return render_template("orgList.html", layout="activenav.html", orgs=orgs, q=q)
+	return render_template("orgList.html", layout="activenav.html", orgs=orgs, q=q, page=page, pageNum=range(1, numPages + 1), pageRows=rowsPerPage)
 
 @application.route("/organizations/<int:OrgID>/edit")
 def organizationEdit(OrgID):

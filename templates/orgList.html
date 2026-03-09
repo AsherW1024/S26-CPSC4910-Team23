@@ -2,61 +2,121 @@
 
 {% block content %}
 <div class="container is-max-desktop mt-6">
-  <h1 class="title">Organizations</h1>
+  <div class="box">
+    <h1 class="title">Organizations</h1>
 
-  {% if session.get('role') == "Admin" %}
-  <form method="GET" action="/organizations" class="mb-4">
-  {% elif session.get('role') == "Driver" %}
-  <form method="GET" action="/organization/apply" class="mb-4">
-  {% endif %}
-    <div class="field has-addons">
-      <div class="control is-expanded">
-        <input class="input" type="text" name="q" placeholder="Search organization name..." value="{{ q }}">
+    {% if session.get('role') == "Admin" %}
+    <form method="GET" action="/organizations" class="mb-4">
+    {% elif session.get('role') == "Driver" %}
+    <form method="GET" action="/organization/apply" class="mb-4">
+    {% endif %}
+       <div class="columns is-centered is-mobile">
+        <div class="column">
+          <label class="label">Search Bar</label>
+          <div class="field has-addons">
+            <div class="control is-expanded">
+              <input class="input" type="text" name="q" placeholder="Search name, email, username..." value="{{ q }}">
+            </div>
+            <div class="control">
+              <button class="button is-info" type="submit">Submit</button>
+            </div>
+          </div>
+        </div>
+        <div class="column is-narrow">
+          <div class="field">
+            <label class="label">Rows per Page</label>
+            <div class="select">
+              <select name="pageCount" onchange="this.form.submit()">
+                <option value=10 {% if pageRows==10 %}selected{% endif %}>10</option>
+                <option value=25 {% if pageRows==25 %}selected{% endif %}>25</option>
+                <option value=50 {% if pageRows==50 %}selected{% endif %}>50</option>
+                <option value=100 {% if pageRows==100 %}selected{% endif %}>100</option>
+              </select>
+            </div>
+          </div>
+        </div>
       </div>
+    </form>
 
-      <div class="control">
-        <button class="button is-info" type="submit">Search</button>
-      </div>
-    </div>
-  </form>
+    <table class="table is-striped is-fullwidth">
+      <thead>
+        <tr>
+          <th>Organization Name</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in orgs %}
+        <tr>
+          <td>{{ o.Name }}</td>
 
-  <table class="table is-striped is-fullwidth">
-    <thead>
-      <tr>
-        <th>Organization Name</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for o in orgs %}
-      <tr>
-        <td>{{ o.Name }}</td>
-
-        {% if session.get('role') == "Admin" %}
-        <td><a class="button is-small is-success" href="/organizations/{{ o.OrganizationID }}/edit">Edit</a></td>
-        <td>
-          <form method="POST" action="/organizations/{{ o.OrganizationID }}/delete"
-                style="display:inline;" onsubmit="return confirmOrgDelete();">
-            <button class="button is-small is-danger" type="submit">
-              Delete
-            </button>
-          </form>
-        </td>
-        {% elif session.get('role') == "Driver" %}
-          {% if o.Applied == 1 %}
-          <td><a class="button is-small is-success" disabled>Applied</a></td>
-          <td><a class="button is-small is-danger" href="/organization/apply/{{ o.OrganizationID }}/cancel">Cancel</a></td>
-          {% elif o.Applied == 0 and not hasApplied %}
-          <td><a class="button is-small" href="/organization/apply/{{ o.OrganizationID }}">Apply</a></td>
+          {% if session.get('role') == "Admin" %}
+          <td><a class="button is-small is-success" href="/organizations/{{ o.OrganizationID }}/edit">Edit</a></td>
+          <td>
+            <form method="POST" action="/organizations/{{ o.OrganizationID }}/delete"
+                  style="display:inline;" onsubmit="return confirmOrgDelete();">
+              <button class="button is-small is-danger" type="submit">
+                Delete
+              </button>
+            </form>
+          </td>
+          {% elif session.get('role') == "Driver" %}
+            {% if o.Applied == 1 %}
+            <td><a class="button is-small is-success" disabled>Applied</a></td>
+            <td><a class="button is-small is-danger" href="/organization/apply/{{ o.OrganizationID }}/cancel">Cancel</a></td>
+            {% elif o.Applied == 0 and not hasApplied %}
+            <td><a class="button is-small" href="/organization/apply/{{ o.OrganizationID }}">Apply</a></td>
+            {% endif %}
           {% endif %}
-        {% endif %}
-      </tr>
-      {% endfor %}
+        </tr>
+        {% endfor %}
 
-      {% if orgs|length == 0 %}
-        <tr><td colspan="3">No organizations found.</td></tr>
+        {% if orgs|length == 0 %}
+          <tr><td colspan="3">No organizations found.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+    <nav class="pagination is-centered" role="navigation">
+      {% if page > 1 %}
+          <a href="?page={{ page - 1 }}" class="pagination-previous">Previous</a>
+      {% else %}
+          <a href="#" class="pagination-previous" disabled>Previous</a>
       {% endif %}
-    </tbody>
-  </table>
+      {% if pageNum|length > 1 and page < pageNum|length %}
+          <a href="?page={{ page + 1 }}" class="pagination-next">Next page</a>
+      {% else %}
+          <a href="#" class="pagination-next" disabled>Next page</a>
+      {% endif %}
+      <ul class="pagination-list">
+      {% set notellipsis = [true] %}
+      {% for p in pageNum %}
+        {% set show = 
+          p == 1 or p % 10 == 0 or p == page or p == pageNum|length or (p >= page - 3 and p <= page + 3)
+        %}
+        {% if show %}
+          {% if p == page %}
+            <a
+            href=""
+            class="pagination-link is-current"
+            aria-label="Page {{ p }}"
+            aria-current="page"
+            >{{ p }}</a>
+            {% if notellipsis.pop() %} {% endif %}
+            {% if notellipsis.append(true) %} {% endif %}
+          {% else %}
+            <li><a href="?page={{ p }}&pageCount={{ pageRows }}" class="pagination-link">{{ p }}</a></li>
+            {% if notellipsis.pop() %} {% endif %}
+            {% if notellipsis.append(true) %} {% endif %}
+          {% endif %}
+        {% elif notellipsis[0] %}
+          <li><span class="pagination-ellipsis">&hellip;</span></li>
+          {% if notellipsis.pop() %} {% endif %}
+          {% if notellipsis.append(false) %} {% endif %}
+        {% endif %}
+          
+      {% endfor %}
+      </ul>
+    </nav>
+  </div>
 </div>
 
 <script src="/static/js/form.js"></script>
