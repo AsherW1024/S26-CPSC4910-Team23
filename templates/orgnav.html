@@ -13,11 +13,12 @@
 <body>
     <div class="topnav">
         <div class="nav-left">
-            <a href="/"> Exit Organization </a>
-            <a href="/catalog"> Catalog </a>
             {% if session.get('role') == "Admin" %}
-                <a href="/organizations"> Organizations </a>
+                <a href="/organizations"> Exit Organization </a>
+            {% else %}
+                <a href="/"> Exit Organization </a>
             {% endif %}
+            <a href="/catalog"> Catalog </a>
             {% if session.get('role') != "Driver" %}
                 {% if session.get('role') != "Driver" %}
                     <a href="/organization/applications"> Applications </a>

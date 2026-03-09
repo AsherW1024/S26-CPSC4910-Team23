@@ -25,7 +25,21 @@ function confirmUserRemove() {
     return confirm("Are you sure you want to remove this user?");
 }
 
-function promptUserAccept() {
+function promptOrgRename(OrgID) {
+    const message = prompt("Enter a new name for this organization:");
+
+    if (message === null) {return false;}
+
+    if (message.trim() === "") {
+        alert("You must enter a new name.");
+        return false;
+    }
+
+    document.getElementById("newName_" + OrgID).value = message;
+    return true;
+}
+
+function promptUserAccept(userID) {
     const message = prompt("Enter a reason for accepting this driver:");
 
     if (message === null) {return false;}
@@ -35,11 +49,11 @@ function promptUserAccept() {
         return false;
     }
 
-    document.getElementById("acceptReason").value = message;
+    document.getElementById("acceptReason_" + userID).value = message;
     return true;
 }
 
-function promptUserReject() {
+function promptUserReject(userID) {
     const message = prompt("Enter a reason for rejecting this driver:");
 
     if (message === null) {return false;}
@@ -49,7 +63,7 @@ function promptUserReject() {
         return false;
     }
 
-    document.getElementById("rejectReason").value = message;
+    document.getElementById("rejectReason_" + userID).value = message;
     return true;
 }
 
