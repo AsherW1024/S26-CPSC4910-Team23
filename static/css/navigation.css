@@ -3,16 +3,14 @@ html, body {
 	padding: 0;
 }
 
-.topnav,
-.leave{
+.topnav {
   background-color: #333;
 	display: flex;
 	justify-content: space-between;
 	overflow: visible;
 }
 
-.topnav a, 
-.leave{
+.topnav a{
   float: left;
   color: #0073e6;
   text-align: center;
