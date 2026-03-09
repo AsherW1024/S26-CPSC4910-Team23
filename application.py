@@ -577,7 +577,7 @@ def sponsorUserList():
 		""", (like, like, like, session["UserID"], rowsPerPage, offset))
 	else:
 		rowTotal = selectDb("""
-			SELECT SELECT COUNT(*) AS totalRows
+			SELECT COUNT(*) AS totalRows
 			FROM Users
 			WHERE (UserType = "Sponsor" OR UserType = "Driver") AND 
 				  (UserID <> %s)
