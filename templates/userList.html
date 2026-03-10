@@ -38,7 +38,7 @@
       <thead>
         <tr>
           {% if use == "website" %}
-          <th>UserType</th><th>Name</th><th>Email</th><th>Username</th><th></th><th>Actions</th><th></th>
+          <th>UserType</th><th>Name</th><th>Email</th><th>Username</th><th>Edit</th><th>View As</th><th>Actions</th>
           {% elif use == "organization" %}
           <th>UserType</th><th>Username</th><th>status</th><th>Points</th><th></th><th>Actions</th><th></th>
           {% elif use == "application" %}
@@ -71,6 +71,15 @@
           {% endif %}
           {% if use == "website"%}
           <td><a class="button is-small" href="/{{ accountType }}/users/{{ u.UserID }}/edit">Edit</a></td>
+          <td>
+            {% if accountType == "admin" and u.UserType in ["Driver", "Sponsor"] %}
+            <form method="POST" action="/admin/users/{{ u.UserID }}/view-as" style="display:inline;">
+              <button class="button is-small is-info" type="submit">
+                View As
+              </button>
+            </form>
+            {% endif %}
+          </td>
           {% elif use == "organization" %}
             {% if u.UserType == "Driver" %}
             <td><a class="button is-small" href="/{{ accountType }}/users/{{ u.UserID }}/points">Adjust Points</a></td>

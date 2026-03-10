@@ -556,11 +556,35 @@ def reset_password_post(token):
     flash("Password reset successful. Please login.", "success")
     return redirect(url_for("login"))
 
+def is_impersonating():
+	return "admin_real_UserID" in session
+
+def stop_impersonation_session():
+	if not is_impersonating():
+		return
+
+	session["UserID"] = session["admin_real_UserID"]
+	session["role"] = session["admin_real_role"]
+	session["Organization"] = session.get("admin_real_Organization")
+	session["OrgID"] = session.get("admin_real_OrgID", 0)
+
+	session.pop("admin_real_UserID", None)
+	session.pop("admin_real_role", None)
+	session.pop("admin_real_Organization", None)
+	session.pop("admin_real_OrgID", None)
+	session.pop("impersonating_target_UserID", None)
+
 @application.route("/logout")
 def logout():
 	session.pop("UserID", None)
 	session.pop("role", None)
 	session.pop("Organization", None)
+	session.pop("OrgID", None)
+	session.pop("admin_real_UserID", None)
+	session.pop("admin_real_role", None)
+	session.pop("admin_real_Organization", None)
+	session.pop("admin_real_OrgID", None)
+	session.pop("impersonating_target_UserID", None)
 	session.pop("attempts", None)
 	session.pop("lockoutTime", None)
 
@@ -616,6 +640,61 @@ def adminUserList():
 	numPages = math.ceil(rowTotal[0]["totalRows"] / rowsPerPage)
 	
 	return render_template("userList.html", layout="activenav.html", users=users, q=q, accountType='admin', use="website" , page=page, pageNum=range(1, numPages + 1), pageRows=rowsPerPage)
+
+@application.route("/admin/users/<int:UserID>/view-as", methods=["POST"])
+def adminViewAsUser(UserID):
+	guard = require_admin()
+	if guard:
+		return guard
+
+	target = paramQueryDb("""
+		SELECT u.UserID, u.UserType,
+			   COALESCE(s.OrganizationID, d.OrganizationID) AS OrganizationID,
+			   o.Name AS OrganizationName
+		FROM Users u
+		LEFT JOIN Sponsors s ON u.UserID = s.SponsorID
+		LEFT JOIN Drivers d ON u.UserID = d.DriverID
+		LEFT JOIN Organizations o ON o.OrganizationID = COALESCE(s.OrganizationID, d.OrganizationID)
+		WHERE u.UserID = %s
+	""", (UserID,))
+
+	if not target:
+		flash("Target user not found.", "validation")
+		return redirect(url_for("adminUserList"))
+
+	if target["UserType"] not in ("Driver", "Sponsor"):
+		flash("Admin can only view as a Driver or Sponsor.", "validation")
+		return redirect(url_for("adminUserList"))
+
+	# save the real admin identity only once
+	if not is_impersonating():
+		session["admin_real_UserID"] = session["UserID"]
+		session["admin_real_role"] = session["role"]
+		session["admin_real_Organization"] = session.get("Organization")
+		session["admin_real_OrgID"] = session.get("OrgID", 0)
+
+	# switch session to target user
+	session["UserID"] = target["UserID"]
+	session["role"] = target["UserType"]
+	session["Organization"] = target["OrganizationName"]
+	session["OrgID"] = target["OrganizationID"] if target["OrganizationID"] is not None else 0
+	session["impersonating_target_UserID"] = target["UserID"]
+
+	flash(f"Now viewing as {target['UserType']} (UserID {target['UserID']}).", "success")
+
+	if target["OrganizationName"]:
+		return redirect(url_for("organization"))
+	return redirect(url_for("home"))
+
+@application.route("/admin/stop-view-as", methods=["POST"])
+def adminStopViewAs():
+	if not is_impersonating():
+		flash("You are not currently viewing as another user.", "validation")
+		return redirect(url_for("home"))
+
+	stop_impersonation_session()
+	flash("Returned to admin view.", "success")
+	return redirect(url_for("adminUserList"))
 
 @application.route("/sponsor/users")
 def sponsorUserList():
@@ -926,7 +1005,7 @@ def deleteUser(accountType, UserID):
 def home():
 	if 'UserID' in session:
 		getOrganization()
-		if session.get("Organization") != None and session.get("Role") == "Admin":
+		if session.get("Organization") != None and session.get("role") == "Admin":
 			session["Organization"]	= None		
 		return render_template("home.html", layout = "activenav.html")
 	return render_template("home.html", layout = "nav.html")
