@@ -559,11 +559,8 @@ def reset_password_post(token):
     flash("Password reset successful. Please login.", "success")
     return redirect(url_for("login"))
 
-def is_impersonating():
-	return "admin_real_UserID" in session
-
-def stop_impersonation_session():
-	if not is_impersonating():
+def stop_admin_view_as_session():
+	if "admin_real_UserID" not in session:
 		return
 
 	session["UserID"] = session["admin_real_UserID"]
@@ -691,11 +688,11 @@ def adminViewAsUser(UserID):
 
 @application.route("/admin/stop-view-as", methods=["POST"])
 def adminStopViewAs():
-	if not is_impersonating():
+	if "admin_real_UserID" not in session:
 		flash("You are not currently viewing as another user.", "validation")
 		return redirect(url_for("home"))
 
-	stop_impersonation_session()
+	stop_admin_view_as_session()
 	flash("Returned to admin view.", "success")
 	return redirect(url_for("adminUserList"))
 
