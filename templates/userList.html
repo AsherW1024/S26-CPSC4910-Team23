@@ -3,9 +3,18 @@
 {% block content %}
 <div class="container is-max-desktop mt-6">
   <div class="box">
-    <h1 class="title">User Profiles</h1>
-
+    <h1 class="title">
+      {% if use == "enroll_driver" %}
+        Enroll Driver into {{ targetOrg.Name }}
+      {% else %}
+        User Profiles
+      {% endif %}
+    </h1>
+    {% if use == "enroll_driver" %}
+    <form method="GET" action="/organizations/{{ targetOrg.OrganizationID }}/enroll-driver" class="mb-4">
+    {% else %}
     <form method="GET" action="/{{ accountType }}/users" class="mb-4">
+    {% endif %}
       <div class="columns is-centered is-mobile">
         <div class="column">
           <label class="label">Search Bar</label>
@@ -42,7 +51,9 @@
           {% elif use == "organization" %}
           <th>UserType</th><th>Username</th><th>status</th><th>Points</th><th></th><th>Actions</th><th></th>
           {% elif use == "application" %}
-          <th>Username</th><th>Name</th><th>Email</th><th>Date Applied</th><th></th><th>Actions</th><th></th>
+          <th>UserType</th><th>Name</th><th>Email</th><th>Date Applied</th><th></th><th>Actions</th><th></th>
+          {% elif use == "enroll_driver" %}
+          <th>Name</th><th>Email</th><th>Username</th><th></th>
           {% endif %}
         </tr>
       </thead>
@@ -68,6 +79,10 @@
           <td>{{ u.Name }}</td>
           <td>{{ u.Email }}</td>
           <td>{{ u.DateApplied }}</td>
+          {% elif use == "enroll_driver" %}
+          <td>{{ u.Name }}</td>
+          <td>{{ u.Email }}</td>
+          <td>{{ u.Username }}</td>
           {% endif %}
           {% if use == "website"%}
           <td><a class="button is-small" href="/{{ accountType }}/users/{{ u.UserID }}/edit">Edit</a></td>
@@ -104,6 +119,14 @@
               </button>
             </form>
           </td>
+          {% elif use == "enroll_driver" %}
+          <td>
+            <form method="POST" action="/organizations/{{ targetOrg.OrganizationID }}/enroll-driver/{{ u.UserID }}" style="display:inline;">
+              <button class="button is-small is-success" type="submit">
+                Enroll
+              </button>
+            </form>
+          </td>
           {% endif %}
           <td>
             {% if use == "website" %}
@@ -128,6 +151,7 @@
                 Reject
               </button>
             </form>
+            {% elif use == "enroll_driver" %}
             {% endif %}
           </td>
         </tr>

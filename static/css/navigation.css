@@ -7,7 +7,7 @@ html, body {
   background-color: #333;
 	display: flex;
 	justify-content: space-between;
-	overflow: visible;
+	overflow: hidden;
 }
 
 .topnav a{
@@ -25,7 +25,7 @@ html, body {
 }
 
 .nav-left {
-	float: left;
+float: left;
 }
 
 .nav-right {

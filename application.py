@@ -668,7 +668,7 @@ def adminViewAsUser(UserID):
 		return redirect(url_for("adminUserList"))
 
 	# save the real admin identity only once
-	if not is_impersonating():
+	if "admin_real_UserID" not in session:
 		session["admin_real_UserID"] = session["UserID"]
 		session["admin_real_role"] = session["role"]
 		session["admin_real_Organization"] = session.get("Organization")
@@ -696,6 +696,132 @@ def adminStopViewAs():
 	stop_admin_view_as_session()
 	flash("Returned to admin view.", "success")
 	return redirect(url_for("adminUserList"))
+
+# ===== admin enroll driver into a selected organization =====
+@application.route("/organizations/<int:OrganizationID>/enroll-driver")
+def adminEnrollDriverPage(OrganizationID):
+	guard = require_admin()
+	if guard:
+		return guard
+
+	org = paramQueryDb("""
+		SELECT OrganizationID, Name
+		FROM Organizations
+		WHERE OrganizationID = %s
+	""", (OrganizationID,))
+
+	if not org:
+		flash("Organization not found.", "notfound")
+		return redirect(url_for("organizations"))
+
+	q = request.args.get("q", "").strip()
+	like = f"%{q}%"
+
+	page = request.args.get("page", 1, type=int)
+	rowsPerPage = request.args.get("pageCount", 10, type=int)
+	offset = (page - 1) * rowsPerPage
+
+	if q:
+		rowTotal = selectDb("""
+			SELECT COUNT(*) AS totalRows
+			FROM Users u
+			JOIN Drivers d ON u.UserID = d.DriverID
+			WHERE u.UserType = "Driver"
+			  AND (d.OrganizationID IS NULL OR d.OrganizationID = 0)
+			  AND (u.Name LIKE %s OR u.Email LIKE %s OR u.Username LIKE %s)
+		""", (like, like, like))
+
+		drivers = selectDb("""
+			SELECT u.UserID, u.Name, u.Email, u.Username
+			FROM Users u
+			JOIN Drivers d ON u.UserID = d.DriverID
+			WHERE u.UserType = "Driver"
+			  AND (d.OrganizationID IS NULL OR d.OrganizationID = 0)
+			  AND (u.Name LIKE %s OR u.Email LIKE %s OR u.Username LIKE %s)
+			ORDER BY u.Name
+			LIMIT %s OFFSET %s
+		""", (like, like, like, rowsPerPage, offset))
+	else:
+		rowTotal = selectDb("""
+			SELECT COUNT(*) AS totalRows
+			FROM Users u
+			JOIN Drivers d ON u.UserID = d.DriverID
+			WHERE u.UserType = "Driver"
+			  AND (d.OrganizationID IS NULL OR d.OrganizationID = 0)
+		""", ())
+
+		drivers = selectDb("""
+			SELECT u.UserID, u.Name, u.Email, u.Username
+			FROM Users u
+			JOIN Drivers d ON u.UserID = d.DriverID
+			WHERE u.UserType = "Driver"
+			  AND (d.OrganizationID IS NULL OR d.OrganizationID = 0)
+			ORDER BY u.Name
+			LIMIT %s OFFSET %s
+		""", (rowsPerPage, offset))
+
+	totalRows = rowTotal[0]["totalRows"] if rowTotal else 0
+	numPages = max(1, math.ceil(totalRows / rowsPerPage))
+
+	return render_template(
+		"userList.html",
+		layout="activenav.html",
+		users=drivers,
+		q=q,
+		accountType="admin",
+		use="enroll_driver",
+		page=page,
+		pageNum=range(1, numPages + 1),
+		pageRows=rowsPerPage,
+		targetOrg=org
+	)
+
+@application.route("/organizations/<int:OrganizationID>/enroll-driver/<int:UserID>", methods=["POST"])
+def adminEnrollDriverPost(OrganizationID, UserID):
+	guard = require_admin()
+	if guard:
+		return guard
+
+	org = paramQueryDb("""
+		SELECT OrganizationID, Name
+		FROM Organizations
+		WHERE OrganizationID = %s
+	""", (OrganizationID,))
+
+	if not org:
+		flash("Organization not found.", "notfound")
+		return redirect(url_for("organizations"))
+
+	driver = paramQueryDb("""
+		SELECT u.UserID, u.Name, u.Username, d.OrganizationID
+		FROM Users u
+		JOIN Drivers d ON u.UserID = d.DriverID
+		WHERE u.UserID = %s AND u.UserType = "Driver"
+	""", (UserID,))
+
+	if not driver:
+		flash("Driver not found.", "notfound")
+		return redirect(url_for("adminEnrollDriverPage", OrganizationID=OrganizationID))
+
+	if driver["OrganizationID"] not in (None, 0):
+		flash("This driver is already enrolled in an organization.", "validation")
+		return redirect(url_for("adminEnrollDriverPage", OrganizationID=OrganizationID))
+
+	# enroll the driver directly
+	updateDb("""
+		UPDATE Drivers
+		SET OrganizationID = %s
+		WHERE DriverID = %s
+	""", (OrganizationID, UserID))
+
+	# clean up any pending applications for this driver
+	updateDb("""
+		DELETE FROM OrganizationApplications
+		WHERE DriverUName = %s AND ApplicationStatus = "Pending"
+	""", (driver["Username"],))
+
+	flash(f'{driver["Name"]} was enrolled into {org["Name"]}.', "success")
+	return redirect(url_for("adminEnrollDriverPage", OrganizationID=OrganizationID))
 
 @application.route("/sponsor/users")
 def sponsorUserList():
@@ -776,85 +902,105 @@ def userEdit(accountType, UserID):
 
 @application.route("/reports/<ReportType>")
 def report(ReportType):
-    allowed_types = {"passwords", "points", "applications", "logins"}
-    if ReportType not in allowed_types:
-        flash("Unknown report requested.", "validation")
-        return redirect(url_for("home"))
+	allowed_types = {"passwords", "points", "applications", "logins"}
+	if ReportType not in allowed_types:
+		flash("Unknown report requested.", "validation")
+		return redirect(url_for("home"))
 
-    org_id = get_user_org_id()
-    org_name = get_effective_org_name()
+	org_id = get_user_org_id()
+	org_name = get_effective_org_name()
 
-    start = request.args.get("start", "").strip()
-    end = request.args.get("end", "").strip()
-    driver_filter = request.args.get("driver", "").strip()
-    csv_export = request.args.get("format") == "csv"
+	start = request.args.get("start", "").strip()
+	end = request.args.get("end", "").strip()
+	driver_filter = request.args.get("driver", "").strip()
+	csv_export = request.args.get("format") == "csv"
 
-    page = request.args.get("page", 1, type=int)
-    rowsPerPage = request.args.get("pageCount", 10, type=int)
-    offset = (page - 1) * rowsPerPage
+	page = request.args.get("page", 1, type=int)
+	rowsPerPage = request.args.get("pageCount", 10, type=int)
+	offset = (page - 1) * rowsPerPage
 
-    where_clauses = []
-    params = []
+	where_clauses = []
+	params = []
 
-    date_field = {
-        "passwords": "pa.DateAdjusted",
-        "points": "pa.DateAdjusted",
-        "applications": "a.DateApplied",
-        "logins": "LoginDate"
-    }[ReportType]
+	date_field = {
+		"passwords": "pa.DateAdjusted",
+		"points": "pa.DateAdjusted",
+		"applications": "a.DateApplied",
+		"logins": "l.LoginDate"
+	}[ReportType]
 
-    if ReportType in ["points", "applications"] and org_name:
-        if not org_id:
-            flash("Organization not found.", "validation")
-            return redirect(url_for("home"))
-        where_clauses.append("OrganizationID=%s")
-        params.append(org_id)
+	if ReportType in ["points", "applications"] and org_name:
+		if not org_id:
+			flash("Organization not found.", "validation")
+			return redirect(url_for("home"))
 
-    if start:
-        where_clauses.append(f"{date_field} >= %s")
-        params.append(start + " 00:00:00")
+		if ReportType == "points":
+			where_clauses.append("pa.OrganizationID=%s")
+		else:
+			where_clauses.append("a.OrganizationID=%s")
+		params.append(org_id)
 
-    if end:
-        where_clauses.append(f"{date_field} <= %s")
-        params.append(end + " 23:59:59")
+	elif ReportType == "passwords" and org_name:
+		where_clauses.append("COALESCE(ts_org.Name, td_org.Name) = %s")
+		params.append(org_name)
 
-    if ReportType == "points" and driver_filter:
-        like = f"%{driver_filter}%"
-        where_clauses.append("(u.Name LIKE %s OR u.Email LIKE %s OR u.Username LIKE %s)")
-        params.extend([like, like, like])
+	elif ReportType == "logins" and org_name:
+		where_clauses.append("COALESCE(ls_org.Name, ld_org.Name) = %s")
+		params.append(org_name)
 
-    where = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+	if start:
+		where_clauses.append(f"{date_field} >= %s")
+		params.append(start + " 00:00:00")
 
-    if ReportType == "passwords":
-        count_query = f"""
-            SELECT COUNT(*) AS totalRows
-            FROM PasswordAdjustments pa
-            JOIN Users u ON u.Username = pa.AdjustedUName
-            LEFT JOIN Users x ON x.Username = pa.AdjustedByUName
-            {where}
-        """
-        data_query = f"""
-            SELECT
-                pa.DateAdjusted,
-                pa.TypeOfChange,
-                COALESCE(x.Name, pa.AdjustedByUName) AS Actor,
-                u.Name AS Target
-            FROM PasswordAdjustments pa
-            JOIN Users u ON u.Username = pa.AdjustedUName
-            LEFT JOIN Users x ON x.Username = pa.AdjustedByUName
-            {where}
-            ORDER BY pa.DateAdjusted DESC
-        """
-        csv_headers = ["DateAdjusted", "Actor", "Target", "TypeOfChange"]
+	if end:
+		where_clauses.append(f"{date_field} <= %s")
+		params.append(end + " 23:59:59")
 
-    elif ReportType == "points":
-        count_query = f"""
+	if ReportType == "points" and driver_filter:
+		like = f"%{driver_filter}%"
+		where_clauses.append("(u.Name LIKE %s OR u.Email LIKE %s OR u.Username LIKE %s)")
+		params.extend([like, like, like])
+
+	where = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+
+	if ReportType == "passwords":
+		count_query = f"""
+			SELECT COUNT(*) AS totalRows
+			FROM PasswordAdjustments pa
+			JOIN Users u ON u.Username = pa.AdjustedUName
+			LEFT JOIN Sponsors ts ON u.UserID = ts.SponsorID
+			LEFT JOIN Drivers td ON u.UserID = td.DriverID
+			LEFT JOIN Organizations ts_org ON ts.OrganizationID = ts_org.OrganizationID
+			LEFT JOIN Organizations td_org ON td.OrganizationID = td_org.OrganizationID
+			LEFT JOIN Users x ON x.Username = pa.AdjustedByUName
+			{where}
+		"""
+		data_query = f"""
+			SELECT
+				pa.DateAdjusted,
+				pa.TypeOfChange,
+				COALESCE(x.Name, pa.AdjustedByUName) AS Actor,
+				u.Name AS Target
+			FROM PasswordAdjustments pa
+			JOIN Users u ON u.Username = pa.AdjustedUName
+			LEFT JOIN Sponsors ts ON u.UserID = ts.SponsorID
+			LEFT JOIN Drivers td ON u.UserID = td.DriverID
+			LEFT JOIN Organizations ts_org ON ts.OrganizationID = ts_org.OrganizationID
+			LEFT JOIN Organizations td_org ON td.OrganizationID = td_org.OrganizationID
+			LEFT JOIN Users x ON x.Username = pa.AdjustedByUName
+			{where}
+			ORDER BY pa.DateAdjusted DESC
+		"""
+		csv_headers = ["DateAdjusted", "Actor", "Target", "TypeOfChange"]
+
+	elif ReportType == "points":
+		count_query = f"""
             SELECT COUNT(*) AS totalRows
             FROM PointAdjustments pa
             JOIN Users u ON u.Username = pa.DriverUName
             {where}
         """
-        data_query = f"""
+		data_query = f"""
             SELECT
                 pa.DateAdjusted,
                 u.Name AS DriverName,
@@ -872,69 +1018,79 @@ def report(ReportType):
             {where}
             ORDER BY pa.DateAdjusted DESC
         """
-        csv_headers = ["DateAdjusted", "DriverName", "DriverUName", "AdjustedByUName", "DeltaPoints", "AdjustmentReason"]
+		csv_headers = ["DateAdjusted", "DriverName", "DriverUName", "AdjustedByUName", "DeltaPoints", "AdjustmentReason"]
 
-    elif ReportType == "applications":
-        count_query = f"""
+	elif ReportType == "applications":
+		count_query = f"""
             SELECT COUNT(*) AS totalRows
             FROM OrganizationApplications a
             JOIN Organizations o ON a.OrganizationID = o.OrganizationID
             {where}
         """
-        data_query = f"""
-            SELECT
-                a.DateApplied,
-                o.Name,
-                a.DriverUName,
-                a.AcceptedByUName AS ReviewedByUName,
-                a.ApplicationStatus,
-                a.ApplicationReason AS ReviewReason
-            FROM OrganizationApplications a
-            JOIN Organizations o ON a.OrganizationID = o.OrganizationID
-            {where}
-            ORDER BY a.DateApplied DESC
-        """
-        csv_headers = ["DateApplied", "Name", "DriverUName", "ReviewedByUName", "ApplicationStatus", "ReviewReason"]
+		data_query = f"""
+			SELECT
+				a.DateApplied,
+				o.Name,
+				a.DriverUName,
+				a.ReviewedByUName,
+				a.ApplicationStatus,
+				a.ReviewReason
+			FROM OrganizationApplications a
+			JOIN Organizations o ON a.OrganizationID = o.OrganizationID
+			{where}
+			ORDER BY a.DateApplied DESC
+		"""
+		csv_headers = ["DateApplied", "Name", "DriverUName", "ReviewedByUName", "ApplicationStatus", "ReviewReason"]
 
-    else:
-        count_query = f"""
-            SELECT COUNT(*) AS totalRows
-            FROM Logins
-            {where}
-        """
-        data_query = f"""
-            SELECT
-                LoginDate,
-                LoginUser,
-                CASE
-                    WHEN LoginResult = 1 THEN 'Successful Login'
-                    WHEN LoginResult = 0 THEN 'Failed Login'
-                END AS LoginStatus
-            FROM Logins
-            {where}
-            ORDER BY LoginDate DESC
-        """
-        csv_headers = ["LoginDate", "LoginUser", "LoginStatus"]
+	else:
+		count_query = f"""
+			SELECT COUNT(*) AS totalRows
+			FROM Logins l
+			LEFT JOIN Users lu ON (lu.Email = l.LoginUser OR lu.Username = l.LoginUser)
+			LEFT JOIN Sponsors ls ON lu.UserID = ls.SponsorID
+			LEFT JOIN Drivers ld ON lu.UserID = ld.DriverID
+			LEFT JOIN Organizations ls_org ON ls.OrganizationID = ls_org.OrganizationID
+			LEFT JOIN Organizations ld_org ON ld.OrganizationID = ld_org.OrganizationID
+			{where}
+		"""
+		data_query = f"""
+			SELECT
+				l.LoginDate,
+				l.LoginUser,
+				CASE
+					WHEN l.LoginResult = 1 THEN 'Successful Login'
+					WHEN l.LoginResult = 0 THEN 'Failed Login'
+				END AS LoginStatus
+			FROM Logins l
+			LEFT JOIN Users lu ON (lu.Email = l.LoginUser OR lu.Username = l.LoginUser)
+			LEFT JOIN Sponsors ls ON lu.UserID = ls.SponsorID
+			LEFT JOIN Drivers ld ON lu.UserID = ld.DriverID
+			LEFT JOIN Organizations ls_org ON ls.OrganizationID = ls_org.OrganizationID
+			LEFT JOIN Organizations ld_org ON ld.OrganizationID = ld_org.OrganizationID
+			{where}
+			ORDER BY l.LoginDate DESC
+		"""
+		csv_headers = ["LoginDate", "LoginUser", "LoginStatus"]
 
-    rowTotal = selectDb(count_query, tuple(params)) or [{"totalRows": 0}]
+	rowTotal = selectDb(count_query, tuple(params)) or [{"totalRows": 0}]
 
-    if csv_export:
-        rows = selectDb(data_query, tuple(params)) or []
-        return build_csv_response(f"{ReportType}_report.csv", csv_headers, rows)
+	if csv_export:
+		rows = selectDb(data_query, tuple(params)) or []
+		return build_csv_response(f"{ReportType}_report.csv", csv_headers, rows)
 
-    rows = selectDb(data_query + " LIMIT %s OFFSET %s", tuple(list(params) + [rowsPerPage, offset])) or []
+	rows = selectDb(data_query + " LIMIT %s OFFSET %s", tuple(list(params) + [rowsPerPage, offset])) or []
 
-    total_rows = rowTotal[0]["totalRows"] if rowTotal else 0
-    numPages = max(1, math.ceil(total_rows / rowsPerPage)) if rowsPerPage else 1
+	total_rows = rowTotal[0]["totalRows"] if rowTotal else 0
+	numPages = max(1, math.ceil(total_rows / rowsPerPage)) if rowsPerPage else 1
 
-    if session.get("role") == "Admin" and session.get("Organization") == None:
-        nav = "activenav.html"
-    elif session.get("role") == "Admin" and session.get("Organization") != None:
-        nav = "orgnav.html"
-    else:
-        nav = "orgnav.html" if session.get("Organization") else "activenav.html"
+	if session.get("role") == "Admin" and session.get("Organization") == None:
+		nav = "activenav.html"
+	elif session.get("role") == "Admin" and session.get("Organization") != None:
+		nav = "orgnav.html"
+	else:
+		nav = "orgnav.html" if session.get("Organization") else "activenav.html"
 
-    return render_template(
+	return render_template(
         "logReports.html",
         layout=nav,
         rows=rows,
@@ -1258,8 +1414,13 @@ def organizations():
 
 @application.route("/organizations/<int:OrgID>/view")
 def organizationView(OrgID):
-    org = paramQueryDb("SELECT Name FROM Organizations WHERE OrganizationID = %s", (OrgID,))
-    session['Organization'] = org['Name']
+    org = paramQueryDb("SELECT Name, OrganizationID FROM Organizations WHERE OrganizationID = %s", (OrgID,))
+    if not org:
+        flash("Organization not found.", "validation")
+        return redirect(url_for("organizations"))
+
+    session["Organization"] = org["Name"]
+    session["OrgID"] = org["OrganizationID"]
     return redirect(url_for("organization"))
 
 @application.route("/organizations/<int:OrgID>/edit", methods=["POST"])
@@ -1494,9 +1655,9 @@ def adjustDriverPointsPost(UserID):
 def removeOrgUser(UserID):
 	user = selectDb("""SELECT UserType FROM Users WHERE UserID = %s""", (UserID,))
 	if user[0]["UserType"] == "Sponsor":
-		updateDb("""UPDATE Sponsors SET OrganizationID = 0 WHERE SponsorID = %s""", (UserID,))
+		updateDb("""UPDATE Sponsors SET OrganizationID = %s WHERE SponsorID = %s""", (None, UserID,))
 	elif user[0]["UserType"] == "Driver":
-		updateDb("""UPDATE Drivers SET OrganizationID = 0 WHERE DriverID = %s""", (UserID,))
+		updateDb("""UPDATE Drivers SET OrganizationID = %s WHERE DriverID = %s""", (None, UserID,))
 	return redirect(url_for("organizationUsers"))
 
 @application.route("/organization/apply")
