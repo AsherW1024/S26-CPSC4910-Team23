@@ -77,19 +77,18 @@ def get_org_name_for_user(user_id):
     """, (user_id,))
     return row.get("OrganizationName") if row else None
 
-def log_password_event(event_type: str, actor_user_id=None, target_user_id=None, org_id=None):
+def log_password_event(event_type: str, actor_user_id=None, target_user_id=None):
     actor_ip = get_request_ip()
     event_time = datetime.now()
 
-    if org_id is None and target_user_id:
-        org = paramQueryDb("""
-            SELECT o.OrganizationID
-            FROM Users u
-            LEFT JOIN Sponsors s ON u.UserID = s.SponsorID
-            LEFT JOIN Drivers d ON u.UserID = d.DriverID
-            LEFT JOIN Organizations o ON o.Name = COALESCE(s.OrganizationName, d.OrganizationName)
-            WHERE u.UserID = %s
-        """, (target_user_id,))
+    org_name = None
+    for uid in (target_user_id, actor_user_id):
+        if uid and not org_name:
+            org_name = get_org_name_for_user(uid)
+
+    org_id = None
+    if org_name:
+        org = paramQueryDb("SELECT OrganizationID FROM Organizations WHERE Name=%s", (org_name,))
         if org:
             org_id = org.get("OrganizationID")
 
