@@ -559,9 +559,9 @@ def logout():
 	session.pop("lockoutTime", None)
 
 	session.pop("impersonating", None)
-    session.pop("original_UserID", None)
-    session.pop("original_role", None)
-    session.pop("original_Organization", None)
+	session.pop("original_UserID", None)
+	session.pop("original_role", None)
+	session.pop("original_Organization", None)
 
 	return redirect(url_for("home"))
 
