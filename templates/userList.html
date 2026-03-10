@@ -78,6 +78,13 @@
             <td></td>
             {% endif %}
           <td><a class="button is-small" href="/{{ accountType }}/users/{{ u.UserID }}/edit">Edit</a></td>
+          <td>
+            {% if canImpersonate and u.UserType == "Driver" %}
+            <form method="POST" action="/{{ accountType }}/users/{{ u.UserID }}/assume" style="display:inline;">
+              <button class="button is-small is-warning" type="submit">Assume Driver</button>
+            </form>
+            {% endif %}
+          </td>
           {% elif use == "application" %}
           <td>
             <form method="POST" action="/{{ accountType }}/applications/{{ u.UserID }}/accept"
