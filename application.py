@@ -162,18 +162,21 @@ def require_login():
 
 def getOrganization():
 	if "UserID" in session:
-		org = paramQueryDb("""SELECT s.OrganizationName as SponsorOrg, d.OrganizationName as DriverOrg
+		org = paramQueryDb("""SELECT o.Name, o.OrganizationID
 							FROM Users u 
 							LEFT JOIN Sponsors s ON u.UserID = s.SponsorID 
 							LEFT JOIN Drivers d ON u.UserID = d.DriverID
+							LEFT JOIN Organizations o ON o.OrganizationID=COALESCE(s.OrganizationID, d.OrganizationID)
 							WHERE u.UserID = %s""", (session['UserID'],))
 
 		if org:
-			organization = org["SponsorOrg"] or org["DriverOrg"]
+			organization = org["Name"]
 			if organization is not None:
 				session['Organization'] = organization
+				session['OrgID'] = org["OrganizationID"]
 			else:
 				session['Organization'] = None
+				session['OrgID'] = 0
 		else:
 			session.pop("Organization", None)
 
@@ -202,7 +205,7 @@ def registerUser():
 		organization = session['createOrg']
 		session.pop("createOrg", None)
 	
-	if 'Organization' in session:
+	if 'Organization' in session and session["Organization"] != None:
 		organization = session['Organization']
 
 	accountType = request.form.get("accType")
@@ -266,15 +269,20 @@ def registerUser():
 			newUser = paramQueryDb("SELECT UserID FROM Users WHERE Email=%s OR Username=%s", 
 				(email, username))		
 			updateDb(
-				"""INSERT INTO Sponsors (SponsorID, OrganizationName)
-				VALUES (%s, %s)""", (newUser['UserID'], organization))
+				"""INSERT INTO Sponsors (SponsorID, OrganizationID)
+				VALUES (%s, %s)""", (newUser['UserID'], orgExists["OrganizationID"]))
 			flash("Sponsor account created please login", "created")
 		else:	
 			newUser = paramQueryDb("SELECT UserID FROM Users WHERE Email=%s OR Username=%s", 
 				(email, username))
-			updateDb(
-				"""INSERT INTO Drivers (DriverID, OrganizationName)
-				VALUES (%s, %s)""", (newUser['UserID'], organization))
+			if not orgExists:
+				updateDb(
+					"""INSERT INTO Drivers (DriverID, OrganizationID)
+					VALUES (%s, %s)""", (newUser['UserID'], None))
+			else:
+				updateDb(
+					"""INSERT INTO Drivers (DriverID, OrganizationID)
+					VALUES (%s, %s)""", (newUser['UserID'], orgExists["OrganizationID"]))
 			flash("Driver account created please login", "created")
 	if "UserID" in session:
 		getOrganization()
@@ -378,13 +386,8 @@ def loginUser():
 		flash("Welcome Admin, we appreciate your visit to our website!", "admin")
 	elif exists['UserType'] == "Sponsor":
 		flash("Welcome Sponsor, we appreciate your visit to our website!", "sponsor")
-		#userOrg = paramQueryDb("SELECT OrganizationName FROM Sponsors WHERE SponsorID = %s", (exists['id'],))
-		#session['Organization'] = userOrg['OrganizationName']
 	elif exists['UserType'] == "Driver":
 		flash("Welcome Driver, we appreciate your visit to our website!", "driver")
-		#userOrg = paramQueryDb("SELECT OrganizationName FROM Drivers WHERE SponsorID = %s", (exists['id'],))
-		#if userOrg:	
-			#session['Organization'] = userOrg['OrganizationName']
 
 	getOrganization()
 
@@ -471,11 +474,10 @@ def reset_password_post(token):
     org_id = None
     # attempt to infer org via joined sponsor/driver for the target user
     org = paramQueryDb("""
-        SELECT o.OrganizationID
+        SELECT COALESCE(s.OrganizationID, d.OrganizationID)
         FROM Users u
         LEFT JOIN Sponsors s ON u.UserID=s.SponsorID
         LEFT JOIN Drivers d ON u.UserID=d.DriverID
-        LEFT JOIN Organizations o ON o.Name=COALESCE(s.OrganizationName, d.OrganizationName)
         WHERE u.UserID=%s
     """, (rec["UserID"],))
     if org:
@@ -577,7 +579,7 @@ def sponsorUserList():
 		""", (like, like, like, session["UserID"], rowsPerPage, offset))
 	else:
 		rowTotal = selectDb("""
-			SELECT SELECT COUNT(*) AS totalRows
+			SELECT COUNT(*) AS totalRows
 			FROM Users
 			WHERE (UserType = "Sponsor" OR UserType = "Driver") AND 
 				  (UserID <> %s)
@@ -645,7 +647,10 @@ def report(ReportType):
 	if ReportType in ["points", "applications"]:
 		if "Organization" in session and session["Organization"] != None:
 			params = [org_id]
-			where += "OrganizationID=%s"
+			if ReportType == "applications":
+				where += "o.OrganizationID=%s"
+			else:
+				where += "OrganizationID=%s"
 			if start or end:
 				where += " AND "
 		else:
@@ -809,6 +814,7 @@ def deleteUser(accountType, UserID):
 @application.route("/")
 def home():
 	if 'UserID' in session:
+		getOrganization()
 		if session.get("Organization") != None and session.get("Role") == "Admin":
 			session["Organization"]	= None		
 		return render_template("home.html", layout = "activenav.html")
@@ -1062,24 +1068,30 @@ def organizations():
 	
 	return render_template("orgList.html", layout="activenav.html", orgs=orgs, q=q, page=page, pageNum=range(1, numPages + 1), pageRows=rowsPerPage)
 
-@application.route("/organizations/<int:OrgID>/edit")
+@application.route("/organizations/<int:OrgID>/view")
+def organizationView(OrgID):
+    org = paramQueryDb("SELECT Name FROM Organizations WHERE OrganizationID = %s", (OrgID,))
+    session['Organization'] = org['Name']
+    return redirect(url_for("organization"))
+
+@application.route("/organizations/<int:OrgID>/edit", methods=["POST"])
 def organizationEdit(OrgID):
-	org = paramQueryDb("SELECT Name FROM Organizations WHERE OrganizationID = %s", (OrgID,))
-	session['Organization'] = org['Name']
-	return redirect(url_for("organization"))
+	newName = request.form.get("newName")
+	updateDb("UPDATE Organizations SET Name = %s WHERE OrganizationID = %s", (newName, OrgID))
+	return redirect(url_for("organizations"))
 
 @application.route("/organizations/<int:OrgID>/delete", methods=["POST"])
 def organizationDelete(OrgID):
-	org = paramQueryDb("SELECT Name FROM Organizations WHERE OrganizationID = %s", (OrgID,))
-	updateDb("UPDATE Drivers SET OrganizationName = %s WHERE OrganizationName = %s", ("None", org['Name']))
+	updateDb("UPDATE Drivers SET OrganizationID = %s WHERE OrganizationID = %s", ("0", OrgID))
 	updateDb("DELETE FROM Organizations WHERE OrganizationID = %s", (OrgID,))
 	
 	flash("Organization deleted successfully.", "success")
-	return redirect("/organizations")
+	return redirect(url_for("organizations"))
 
 @application.route("/organization")
 def organization():
-	if "Organization" in session or session.get('role') == "Admin":
+	getOrganization()
+	if ("Organization" in session and session["Organization"] != None) or session.get('role') == "Admin":
 		return render_template("organization.html", layout="orgnav.html", organizationName=session["Organization"])
 	else:
 		return render_template("organization.html", layout="orgnav.html", organizationName="None")
@@ -1093,27 +1105,56 @@ def organizationUsers():
 	q = request.args.get("q", "").strip()
 	like = f"%{q}%"
 
+	page = request.args.get("page", 1, type=int)
+	rowsPerPage = request.args.get("pageCount", 10, type=int)
+	offset = (page - 1) * rowsPerPage
+
 	if q:
-		users = selectDb("""
-			SELECT u.UserID, u.UserType, u.UserID, u.Name, u.Email, u.Username, s.OrganizationName, d.OrganizationName, d.TotalPoints
-			FROM Users u LEFT JOIN Sponsors s ON u.UserID = s.SponsorID LEFT JOIN Drivers d ON u.UserID = d.DriverID
+		rowTotal = selectDb("""
+			SELECT COUNT(*) AS totalRows
+			FROM Users u LEFT JOIN Sponsors s ON u.UserID = s.SponsorID 
+			LEFT JOIN Drivers d ON u.UserID = d.DriverID
+			LEFT JOIN Organizations o ON o.OrganizationID=COALESCE(s.OrganizationID, d.OrganizationID)
 			WHERE (u.Name LIKE %s OR u.Email LIKE %s OR u.Username LIKE %s) AND 
 				  (u.UserType = "Sponsor" OR u.UserType = "Driver") AND 
-				  (s.OrganizationName = %s OR d.OrganizationName = %s)
-			ORDER BY Name
-			LIMIT 50
-		""", (like, like, like, session['Organization'], session['Organization']))
-	else:
+				  (o.Name = %s)
+			ORDER BY o.Name
+		""", (like, like, like, session['Organization']))
 		users = selectDb("""
-			SELECT u.UserID, u.UserType, u.UserID, u.Name, u.Email, u.Username, s.OrganizationName, d.OrganizationName, d.TotalPoints
-			FROM Users u LEFT JOIN Sponsors s ON u.UserID = s.SponsorID LEFT JOIN Drivers d ON u.UserID = d.DriverID
+			SELECT u.UserID, u.UserType, u.UserID, u.Name, u.Email, u.Username, o.Name, d.TotalPoints
+			FROM Users u LEFT JOIN Sponsors s ON u.UserID = s.SponsorID 
+			LEFT JOIN Drivers d ON u.UserID = d.DriverID
+			LEFT JOIN Organizations o ON o.OrganizationID=COALESCE(s.OrganizationID, d.OrganizationID)
+			WHERE (u.Name LIKE %s OR u.Email LIKE %s OR u.Username LIKE %s) AND 
+				  (u.UserType = "Sponsor" OR u.UserType = "Driver") AND 
+				  (o.Name = %s)
+			ORDER BY o.Name
+			LIMIT %s OFFSET %s
+		""", (like, like, like, session['Organization'], rowsPerPage, offset))
+	else:
+		rowTotal = selectDb("""
+			SELECT COUNT(*) AS totalRows
+			FROM Users u LEFT JOIN Sponsors s ON u.UserID = s.SponsorID 
+			LEFT JOIN Drivers d ON u.UserID = d.DriverID
+			LEFT JOIN Organizations o ON o.OrganizationID=COALESCE(s.OrganizationID, d.OrganizationID)
 			WHERE (u.UserType = "Sponsor" OR u.UserType = "Driver") AND 
-				  (s.OrganizationName = %s OR d.OrganizationName = %s)
-			ORDER BY Name
-			LIMIT 50
-		""", (session['Organization'], session['Organization']))
+				  (o.Name = %s)
+			ORDER BY o.Name
+		""", (session['Organization'],))
+		users = selectDb("""
+			SELECT u.UserID, u.UserType, u.UserID, u.Name, u.Email, u.Username, o.Name, d.TotalPoints
+			FROM Users u LEFT JOIN Sponsors s ON u.UserID = s.SponsorID 
+			LEFT JOIN Drivers d ON u.UserID = d.DriverID
+			LEFT JOIN Organizations o ON o.OrganizationID=COALESCE(s.OrganizationID, d.OrganizationID)
+			WHERE (u.UserType = "Sponsor" OR u.UserType = "Driver") AND 
+				  (o.Name = %s)
+			ORDER BY o.Name
+			LIMIT %s OFFSET %s
+		""", (session['Organization'], rowsPerPage, offset))
+
+	numPages = math.ceil(rowTotal[0]["totalRows"] / rowsPerPage)
 	
-	return render_template("userList.html", layout="orgnav.html", users=users, q=q, accountType='organization', use="organization")
+	return render_template("userList.html", layout="orgnav.html", users=users, q=q, accountType='organization', use="organization", page=page, pageNum=range(1, numPages + 1), pageRows=rowsPerPage)
 
 @application.route("/organization/users/<int:UserID>/points")
 def adjustDriverPoints(UserID):
@@ -1124,9 +1165,10 @@ def adjustDriverPoints(UserID):
             return guard
 
     driver = paramQueryDb("""
-        SELECT u.UserID, u.Name, u.Email, u.Username, d.OrganizationName, d.TotalPoints
+        SELECT u.UserID, u.Name AS DriverName, u.Email, u.Username, o.Name AS OrgName, d.TotalPoints
         FROM Users u
         JOIN Drivers d ON u.UserID = d.DriverID
+		JOIN Organization o ON d.OrganizationID = o.OrganizationID
         WHERE u.UserID=%s AND u.UserType='Driver'
     """, (UserID,))
 
@@ -1204,9 +1246,9 @@ def adjustDriverPointsPost(UserID):
 def removeOrgUser(UserID):
 	user = selectDb("""SELECT UserType FROM Users WHERE UserID = %s""", (UserID,))
 	if user[0]["UserType"] == "Sponsor":
-		updateDb("""UPDATE Sponsors SET OrganizationName = NULL WHERE SponsorID = %s""", (UserID,))
+		updateDb("""UPDATE Sponsors SET OrganizationID = 0 WHERE SponsorID = %s""", (UserID,))
 	elif user[0]["UserType"] == "Driver":
-		updateDb("""UPDATE Drivers SET OrganizationName = NULL WHERE DriverID = %s""", (UserID,))
+		updateDb("""UPDATE Drivers SET OrganizationID = 0 WHERE DriverID = %s""", (UserID,))
 	return redirect(url_for("organizationUsers"))
 
 @application.route("/organization/apply")
@@ -1216,7 +1258,7 @@ def apply():
 	orgs = selectDb("SELECT OrganizationID, Name FROM Organizations ORDER BY Name DESC", ())
 	application = selectDb("""SELECT o.Name, a.ApplicationStatus 
 							FROM OrganizationApplications a JOIN Organizations o ON a.OrganizationID = o.OrganizationID
-							WHERE a.DriverUName = %s""", (username,))
+							WHERE a.DriverUName = %s and a.ApplicationStatus = %s""", (username, "Pending"))
 	if application:
 		app = application[0]
 	else:
@@ -1234,13 +1276,13 @@ def organization_leave():
         return redirect(url_for("organization"))
 
     updateDb(
-        "UPDATE Drivers SET OrganizationName=%s WHERE DriverID=%s",
-        ("None", session["UserID"])
+        "UPDATE Drivers SET OrganizationID=%s WHERE DriverID=%s",
+        (None, session["UserID"])
     )
 
     session.pop("Organization", None)
     flash("You left the organization.", "success")
-    return redirect(url_for("organization"))
+    return redirect(url_for("home"))
 
 @application.route("/organization/apply", methods=["POST"])
 def applyPost():
@@ -1250,7 +1292,7 @@ def applyPost():
 	timeApplied = datetime.now()
 	updateDb("""INSERT INTO OrganizationApplications (OrganizationID, DriverUName, ApplicationStatus, DateApplied)
 				VALUES (%s, %s, %s, %s)""", (org["OrganizationID"], user['Username'], "Pending", timeApplied))
-	flash(f"You have applied for enrollment in {{ organization }}", "enrolled")
+	flash(f"You have applied for enrollment in { organization } ", "enrolled")
 	return redirect(url_for("apply"))
 
 @application.route("/organization/apply/cancel")
@@ -1266,25 +1308,44 @@ def applications():
 	q = request.args.get("q", "").strip()
 	like = f"%{q}%"
 
+	page = request.args.get("page", 1, type=int)
+	rowsPerPage = request.args.get("pageCount", 10, type=int)
+	offset = (page - 1) * rowsPerPage
+
 	if q:
+		rowTotal = selectDb("""
+			SELECT COUNT(*) AS totalRows
+			FROM OrganizationApplications a JOIN Users u ON a.DriverUName = u.Username JOIN Organizations o ON a.OrganizationID = o.OrganizationID
+			WHERE (u.Name LIKE %s OR u.Email LIKE %s OR u.Username LIKE %s) AND 
+					(u.UserType = "Driver") AND (o.Name = %s) AND a.ApplicationStatus = "Pending"
+			ORDER BY o.Name, u.Name
+			""", (like, like, like, session['Organization']))
 		users = selectDb("""
 			SELECT u.UserID, u.Username, u.Name, u.Email, u.UserType, a.DateApplied, o.Name
 			FROM OrganizationApplications a JOIN Users u ON a.DriverUName = u.Username JOIN Organizations o ON a.OrganizationID = o.OrganizationID
 			WHERE (u.Name LIKE %s OR u.Email LIKE %s OR u.Username LIKE %s) AND 
 					(u.UserType = "Driver") AND (o.Name = %s) AND a.ApplicationStatus = "Pending"
 			ORDER BY o.Name, u.Name
-			LIMIT 50
-			""", (like, like, like, session['Organization']))
+			LIMIT %s OFFSET %s
+			""", (like, like, like, session['Organization'], rowsPerPage, offset))
 	else:
+		rowTotal = selectDb("""
+			SELECT COUNT(*) AS totalRows
+			FROM OrganizationApplications a JOIN Users u ON a.DriverUName = u.Username JOIN Organizations o ON a.OrganizationID = o.OrganizationID
+			WHERE (u.UserType = "Driver") AND (o.Name = %s) AND a.ApplicationStatus = "Pending"
+			ORDER BY o.Name, u.Name
+			""", (session['Organization'],))
 		users = selectDb("""
 			SELECT u.UserID, u.Username, u.Name, u.Email, u.UserType, a.DateApplied, o.Name
 			FROM OrganizationApplications a JOIN Users u ON a.DriverUName = u.Username JOIN Organizations o ON a.OrganizationID = o.OrganizationID
 			WHERE (u.UserType = "Driver") AND (o.Name = %s) AND a.ApplicationStatus = "Pending"
 			ORDER BY o.Name, u.Name
-			LIMIT 50
-			""", (session['Organization'],))
+			LIMIT %s OFFSET %s
+			""", (session['Organization'], rowsPerPage, offset))
 
-	return render_template("userList.html", layout="orgnav.html", users=users, q=q, accountType='organization', use="application")
+	numPages = math.ceil(rowTotal[0]["totalRows"] / rowsPerPage)
+
+	return render_template("userList.html", layout="orgnav.html", users=users, q=q, accountType='organization', use="application", page=page, pageNum=range(1, numPages + 1), pageRows=rowsPerPage)
 
 @application.route("/organization/applications/<int:UserID>/accept", methods=["POST"])
 def acceptedApplications(UserID):
@@ -1292,8 +1353,8 @@ def acceptedApplications(UserID):
 	user = paramQueryDb("""SELECT Username FROM Users WHERE UserID = %s""", (session['UserID'],))
 	driver = paramQueryDb("""SELECT Username FROM Users WHERE UserID = %s""", (UserID,))
 	timeJoined= datetime.now()
-	updateDb("""UPDATE OrganizationApplications SET ApplicationStatus = %s, AcceptedByUName = %s, ApplicationReason = %s WHERE DriverUName = %s""", ("Accepted", user["Username"], reason, driver["Username"]))
-	updateDb("""UPDATE Drivers SET OrganizationName = %s, DateJoined = %s WHERE DriverID = %s""", (session['Organization'], timeJoined, UserID))
+	updateDb("""UPDATE OrganizationApplications SET ApplicationStatus = %s, ReviewedByUName = %s, ReviewReason = %s WHERE DriverUName = %s""", ("Accepted", user["Username"], reason, driver["Username"]))
+	updateDb("""UPDATE Drivers SET OrganizationID = %s, DateJoined = %s WHERE DriverID = %s""", (session['OrgID'], timeJoined, UserID))
 	return redirect(url_for("applications"))
 
 @application.route("/organization/applications/<int:UserID>/reject", methods=["POST"])
@@ -1301,20 +1362,20 @@ def rejectedApplications(UserID):
 	reason = request.form.get("rejectReason")
 	user = paramQueryDb("""SELECT Username FROM Users WHERE UserID = %s""", (session['UserID'],))
 	driver = paramQueryDb("""SELECT Username FROM Users WHERE UserID = %s""", (UserID,))
-	updateDb("""UPDATE OrganizationApplications SET ApplicationStatus = %s, AcceptedByUName = %s, ApplicationReason = %s WHERE DriverUName = %s""", ("Rejected", user["Username"], reason, driver["Username"]))
+	updateDb("""UPDATE OrganizationApplications SET ApplicationStatus = %s, ReviewedByUName = %s, ReviewReason = %s WHERE DriverUName = %s""", ("Rejected", user["Username"], reason, driver["Username"]))
 	return redirect(url_for("applications"))
 
 @application.route("/organization/point_value")
 def pointValueScreen():
 	if 'UserID' in session and session.get("role")=="Sponsor":
 		#get org info from db
-		orgName = paramQueryDb(query="SELECT OrganizationName FROM Sponsors WHERE SponsorID=%s", params=(session["UserID"]))["OrganizationName"]
-		orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName))["OrganizationID"]
+		#orgName = paramQueryDb(query="SELECT OrganizationName FROM Sponsors WHERE SponsorID=%s", params=(session["UserID"]))["OrganizationName"]
+		#orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName))["OrganizationID"]
 
 		#provide current point value found in db
 		#later can remove try catch when point value is set on org creation
 		try:
-			pointVal = paramQueryDb(query="SELECT PointValue FROM Point_Values WHERE OrgID=%s", params=(orgID))["PointValue"]
+			pointVal = paramQueryDb(query="SELECT PointValue FROM Point_Values WHERE OrgID=%s", params=(session["OrgID"]))["PointValue"]
 		except Exception as e:
 			print(e)
 			pointVal = 1.00
@@ -1331,10 +1392,10 @@ def changePointValue():
 			newPointVal = round(newPointVal, 2)
 
 			#get org info from db
-			orgName = paramQueryDb(query="SELECT OrganizationName FROM Sponsors WHERE SponsorID=%s", params=(session["UserID"]))["OrganizationName"]
-			orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName))["OrganizationID"]
+			#orgName = paramQueryDb(query="SELECT OrganizationName FROM Sponsors WHERE SponsorID=%s", params=(session["UserID"]))["OrganizationName"]
+			#orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName))["OrganizationID"]
 
-			updateDb(query="UPDATE Point_Values SET OrgID=%s, PointValue=%s", params=(orgID, newPointVal))
+			updateDb(query="UPDATE Point_Values SET OrgID=%s, PointValue=%s", params=(session["OrgID"], newPointVal))
 
 			return jsonify({
 				"message": "Success",
@@ -1357,11 +1418,11 @@ def getPointValue():
 	if 'UserID' in session:
 		try:
 			#get org info from db
-			orgName = paramQueryDb(query="SELECT OrganizationName FROM Sponsors WHERE SponsorID=%s", params=(session["UserID"]))["OrganizationName"]
-			orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName))["OrganizationID"]
+			#orgName = paramQueryDb(query="SELECT OrganizationName FROM Sponsors WHERE SponsorID=%s", params=(session["UserID"]))["OrganizationName"]
+			#orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName))["OrganizationID"]
 
 			#get point value tied to org
-			point_value = paramQueryDb(query="SELECT PointValue FROM Point_Values WHERE OrgID=%s", params=(orgID))["PointValue"]
+			point_value = paramQueryDb(query="SELECT PointValue FROM Point_Values WHERE OrgID=%s", params=(session["OrgID"]))["PointValue"]
 
 			#return point value
 			return jsonify({
@@ -1392,8 +1453,9 @@ def catalog():
 def catalogRules():
 	if 'UserID' in session and session.get("role")=="Sponsor":
 		#get org info for user
-		orgName = paramQueryDb(query="SELECT OrganizationName FROM Sponsors WHERE SponsorID=%s", params=(session.get("UserID")))["OrganizationName"]
-		orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName))["OrganizationID"]
+		#orgName = paramQueryDb(query="SELECT OrganizationName FROM Sponsors WHERE SponsorID=%s", params=(session.get("UserID")))["OrganizationName"]
+		#orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName))["OrganizationID"]
+		orgID = session["OrgID"]
 
 		#get data from Catalog_Rules
 		try:
@@ -1454,7 +1516,7 @@ def catalogRules():
 			print(e)
 			allowedBrands = ["keep-all"]
 
-		return render_template("catalog_rules.html", layout="activenav.html", orgName=orgName, rules=rules, allowedCategories=allowedCategories, allowedBrands=allowedBrands)
+		return render_template("catalog_rules.html", layout="orgnav.html", orgName=session["Organization"], rules=rules, allowedCategories=allowedCategories, allowedBrands=allowedBrands)
 	return redirect(url_for("home"))
 
 
@@ -1465,8 +1527,9 @@ Where sponsors connect to when submitting catalog rules form
 def changeCatalogRules():
 	if 'UserID' in session and session.get("role")=="Sponsor":
 		#get org info from db
-		orgName = paramQueryDb(query="SELECT OrganizationName FROM Sponsors WHERE SponsorID=%s", params=(session["UserID"]))["OrganizationName"]
-		orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName))["OrganizationID"]
+		#orgName = paramQueryDb(query="SELECT OrganizationName FROM Sponsors WHERE SponsorID=%s", params=(session["UserID"]))["OrganizationName"]
+		#orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName))["OrganizationID"]
+		orgID = session["OrgID"]
 
 		minPoints = request.form.get("min-price")
 		maxPoints = request.form.get("max-price")
@@ -1605,11 +1668,12 @@ by their point worth in their org
 def adjustPrice(data):
 	try:
 		#get org info from db
-		if session["role"] == "Sponsor":
-			orgName = paramQueryDb(query="SELECT OrganizationName FROM Sponsors WHERE SponsorID=%s", params=(session["UserID"]))["OrganizationName"]
-		elif session["role"] == "Driver":
-			orgName = paramQueryDb(query="SELECT OrganizationName FROM Drivers WHERE DriverID=%s", params=(session["UserID"]))["OrganizationName"]
-		orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName))["OrganizationID"]
+		#if session["role"] == "Sponsor":
+		#	orgName = paramQueryDb(query="SELECT OrganizationName FROM Sponsors WHERE SponsorID=%s", params=(session["UserID"]))["OrganizationName"]
+		#elif session["role"] == "Driver":
+		#	orgName = paramQueryDb(query="SELECT OrganizationName FROM Drivers WHERE DriverID=%s", params=(session["UserID"]))["OrganizationName"]
+		#orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName))["OrganizationID"]
+		orgID = session["OrgID"]
 
 		#get point value tied to org
 		point_value = paramQueryDb(query="SELECT PointValue FROM Point_Values WHERE OrgID=%s", params=(orgID))["PointValue"]
@@ -1639,8 +1703,9 @@ exclusion list found in the db
 def removeExclusions(data):
 	try:
 		#get org info from db
-		orgName = paramQueryDb(query="SELECT OrganizationName FROM Drivers WHERE DriverID=%s", params=(session["UserID"]))["OrganizationName"]
-		orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName))["OrganizationID"]
+		#orgName = paramQueryDb(query="SELECT OrganizationName FROM Drivers WHERE DriverID=%s", params=(session["UserID"]))["OrganizationName"]
+		#orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName))["OrganizationID"]
+		orgID = session["OrgID"]
 
 		queryResult = queryDb(f"SELECT productID FROM Catalog_Exclusion_List WHERE orgID={orgID}")
 		
@@ -1697,20 +1762,21 @@ def filterByAllowedCategories(data):
 		userID = session.get("UserID")
 
 		#get organization name from specific user table
-		getOrgNameQuery = f"""
-			SELECT OrganizationName
-			FROM {userType}s
-			WHERE {userType}ID = %s
-		"""
-		orgName = paramQueryDb(query=getOrgNameQuery, params=(userID)).get("OrganizationName")
+		#getOrgNameQuery = f"""
+		#	SELECT OrganizationName
+		#	FROM {userType}s
+		#	WHERE {userType}ID = %s
+		#"""
+		#orgName = paramQueryDb(query=getOrgNameQuery, params=(userID)).get("OrganizationName")
 
 		#get organization ID from Organizations table
-		getOrgIDQuery = """
-			SELECT OrganizationID
-			FROM Organizations
-			WHERE Name=%s
-		"""
-		orgID = paramQueryDb(query=getOrgIDQuery, params=(orgName)).get("OrganizationID")
+		#getOrgIDQuery = """
+		#	SELECT OrganizationID
+		#	FROM Organizations
+		#	WHERE Name=%s
+		#"""
+		#orgID = paramQueryDb(query=getOrgIDQuery, params=(orgName)).get("OrganizationID")
+		orgID = session["OrgID"]
 
 		getAllowedCategoriesQuery = f"""
 			SELECT category
@@ -1749,20 +1815,21 @@ def filterByAllowedBrands(data):
 		userID = session.get("UserID")
 
 		#get organization name from specific user table
-		getOrgNameQuery = f"""
-			SELECT OrganizationName
-			FROM {userType}s
-			WHERE {userType}ID = %s
-		"""
-		orgName = paramQueryDb(query=getOrgNameQuery, params=(userID)).get("OrganizationName")
+		#getOrgNameQuery = f"""
+		#	SELECT OrganizationName
+		#	FROM {userType}s
+		#	WHERE {userType}ID = %s
+		#"""
+		#orgName = paramQueryDb(query=getOrgNameQuery, params=(userID)).get("OrganizationName")
 
 		#get organization ID from Organizations table
-		getOrgIDQuery = """
-			SELECT OrganizationID
-			FROM Organizations
-			WHERE Name=%s
-		"""
-		orgID = paramQueryDb(query=getOrgIDQuery, params=(orgName)).get("OrganizationID")
+		#getOrgIDQuery = """
+		#	SELECT OrganizationID
+		#	FROM Organizations
+		#	WHERE Name=%s
+		#"""
+		#orgID = paramQueryDb(query=getOrgIDQuery, params=(orgName)).get("OrganizationID")
+		orgID = session["OrgID"]
 
 		getAllowedBrandsQuery = f"""
 			SELECT brand
@@ -1800,21 +1867,22 @@ def filterByRules(data):
 		userID = session.get("UserID")
 
 		#get organization name from specific user table
-		getOrgNameQuery = f"""
-			SELECT OrganizationName
-			FROM {userType}s
-			WHERE {userType}ID = %s
-		"""
-		orgName = paramQueryDb(query=getOrgNameQuery, params=(userID)).get("OrganizationName")
+		#getOrgNameQuery = f"""
+		#	SELECT OrganizationName
+		#	FROM {userType}s
+		#	WHERE {userType}ID = %s
+		#"""
+		#orgName = paramQueryDb(query=getOrgNameQuery, params=(userID)).get("OrganizationName")
 
 		#get organization ID from Organizations table
-		getOrgIDQuery = """
-			SELECT OrganizationID
-			FROM Organizations
-			WHERE Name=%s
-		"""
-		orgID = paramQueryDb(query=getOrgIDQuery, params=(orgName)).get("OrganizationID")
-		
+		#getOrgIDQuery = """
+		#	SELECT OrganizationID
+		#	FROM Organizations
+		#	WHERE Name=%s
+		#"""
+		#orgID = paramQueryDb(query=getOrgIDQuery, params=(orgName)).get("OrganizationID")
+		orgID = session["OrgID"]
+
 		#get catalog rules for organization
 		try:
 			getRulesQuery = """
@@ -1918,8 +1986,9 @@ def getExcludedProducts():
 	if "UserID" in session and userType == "Sponsor":
 		try:
 			#get org info from db
-			orgName = paramQueryDb(query="SELECT OrganizationName FROM Sponsors WHERE SponsorID=%s", params=(session["UserID"]))["OrganizationName"]
-			orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName))["OrganizationID"]
+			#orgName = paramQueryDb(query="SELECT OrganizationName FROM Sponsors WHERE SponsorID=%s", params=(session["UserID"]))["OrganizationName"]
+			#orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName))["OrganizationID"]
+			orgID = session["OrgID"]
 
 			products = queryDb(query=f"SELECT productID FROM Catalog_Exclusion_List WHERE orgID={orgID}")
 
@@ -1932,7 +2001,7 @@ def getExcludedProducts():
 			#make list of product ids to send back to the javascript
 			productList = []
 			for product in products:
-				id = product["productID"];
+				id = product["productID"]
 				productList.append(id)
 
 			return jsonify({
@@ -1956,8 +2025,9 @@ def excludeProduct():
 	if "UserID" in session and userType == "Sponsor":
 		try:
 			#get org info from db
-			orgName = paramQueryDb(query="SELECT OrganizationName FROM Sponsors WHERE SponsorID=%s", params=(session["UserID"]))["OrganizationName"]
-			orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName))["OrganizationID"]
+			#orgName = paramQueryDb(query="SELECT OrganizationName FROM Sponsors WHERE SponsorID=%s", params=(session["UserID"]))["OrganizationName"]
+			#orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName))["OrganizationID"]
+			orgID = session["OrgID"]
 
 			#get id of product being excluded from catalog
 			data = request.json
@@ -2010,8 +2080,9 @@ def addToWishList():
 
 		userID = session.get("UserID")
 
-		orgName = paramQueryDb(query="SELECT OrganizationName FROM Drivers WHERE DriverID=%s", params=(userID)).get("OrganizationName")
-		orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName)).get("OrganizationID")
+		#orgName = paramQueryDb(query="SELECT OrganizationName FROM Drivers WHERE DriverID=%s", params=(userID)).get("OrganizationName")
+		#orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName)).get("OrganizationID")
+		orgID = session["OrgID"]
 
 		insertWishlistProductQuery = """
 			INSERT INTO Wishlist
@@ -2043,8 +2114,9 @@ def removeFromWishList():
 
 		userID = session.get("UserID")
 
-		orgName = paramQueryDb(query="SELECT OrganizationName FROM Drivers WHERE DriverID=%s", params=(userID)).get("OrganizationName")
-		orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName)).get("OrganizationID")
+		#orgName = paramQueryDb(query="SELECT OrganizationName FROM Drivers WHERE DriverID=%s", params=(userID)).get("OrganizationName")
+		#orgID = paramQueryDb(query="SELECT OrganizationID FROM Organizations WHERE Name=%s", params=(orgName)).get("OrganizationID")
+		orgID = session.get("OrgID")
 
 		deleteFromWishlistQuery = """
 			DELETE FROM Wishlist
@@ -2129,6 +2201,26 @@ def wishlist():
 		return render_template("wishlist.html", layout="activenav.html", wishlistData=wishlistData)
 	return redirect(url_for("home"))
 
+@application.route("/cart/add", methods=["POST"])
+def addToCart():
+	if "UserID" in session:
+		userID = session.get("UserID")
+		orgID = session.get("OrgID")
+		productID = request.json.get("productID")
+
+		try:
+			addToCartQuery = """
+				INSERT INTO Cart
+				(userID, orgID, productID, amount)
+				VALUES (%s, %s, %s, %s)
+			"""
+			updateDb(query=addToCartQuery, params=(userID, orgID, productID, 1))
+		except Exception as e:
+			print(f"Issue with query in '/car/add': {e}")
+			return jsonify({"message": "Issue updating cart"}), 400
+		
+		return jsonify({"message": "Success"}), 200
+	return jsonify({"message": "Permission error"}), 400
 """
 This lets us test locally. Should not execute in AWS
 """

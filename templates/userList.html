@@ -81,8 +81,8 @@
           {% elif use == "application" %}
           <td>
             <form method="POST" action="/{{ accountType }}/applications/{{ u.UserID }}/accept"
-                    style="display:inline;" onsubmit="return promptUserAccept();">
-              <input type="hidden" name="acceptReason" id="acceptReason">
+                    style="display:inline;" onsubmit="return promptUserAccept({{ u.UserID }});">
+              <input type="hidden" name="acceptReason" id="acceptReason_{{ u.UserID }}">
               <button class="button is-small is-success" type="submit">
                 Accept
               </button>
@@ -106,8 +106,8 @@
             </form>
             {% elif use == "application" %}
             <form method="POST" action="/{{ accountType }}/applications/{{ u.UserID }}/reject"
-                  style="display:inline;" onsubmit="return promptUserReject();">
-              <input type="hidden" name="rejectReason" id="rejectReason">
+                  style="display:inline;" onsubmit="return promptUserReject({{ u.UserID }});">
+              <input type="hidden" name="rejectReason" id="rejectReason_{{ u.UserID }}">
               <button class="button is-small is-danger" type="submit">
                 Reject
               </button>

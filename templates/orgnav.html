@@ -13,11 +13,12 @@
 <body>
     <div class="topnav">
         <div class="nav-left">
-            <a href="/"> Exit Organization </a>
-            <a href="/catalog"> Catalog </a>
             {% if session.get('role') == "Admin" %}
-                <a href="/organizations"> Organizations </a>
+                <a href="/organizations"> Exit Organization </a>
+            {% else %}
+                <a href="/"> Exit Organization </a>
             {% endif %}
+            <a href="/catalog"> Catalog </a>
             {% if session.get('role') != "Driver" %}
                 {% if session.get('role') != "Driver" %}
                     <a href="/organization/applications"> Applications </a>
@@ -45,7 +46,6 @@
                     {% endif %}
                     </div>
                 </div>
-            {% endif %}
             <div class="dropdown">
                 <button class="dropbtn" type="button">Reports</button>
                 <div class="dropdown-content">
@@ -57,6 +57,12 @@
                     <a href="/reports/points">Points Report</a>
                 </div>
             </div>
+            {% elif session.get('role') == "Driver" %}
+                <form id="leaveform" method="POST" action="/organization/leave"
+                  style="display:inline;" onsubmit="return confirmOrgLeave();">
+                    <a onclick="document.getElementById('leaveform').submit()">Leave Organization</a>
+                </form>
+            {% endif %}
             <div class="dropdown">
                 <button class="icon-user dropbtn" type="button">
                     <i class="fa fa-user fa-1x"></i>
