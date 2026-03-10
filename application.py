@@ -668,7 +668,7 @@ def adminViewAsUser(UserID):
 		return redirect(url_for("adminUserList"))
 
 	# save the real admin identity only once
-	if not is_impersonating():
+	if "admin_real_UserID" not in session:
 		session["admin_real_UserID"] = session["UserID"]
 		session["admin_real_role"] = session["role"]
 		session["admin_real_Organization"] = session.get("Organization")
