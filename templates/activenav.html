@@ -62,12 +62,20 @@
                 <div class="dropdown-content">
                     <a href="/profile">Profile</a>
                     <a href="/settings">Settings</a>
+                
                     {% if session.get('role') == "Driver" %}
                         <a href="/wishlist">Wishlist</a>
                     {% elif session.get('role') == "Admin" %}
                         <a href="/admin/users">Edit Users</a>
                     {% elif session.get('role') == "Sponsor" %}
                         <a href="/sponsor/users">Edit Users</a>
+                    {% endif %}
+                    {% if session.get("admin_real_UserID") %}
+                    <form method="POST" action="/admin/stop-view-as" style="margin:0;">
+                        <button class="button is-white is-fullwidth" type="submit">
+                            Stop Viewing As
+                        </button>
+                    </form>
                     {% endif %}
                     <a href="/about"> About us </a>
                     <a href="/logout">Logout</a>
