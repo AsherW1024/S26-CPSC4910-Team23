@@ -807,8 +807,20 @@ def report(ReportType):
 		if not org_id:
 			flash("Organization not found.", "validation")
 			return redirect(url_for("home"))
-		where_clauses.append("OrganizationID=%s")
+
+		if ReportType == "points":
+			where_clauses.append("pa.OrganizationID=%s")
+		else:
+			where_clauses.append("a.OrganizationID=%s")
 		params.append(org_id)
+
+	elif ReportType == "passwords" and org_name:
+		where_clauses.append("COALESCE(ts_org.Name, td_org.Name) = %s")
+		params.append(org_name)
+
+	elif ReportType == "logins" and org_name:
+		where_clauses.append("COALESCE(ls_org.Name, ld_org.Name) = %s")
+		params.append(org_name)
 
 	if start:
 		where_clauses.append(f"{date_field} >= %s")
