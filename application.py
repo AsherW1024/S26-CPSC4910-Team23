@@ -837,15 +837,19 @@ def report(ReportType):
 
 	where = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
 
-    if ReportType == "passwords":
-        count_query = f"""
-            SELECT COUNT(*) AS totalRows
-            FROM PasswordAdjustments pa
-            JOIN Users u ON u.Username = pa.AdjustedUName
-            LEFT JOIN Users x ON x.Username = pa.AdjustedByUName
-            {where}
-        """
-        data_query = f"""
+	if ReportType == "passwords":
+		count_query = f"""
+			SELECT COUNT(*) AS totalRows
+			FROM PasswordAdjustments pa
+			JOIN Users u ON u.Username = pa.AdjustedUName
+			LEFT JOIN Sponsors ts ON u.UserID = ts.SponsorID
+			LEFT JOIN Drivers td ON u.UserID = td.DriverID
+			LEFT JOIN Organizations ts_org ON ts.OrganizationID = ts_org.OrganizationID
+			LEFT JOIN Organizations td_org ON td.OrganizationID = td_org.OrganizationID
+			LEFT JOIN Users x ON x.Username = pa.AdjustedByUName
+			{where}
+		"""
+		data_query = f"""
             SELECT
                 pa.DateAdjusted,
                 pa.TypeOfChange,
@@ -857,16 +861,16 @@ def report(ReportType):
             {where}
             ORDER BY pa.DateAdjusted DESC
         """
-        csv_headers = ["DateAdjusted", "Actor", "Target", "TypeOfChange"]
+		csv_headers = ["DateAdjusted", "Actor", "Target", "TypeOfChange"]
 
-    elif ReportType == "points":
-        count_query = f"""
+	elif ReportType == "points":
+		count_query = f"""
             SELECT COUNT(*) AS totalRows
             FROM PointAdjustments pa
             JOIN Users u ON u.Username = pa.DriverUName
             {where}
         """
-        data_query = f"""
+		data_query = f"""
             SELECT
                 pa.DateAdjusted,
                 u.Name AS DriverName,
@@ -884,16 +888,16 @@ def report(ReportType):
             {where}
             ORDER BY pa.DateAdjusted DESC
         """
-        csv_headers = ["DateAdjusted", "DriverName", "DriverUName", "AdjustedByUName", "DeltaPoints", "AdjustmentReason"]
+		csv_headers = ["DateAdjusted", "DriverName", "DriverUName", "AdjustedByUName", "DeltaPoints", "AdjustmentReason"]
 
-    elif ReportType == "applications":
-        count_query = f"""
+	elif ReportType == "applications":
+		count_query = f"""
             SELECT COUNT(*) AS totalRows
             FROM OrganizationApplications a
             JOIN Organizations o ON a.OrganizationID = o.OrganizationID
             {where}
         """
-        data_query = f"""
+		data_query = f"""
             SELECT
                 a.DateApplied,
                 o.Name,
@@ -906,15 +910,15 @@ def report(ReportType):
             {where}
             ORDER BY a.DateApplied DESC
         """
-        csv_headers = ["DateApplied", "Name", "DriverUName", "ReviewedByUName", "ApplicationStatus", "ReviewReason"]
+		csv_headers = ["DateApplied", "Name", "DriverUName", "ReviewedByUName", "ApplicationStatus", "ReviewReason"]
 
-    else:
-        count_query = f"""
+	else:
+		count_query = f"""
             SELECT COUNT(*) AS totalRows
             FROM Logins
             {where}
         """
-        data_query = f"""
+		data_query = f"""
             SELECT
                 LoginDate,
                 LoginUser,
@@ -926,27 +930,27 @@ def report(ReportType):
             {where}
             ORDER BY LoginDate DESC
         """
-        csv_headers = ["LoginDate", "LoginUser", "LoginStatus"]
+		csv_headers = ["LoginDate", "LoginUser", "LoginStatus"]
 
-    rowTotal = selectDb(count_query, tuple(params)) or [{"totalRows": 0}]
+	rowTotal = selectDb(count_query, tuple(params)) or [{"totalRows": 0}]
 
-    if csv_export:
-        rows = selectDb(data_query, tuple(params)) or []
-        return build_csv_response(f"{ReportType}_report.csv", csv_headers, rows)
+	if csv_export:
+		rows = selectDb(data_query, tuple(params)) or []
+		return build_csv_response(f"{ReportType}_report.csv", csv_headers, rows)
 
-    rows = selectDb(data_query + " LIMIT %s OFFSET %s", tuple(list(params) + [rowsPerPage, offset])) or []
+	rows = selectDb(data_query + " LIMIT %s OFFSET %s", tuple(list(params) + [rowsPerPage, offset])) or []
 
-    total_rows = rowTotal[0]["totalRows"] if rowTotal else 0
-    numPages = max(1, math.ceil(total_rows / rowsPerPage)) if rowsPerPage else 1
+	total_rows = rowTotal[0]["totalRows"] if rowTotal else 0
+	numPages = max(1, math.ceil(total_rows / rowsPerPage)) if rowsPerPage else 1
 
-    if session.get("role") == "Admin" and session.get("Organization") == None:
-        nav = "activenav.html"
-    elif session.get("role") == "Admin" and session.get("Organization") != None:
-        nav = "orgnav.html"
-    else:
-        nav = "orgnav.html" if session.get("Organization") else "activenav.html"
+	if session.get("role") == "Admin" and session.get("Organization") == None:
+		nav = "activenav.html"
+	elif session.get("role") == "Admin" and session.get("Organization") != None:
+		nav = "orgnav.html"
+	else:
+		nav = "orgnav.html" if session.get("Organization") else "activenav.html"
 
-    return render_template(
+	return render_template(
         "logReports.html",
         layout=nav,
         rows=rows,
