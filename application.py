@@ -485,12 +485,18 @@ def forgot_password():
 @application.route("/forgot_password", methods=["POST"])
 def forgot_password_post():
     email = request.form.get("email", "").strip()
+    last = session.get("last_reset_request")
+    now = datetime.now().timestamp()
+
+    if last and (now - last) < 10:
+        flash("Please wait a moment before trying again.", "resetFail")
+        return redirect(url_for("forgot_password"))
+    session["last_reset_request"] = now
 
     if not email:
         flash("Please enter an email.", "resetFail")
         return redirect(url_for("forgot_password"))
 
-    # Always act the same (no account enumeration)
     user = paramQueryDb("SELECT UserID FROM Users WHERE Email=%s", (email,))
     if user:
         log_password_event("reset_requested", actor_user_id=user["UserID"], target_user_id=user["UserID"])
@@ -500,14 +506,11 @@ def forgot_password_post():
         expires = datetime.now() + timedelta(minutes=30)
 
         updateDb("""
-            INSERT INTO PasswordResetTokens
-            (UserID, TokenHash, ExpiresAt, UsedAt, CreatedAt, RequestIP)
+            INSERT INTO PasswordResetTokens (UserID, TokenHash, ExpiresAt, UsedAt, CreatedAt, RequestIP)
             VALUES (%s, %s, %s, NULL, %s, %s)
         """, (user["UserID"], token_hash, expires, datetime.now(), get_request_ip()))
 
         log_password_event("reset_issued", actor_user_id=user["UserID"], target_user_id=user["UserID"])
-
-        # Demo-only: show reset link token
         flash(f"Reset link (demo): /reset_password/{raw_token}", "resetSent")
 
     flash("If an account exists for that email, reset instructions were sent.", "resetSent")
