@@ -776,54 +776,54 @@ def userEdit(accountType, UserID):
 
 @application.route("/reports/<ReportType>")
 def report(ReportType):
-    allowed_types = {"passwords", "points", "applications", "logins"}
-    if ReportType not in allowed_types:
-        flash("Unknown report requested.", "validation")
-        return redirect(url_for("home"))
+	allowed_types = {"passwords", "points", "applications", "logins"}
+	if ReportType not in allowed_types:
+		flash("Unknown report requested.", "validation")
+		return redirect(url_for("home"))
 
-    org_id = get_user_org_id()
-    org_name = get_effective_org_name()
+	org_id = get_user_org_id()
+	org_name = get_effective_org_name()
 
-    start = request.args.get("start", "").strip()
-    end = request.args.get("end", "").strip()
-    driver_filter = request.args.get("driver", "").strip()
-    csv_export = request.args.get("format") == "csv"
+	start = request.args.get("start", "").strip()
+	end = request.args.get("end", "").strip()
+	driver_filter = request.args.get("driver", "").strip()
+	csv_export = request.args.get("format") == "csv"
 
-    page = request.args.get("page", 1, type=int)
-    rowsPerPage = request.args.get("pageCount", 10, type=int)
-    offset = (page - 1) * rowsPerPage
+	page = request.args.get("page", 1, type=int)
+	rowsPerPage = request.args.get("pageCount", 10, type=int)
+	offset = (page - 1) * rowsPerPage
 
-    where_clauses = []
-    params = []
+	where_clauses = []
+	params = []
 
-    date_field = {
-        "passwords": "pa.DateAdjusted",
-        "points": "pa.DateAdjusted",
-        "applications": "a.DateApplied",
-        "logins": "LoginDate"
-    }[ReportType]
+	date_field = {
+		"passwords": "pa.DateAdjusted",
+		"points": "pa.DateAdjusted",
+		"applications": "a.DateApplied",
+		"logins": "l.LoginDate"
+	}[ReportType]
 
-    if ReportType in ["points", "applications"] and org_name:
-        if not org_id:
-            flash("Organization not found.", "validation")
-            return redirect(url_for("home"))
-        where_clauses.append("OrganizationID=%s")
-        params.append(org_id)
+	if ReportType in ["points", "applications"] and org_name:
+		if not org_id:
+			flash("Organization not found.", "validation")
+			return redirect(url_for("home"))
+		where_clauses.append("OrganizationID=%s")
+		params.append(org_id)
 
-    if start:
-        where_clauses.append(f"{date_field} >= %s")
-        params.append(start + " 00:00:00")
+	if start:
+		where_clauses.append(f"{date_field} >= %s")
+		params.append(start + " 00:00:00")
 
-    if end:
-        where_clauses.append(f"{date_field} <= %s")
-        params.append(end + " 23:59:59")
+	if end:
+		where_clauses.append(f"{date_field} <= %s")
+		params.append(end + " 23:59:59")
 
-    if ReportType == "points" and driver_filter:
-        like = f"%{driver_filter}%"
-        where_clauses.append("(u.Name LIKE %s OR u.Email LIKE %s OR u.Username LIKE %s)")
-        params.extend([like, like, like])
+	if ReportType == "points" and driver_filter:
+		like = f"%{driver_filter}%"
+		where_clauses.append("(u.Name LIKE %s OR u.Email LIKE %s OR u.Username LIKE %s)")
+		params.extend([like, like, like])
 
-    where = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+	where = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
 
     if ReportType == "passwords":
         count_query = f"""
