@@ -532,10 +532,12 @@ def reset_password_post(token):
     """, (token_hash,))
 
     if not rec or rec["UsedAt"] is not None:
+        log_password_event("reset_invalid", target_user_id=rec["UserID"] if rec else None)
         flash("Reset link is invalid or already used.", "resetFail")
         return redirect(url_for("forgot_password"))
 
     if rec["ExpiresAt"] < datetime.now():
+        log_password_event("reset_expired", actor_user_id=rec["UserID"], target_user_id=rec["UserID"])
         flash("Reset link has expired.", "resetFail")
         return redirect(url_for("forgot_password"))
 
@@ -543,23 +545,7 @@ def reset_password_post(token):
     updateDb("UPDATE Users SET Password_hash=%s WHERE UserID=%s", (new_hash, rec["UserID"]))
     updateDb("UPDATE PasswordResetTokens SET UsedAt=%s WHERE TokenID=%s", (datetime.now(), rec["TokenID"]))
 
-    # Log reset event
-    org_id = None
-    # attempt to infer org via joined sponsor/driver for the target user
-    org = paramQueryDb("""
-        SELECT COALESCE(s.OrganizationID, d.OrganizationID)
-        FROM Users u
-        LEFT JOIN Sponsors s ON u.UserID=s.SponsorID
-        LEFT JOIN Drivers d ON u.UserID=d.DriverID
-        WHERE u.UserID=%s
-    """, (rec["UserID"],))
-    if org:
-        org_id = org["OrganizationID"]
-
-    updateDb("""
-        INSERT INTO PasswordChangeLog (OrganizationID, ActorUserID, TargetUserID, EventType, EventTime, ActorIP)
-        VALUES (%s, %s, %s, %s, %s, %s)
-    """, (org_id, rec["UserID"], rec["UserID"], "reset", datetime.now(), get_request_ip()))
+    log_password_event("reset", actor_user_id=rec["UserID"], target_user_id=rec["UserID"])
 
     flash("Password reset successful. Please login.", "success")
     return redirect(url_for("login"))
