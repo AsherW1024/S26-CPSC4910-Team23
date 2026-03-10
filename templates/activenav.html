@@ -32,6 +32,18 @@
                 </div>
             </div>
             {% endif %}
+            {% if session.get('impersonating') %}
+            <section class="section pb-0">
+                <div class="notification is-warning is-light">
+                    <div class="is-flex is-justify-content-space-between is-align-items-center">
+                        <span><strong>Impersonation active:</strong> You are currently viewing the app as a driver.</span>
+                        <form method="POST" action="/impersonation/exit" style="margin:0;">
+                            <button class="button is-small is-dark" type="submit">Exit impersonation</button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+            {% endif %}
             {% if session.get('role') == "Admin" %}
             <div class="dropdown">
                 <button class="dropbtn" type="button">Reports</button>
