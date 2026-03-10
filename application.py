@@ -1414,8 +1414,13 @@ def organizations():
 
 @application.route("/organizations/<int:OrgID>/view")
 def organizationView(OrgID):
-    org = paramQueryDb("SELECT Name FROM Organizations WHERE OrganizationID = %s", (OrgID,))
-    session['Organization'] = org['Name']
+    org = paramQueryDb("SELECT Name, OrganizationID FROM Organizations WHERE OrganizationID = %s", (OrgID,))
+    if not org:
+        flash("Organization not found.", "validation")
+        return redirect(url_for("organizations"))
+
+    session["Organization"] = org["Name"]
+    session["OrgID"] = org["OrganizationID"]
     return redirect(url_for("organization"))
 
 @application.route("/organizations/<int:OrgID>/edit", methods=["POST"])
