@@ -1385,18 +1385,20 @@ def assume_driver_identity(UserID):
 
 @application.route("/impersonation/exit", methods=["POST"])
 def exit_impersonation():
-    if not is_impersonating():
+    if not session.get("impersonating"):
         flash("No impersonation session is active.", "validation")
         return redirect(url_for("home"))
 
     session["UserID"] = session.get("original_UserID")
     session["role"] = session.get("original_role")
     session["Organization"] = session.get("original_Organization")
+    session["OrgID"] = session.get("original_OrgID", 0)
 
     session.pop("impersonating", None)
     session.pop("original_UserID", None)
     session.pop("original_role", None)
     session.pop("original_Organization", None)
+    session.pop("original_OrgID", None)
 
     flash("Returned to your sponsor view.", "success")
     return redirect(url_for("home"))
