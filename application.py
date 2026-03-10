@@ -1416,7 +1416,7 @@ def adjustDriverPoints(UserID):
         SELECT u.UserID, u.Name AS DriverName, u.Email, u.Username, o.Name AS OrgName, d.TotalPoints
         FROM Users u
         JOIN Drivers d ON u.UserID = d.DriverID
-		JOIN Organization o ON d.OrganizationID = o.OrganizationID
+		JOIN Organizations o ON d.OrganizationID = o.OrganizationID
         WHERE u.UserID=%s AND u.UserType='Driver'
     """, (UserID,))
 
