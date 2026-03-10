@@ -3,9 +3,35 @@
 {% block title %}Catalog{% endblock %}
 
 {% block page_css %}
-<link rel="stylesheet" type="text/css" href="/static/css/wishlist.css">
+<link rel="stylesheet" type="text/css" href="/static/css/cart.css">
 {% endblock %}
 
 {% block content %}
-<div></div>
+<div class="content">
+	<h1>Cart</h1>
+	<div class="table-container">
+		<table>
+			<thead>
+				<tr>
+					<th>Image</th>
+					<th>Name</th>
+					<th>Price</th>
+					<th>Amount</th>
+					<th>Remove</th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for product in cartProductData %}
+				<tr>
+					<td><img src="{{product.thumbnail}}"></td>
+					<td>{{product.title}}</td>
+					<td>{{product.price}}</td>
+					<td><button>+</button><p>1</p><button>-</button></td>
+					<td><button>Remove</button></td>
+				</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	</div>
+</div>
 {% endblock %}
