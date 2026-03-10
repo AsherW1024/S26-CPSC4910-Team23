@@ -1028,18 +1028,18 @@ def report(ReportType):
             {where}
         """
 		data_query = f"""
-            SELECT
-                a.DateApplied,
-                o.Name,
-                a.DriverUName,
-                a.AcceptedByUName AS ReviewedByUName,
-                a.ApplicationStatus,
-                a.ApplicationReason AS ReviewReason
-            FROM OrganizationApplications a
-            JOIN Organizations o ON a.OrganizationID = o.OrganizationID
-            {where}
-            ORDER BY a.DateApplied DESC
-        """
+			SELECT
+				a.DateApplied,
+				o.Name,
+				a.DriverUName,
+				a.ReviewedByUName,
+				a.ApplicationStatus,
+				a.ReviewReason
+			FROM OrganizationApplications a
+			JOIN Organizations o ON a.OrganizationID = o.OrganizationID
+			{where}
+			ORDER BY a.DateApplied DESC
+		"""
 		csv_headers = ["DateApplied", "Name", "DriverUName", "ReviewedByUName", "ApplicationStatus", "ReviewReason"]
 
 	else:
