@@ -8,14 +8,15 @@
 
 {% block content %}
 <div class="content">
-	<h1>Cart</h1>
+	<h1 class="title">Cart</h1>
+	{% if cartProductData %}
 	<div class="table-container">
 		<table>
 			<thead>
 				<tr>
 					<th>Image</th>
 					<th>Name</th>
-					<th>Price</th>
+					<th>Points</th>
 					<th>Amount</th>
 					<th>Remove</th>
 				</tr>
@@ -26,12 +27,16 @@
 					<td><img src="{{product.thumbnail}}"></td>
 					<td>{{product.title}}</td>
 					<td>{{product.price}}</td>
-					<td><button>+</button><p>1</p><button>-</button></td>
+					<td class="table-cell"><button>+</button><p>1</p><button>-</button></td>
 					<td><button>Remove</button></td>
 				</tr>
 				{% endfor %}
 			</tbody>
 		</table>
 	</div>
+	{% else %}
+	<p>No products added to cart yet.</p>
+	<p>To add a product to your cart, click the shopping cart button for a product on the catalog screen.</p>
+	{% endif %}
 </div>
 {% endblock %}

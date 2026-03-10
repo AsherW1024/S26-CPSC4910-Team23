@@ -18,6 +18,7 @@
                 <a href="/organization/apply"> Apply </a>
             {% elif session.get('role') != "Admin" %}
                 <a href="/organization"> Organization </a>
+                <a href="/cart"> Cart </a>
             {% elif session.get('role') == "Admin" %}
                 <a href="/catalog"> Catalog </a>
                 <a href="/organizations"> Organizations </a>

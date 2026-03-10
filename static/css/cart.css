@@ -8,3 +8,11 @@
 	padding: 2%;
 	margin-bottom: 20px;
 }
+.table-cell{
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+.title{
+	font-size: 75px !important;
+}
