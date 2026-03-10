@@ -918,10 +918,15 @@ def report(ReportType):
 
 	else:
 		count_query = f"""
-            SELECT COUNT(*) AS totalRows
-            FROM Logins
-            {where}
-        """
+			SELECT COUNT(*) AS totalRows
+			FROM Logins l
+			LEFT JOIN Users lu ON (lu.Email = l.LoginUser OR lu.Username = l.LoginUser)
+			LEFT JOIN Sponsors ls ON lu.UserID = ls.SponsorID
+			LEFT JOIN Drivers ld ON lu.UserID = ld.DriverID
+			LEFT JOIN Organizations ls_org ON ls.OrganizationID = ls_org.OrganizationID
+			LEFT JOIN Organizations ld_org ON ld.OrganizationID = ld_org.OrganizationID
+			{where}
+		"""
 		data_query = f"""
             SELECT
                 LoginDate,
