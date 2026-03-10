@@ -1193,10 +1193,7 @@ def registerProfileEdits():
         update_vals.append(generate_password_hash(NewPassword, method="pbkdf2:sha256"))
 
         # Log password change event
-        updateDb("""
-            INSERT INTO PasswordAdjustments (AdjustedUName, AdjustedByUName, TypeOfChange, DateAdjusted)
-            VALUES (%s, %s, %s, %s)
-        """, (user.get("Username"), user.get("Username"), "change", datetime.now()))
+        log_password_event("change", actor_user_id=session["UserID"], target_user_id=session["UserID"])
 
     if not update_fields:
         flash("No changes detected.", "validation")
