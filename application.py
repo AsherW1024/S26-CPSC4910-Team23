@@ -592,6 +592,7 @@ def logout():
 	session.pop("original_UserID", None)
 	session.pop("original_role", None)
 	session.pop("original_Organization", None)
+	session.pop("original_OrgID", None)
 
 	return redirect(url_for("home"))
 
