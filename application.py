@@ -2469,6 +2469,41 @@ def addToCart():
 		
 		return jsonify({"message": "Success"}), 200
 	return jsonify({"message": "Permission error"}), 400
+
+def getProductData(id):
+	response = requests.get(f"https://dummyjson.com/products/{id}")
+	if not response.ok:
+		return None
+	return response.json()
+
+
+@application.route("/cart")
+def cart():
+	if "UserID" in session and "OrgID" in session:
+		userID = session.get("UserID")
+		orgID = session.get("OrgID")
+
+		getCartItemsQuery = """
+			SELECT productID
+			FROM Cart
+			WHERE
+				userID=%s
+				AND orgID=%s
+		"""
+		rows = selectDb(query=getCartItemsQuery, params=(userID, orgID))
+
+		#collect just the product ids into a list
+		cartProductIds = []
+		for row in rows:
+			cartProductIds.append(row.get("productID"))
+
+		cartProductData = []
+		for productId in cartProductIds:
+			cartProductData.append(getProductData(productId))
+
+		return render_template("cart.html", layout="activenav.html", cartProductData=cartProductData)
+	return redirect(url_for("home"))
+
 """
 This lets us test locally. Should not execute in AWS
 """
