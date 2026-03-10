@@ -928,17 +928,22 @@ def report(ReportType):
 			{where}
 		"""
 		data_query = f"""
-            SELECT
-                LoginDate,
-                LoginUser,
-                CASE
-                    WHEN LoginResult = 1 THEN 'Successful Login'
-                    WHEN LoginResult = 0 THEN 'Failed Login'
-                END AS LoginStatus
-            FROM Logins
-            {where}
-            ORDER BY LoginDate DESC
-        """
+			SELECT
+				l.LoginDate,
+				l.LoginUser,
+				CASE
+					WHEN l.LoginResult = 1 THEN 'Successful Login'
+					WHEN l.LoginResult = 0 THEN 'Failed Login'
+				END AS LoginStatus
+			FROM Logins l
+			LEFT JOIN Users lu ON (lu.Email = l.LoginUser OR lu.Username = l.LoginUser)
+			LEFT JOIN Sponsors ls ON lu.UserID = ls.SponsorID
+			LEFT JOIN Drivers ld ON lu.UserID = ld.DriverID
+			LEFT JOIN Organizations ls_org ON ls.OrganizationID = ls_org.OrganizationID
+			LEFT JOIN Organizations ld_org ON ld.OrganizationID = ld_org.OrganizationID
+			{where}
+			ORDER BY l.LoginDate DESC
+		"""
 		csv_headers = ["LoginDate", "LoginUser", "LoginStatus"]
 
 	rowTotal = selectDb(count_query, tuple(params)) or [{"totalRows": 0}]
