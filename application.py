@@ -850,17 +850,21 @@ def report(ReportType):
 			{where}
 		"""
 		data_query = f"""
-            SELECT
-                pa.DateAdjusted,
-                pa.TypeOfChange,
-                COALESCE(x.Name, pa.AdjustedByUName) AS Actor,
-                u.Name AS Target
-            FROM PasswordAdjustments pa
-            JOIN Users u ON u.Username = pa.AdjustedUName
-            LEFT JOIN Users x ON x.Username = pa.AdjustedByUName
-            {where}
-            ORDER BY pa.DateAdjusted DESC
-        """
+			SELECT
+				pa.DateAdjusted,
+				pa.TypeOfChange,
+				COALESCE(x.Name, pa.AdjustedByUName) AS Actor,
+				u.Name AS Target
+			FROM PasswordAdjustments pa
+			JOIN Users u ON u.Username = pa.AdjustedUName
+			LEFT JOIN Sponsors ts ON u.UserID = ts.SponsorID
+			LEFT JOIN Drivers td ON u.UserID = td.DriverID
+			LEFT JOIN Organizations ts_org ON ts.OrganizationID = ts_org.OrganizationID
+			LEFT JOIN Organizations td_org ON td.OrganizationID = td_org.OrganizationID
+			LEFT JOIN Users x ON x.Username = pa.AdjustedByUName
+			{where}
+			ORDER BY pa.DateAdjusted DESC
+		"""
 		csv_headers = ["DateAdjusted", "Actor", "Target", "TypeOfChange"]
 
 	elif ReportType == "points":
