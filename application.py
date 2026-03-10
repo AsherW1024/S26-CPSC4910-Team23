@@ -1259,7 +1259,7 @@ def organizationUsers():
 
 	numPages = math.ceil(rowTotal[0]["totalRows"] / rowsPerPage)
 	
-	return render_template("userList.html", layout="orgnav.html", users=users, q=q, accountType='organization', use="organization", page=page, pageNum=range(1, numPages + 1), pageRows=rowsPerPage)
+	return render_template("userList.html", layout="orgnav.html", users=users, q=q, accountType='organization', use="organization", canImpersonate=(session.get("role") == "Sponsor" and not is_impersonating()), page=page, pageNum=range(1, numPages + 1), pageRows=rowsPerPage)
 
 @application.route("/organization/users/<int:UserID>/points")
 def adjustDriverPoints(UserID):
