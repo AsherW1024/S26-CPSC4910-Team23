@@ -59,16 +59,22 @@ def get_request_ip():
         return forwarded_for.split(",")[0].strip()
     return request.remote_addr
 
-def get_effective_role():
-    return session.get("role")
-
 def is_impersonating():
     return bool(session.get("impersonating"))
 
 def get_effective_org_name():
-    if session.get("Organization") and session.get("Organization") != "None":
-        return session.get("Organization")
-    return None
+    org = session.get("Organization")
+    return org if org not in (None, "None", "") else None
+
+def get_org_name_for_user(user_id):
+    row = paramQueryDb("""
+        SELECT COALESCE(s.OrganizationName, d.OrganizationName) AS OrganizationName
+        FROM Users u
+        LEFT JOIN Sponsors s ON u.UserID = s.SponsorID
+        LEFT JOIN Drivers d ON u.UserID = d.DriverID
+        WHERE u.UserID = %s
+    """, (user_id,))
+    return row.get("OrganizationName") if row else None
 
 def log_password_event(event_type: str, actor_user_id=None, target_user_id=None, org_id=None):
     actor_ip = get_request_ip()
