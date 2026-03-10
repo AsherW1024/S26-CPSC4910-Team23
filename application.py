@@ -1349,17 +1349,18 @@ def assume_driver_identity(UserID):
     if guard:
         return guard
 
-    if is_impersonating():
+    if session.get("impersonating"):
         flash("Exit the current impersonation session first.", "validation")
         return redirect(url_for("organizationUsers"))
 
     driver = paramQueryDb("""
-        SELECT u.UserID, u.UserType, u.Name, d.OrganizationName
+        SELECT u.UserID, u.UserType, u.Name, o.Name AS OrganizationName
         FROM Users u
         JOIN Drivers d ON u.UserID = d.DriverID
+        JOIN Organizations o ON d.OrganizationID = o.OrganizationID
         WHERE u.UserID=%s
           AND u.UserType='Driver'
-          AND d.OrganizationName=%s
+          AND o.Name=%s
     """, (UserID, session.get("Organization")))
 
     if not driver:
@@ -1370,14 +1371,17 @@ def assume_driver_identity(UserID):
     session["original_UserID"] = session.get("UserID")
     session["original_role"] = session.get("role")
     session["original_Organization"] = session.get("Organization")
+    session["original_OrgID"] = session.get("OrgID", 0)
 
     session["UserID"] = driver["UserID"]
     session["role"] = "Driver"
-    session["Organization"] = driver.get("OrganizationName")
+    session["Organization"] = driver["OrganizationName"]
+
+    org = paramQueryDb("SELECT OrganizationID FROM Organizations WHERE Name=%s", (driver["OrganizationName"],))
+    session["OrgID"] = org["OrganizationID"] if org else 0
 
     flash(f"Now viewing the app as {driver['Name']}.", "success")
     return redirect(url_for("home"))
-
 
 @application.route("/impersonation/exit", methods=["POST"])
 def exit_impersonation():
