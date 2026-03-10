@@ -697,6 +697,132 @@ def adminStopViewAs():
 	flash("Returned to admin view.", "success")
 	return redirect(url_for("adminUserList"))
 
+# ===== admin enroll driver into a selected organization =====
+@application.route("/organizations/<int:OrganizationID>/enroll-driver")
+def adminEnrollDriverPage(OrganizationID):
+	guard = require_admin()
+	if guard:
+		return guard
+
+	org = paramQueryDb("""
+		SELECT OrganizationID, Name
+		FROM Organizations
+		WHERE OrganizationID = %s
+	""", (OrganizationID,))
+
+	if not org:
+		flash("Organization not found.", "notfound")
+		return redirect(url_for("organizations"))
+
+	q = request.args.get("q", "").strip()
+	like = f"%{q}%"
+
+	page = request.args.get("page", 1, type=int)
+	rowsPerPage = request.args.get("pageCount", 10, type=int)
+	offset = (page - 1) * rowsPerPage
+
+	if q:
+		rowTotal = selectDb("""
+			SELECT COUNT(*) AS totalRows
+			FROM Users u
+			JOIN Drivers d ON u.UserID = d.DriverID
+			WHERE u.UserType = "Driver"
+			  AND (d.OrganizationID IS NULL OR d.OrganizationID = 0)
+			  AND (u.Name LIKE %s OR u.Email LIKE %s OR u.Username LIKE %s)
+		""", (like, like, like))
+
+		drivers = selectDb("""
+			SELECT u.UserID, u.Name, u.Email, u.Username
+			FROM Users u
+			JOIN Drivers d ON u.UserID = d.DriverID
+			WHERE u.UserType = "Driver"
+			  AND (d.OrganizationID IS NULL OR d.OrganizationID = 0)
+			  AND (u.Name LIKE %s OR u.Email LIKE %s OR u.Username LIKE %s)
+			ORDER BY u.Name
+			LIMIT %s OFFSET %s
+		""", (like, like, like, rowsPerPage, offset))
+	else:
+		rowTotal = selectDb("""
+			SELECT COUNT(*) AS totalRows
+			FROM Users u
+			JOIN Drivers d ON u.UserID = d.DriverID
+			WHERE u.UserType = "Driver"
+			  AND (d.OrganizationID IS NULL OR d.OrganizationID = 0)
+		""", ())
+
+		drivers = selectDb("""
+			SELECT u.UserID, u.Name, u.Email, u.Username
+			FROM Users u
+			JOIN Drivers d ON u.UserID = d.DriverID
+			WHERE u.UserType = "Driver"
+			  AND (d.OrganizationID IS NULL OR d.OrganizationID = 0)
+			ORDER BY u.Name
+			LIMIT %s OFFSET %s
+		""", (rowsPerPage, offset))
+
+	totalRows = rowTotal[0]["totalRows"] if rowTotal else 0
+	numPages = max(1, math.ceil(totalRows / rowsPerPage))
+
+	return render_template(
+		"userList.html",
+		layout="activenav.html",
+		users=drivers,
+		q=q,
+		accountType="admin",
+		use="enroll_driver",
+		page=page,
+		pageNum=range(1, numPages + 1),
+		pageRows=rowsPerPage,
+		targetOrg=org
+	)
+
+@application.route("/organizations/<int:OrganizationID>/enroll-driver/<int:UserID>", methods=["POST"])
+def adminEnrollDriverPost(OrganizationID, UserID):
+	guard = require_admin()
+	if guard:
+		return guard
+
+	org = paramQueryDb("""
+		SELECT OrganizationID, Name
+		FROM Organizations
+		WHERE OrganizationID = %s
+	""", (OrganizationID,))
+
+	if not org:
+		flash("Organization not found.", "notfound")
+		return redirect(url_for("organizations"))
+
+	driver = paramQueryDb("""
+		SELECT u.UserID, u.Name, u.Username, d.OrganizationID
+		FROM Users u
+		JOIN Drivers d ON u.UserID = d.DriverID
+		WHERE u.UserID = %s AND u.UserType = "Driver"
+	""", (UserID,))
+
+	if not driver:
+		flash("Driver not found.", "notfound")
+		return redirect(url_for("adminEnrollDriverPage", OrganizationID=OrganizationID))
+
+	if driver["OrganizationID"] not in (None, 0):
+		flash("This driver is already enrolled in an organization.", "validation")
+		return redirect(url_for("adminEnrollDriverPage", OrganizationID=OrganizationID))
+
+	# enroll the driver directly
+	updateDb("""
+		UPDATE Drivers
+		SET OrganizationID = %s
+		WHERE DriverID = %s
+	""", (OrganizationID, UserID))
+
+	# clean up any pending applications for this driver
+	updateDb("""
+		DELETE FROM OrganizationApplications
+		WHERE DriverUName = %s AND ApplicationStatus = "Pending"
+	""", (driver["Username"],))
+
+	flash(f'{driver["Name"]} was enrolled into {org["Name"]}.', "success")
+	return redirect(url_for("adminEnrollDriverPage", OrganizationID=OrganizationID))
+
 @application.route("/sponsor/users")
 def sponsorUserList():
 	guard = require_sponsor()
@@ -1524,9 +1650,9 @@ def adjustDriverPointsPost(UserID):
 def removeOrgUser(UserID):
 	user = selectDb("""SELECT UserType FROM Users WHERE UserID = %s""", (UserID,))
 	if user[0]["UserType"] == "Sponsor":
-		updateDb("""UPDATE Sponsors SET OrganizationID = 0 WHERE SponsorID = %s""", (UserID,))
+		updateDb("""UPDATE Sponsors SET OrganizationID = %s WHERE SponsorID = %s""", (None, UserID,))
 	elif user[0]["UserType"] == "Driver":
-		updateDb("""UPDATE Drivers SET OrganizationID = 0 WHERE DriverID = %s""", (UserID,))
+		updateDb("""UPDATE Drivers SET OrganizationID = %s WHERE DriverID = %s""", (None, UserID,))
 	return redirect(url_for("organizationUsers"))
 
 @application.route("/organization/apply")

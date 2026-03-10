@@ -42,6 +42,12 @@
       <thead>
         <tr>
           <th>Organization Name</th>
+          {% if session.get('role') == "Admin" %}
+          <th></th>
+          <th></th>
+          <th></th>
+          <th></th>
+          {% endif %}
         </tr>
       </thead>
       <tbody>
@@ -51,6 +57,7 @@
 
           {% if session.get('role') == "Admin" %}
           <td><a class="button is-small" href="/organizations/{{ o.OrganizationID }}/view">View</a></td>
+          <td><a class="button is-small is-info" href="/organizations/{{ o.OrganizationID }}/enroll-driver">Enroll Driver</a></td>
           <td>
             <form method="POST" action="/organizations/{{ o.OrganizationID }}/edit"
               style="display:inline;" onsubmit="return promptOrgRename({{ o.OrganizationID }});">
