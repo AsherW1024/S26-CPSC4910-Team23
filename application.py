@@ -53,6 +53,83 @@ def get_user_org_id():
     org = paramQueryDb("SELECT OrganizationID FROM Organizations WHERE Name=%s", (session["Organization"],))
     return org["OrganizationID"] if org else None
 
+def get_request_ip():
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    return request.remote_addr
+
+def get_effective_role():
+    return session.get("role")
+
+def is_impersonating():
+    return bool(session.get("impersonating"))
+
+def get_effective_org_name():
+    if session.get("Organization") and session.get("Organization") != "None":
+        return session.get("Organization")
+    return None
+
+def log_password_event(event_type: str, actor_user_id=None, target_user_id=None, org_id=None):
+    actor_ip = get_request_ip()
+    event_time = datetime.now()
+
+    if org_id is None and target_user_id:
+        org = paramQueryDb("""
+            SELECT o.OrganizationID
+            FROM Users u
+            LEFT JOIN Sponsors s ON u.UserID = s.SponsorID
+            LEFT JOIN Drivers d ON u.UserID = d.DriverID
+            LEFT JOIN Organizations o ON o.Name = COALESCE(s.OrganizationName, d.OrganizationName)
+            WHERE u.UserID = %s
+        """, (target_user_id,))
+        if org:
+            org_id = org.get("OrganizationID")
+
+    try:
+        updateDb("""
+            INSERT INTO PasswordChangeLog
+            (OrganizationID, ActorUserID, TargetUserID, EventType, EventTime, ActorIP)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (org_id, actor_user_id, target_user_id, event_type, event_time, actor_ip))
+    except Exception as e:
+        print("PasswordChangeLog insert skipped:", e)
+
+    try:
+        actor_username = None
+        target_username = None
+
+        if actor_user_id:
+            actor = paramQueryDb("SELECT Username FROM Users WHERE UserID=%s", (actor_user_id,))
+            actor_username = actor.get("Username") if actor else None
+
+        if target_user_id:
+            target = paramQueryDb("SELECT Username FROM Users WHERE UserID=%s", (target_user_id,))
+            target_username = target.get("Username") if target else None
+
+        if target_username:
+            updateDb("""
+                INSERT INTO PasswordAdjustments
+                (AdjustedUName, AdjustedByUName, TypeOfChange, DateAdjusted)
+                VALUES (%s, %s, %s, %s)
+            """, (target_username, actor_username or target_username, event_type, event_time))
+    except Exception as e:
+        print("PasswordAdjustments insert skipped:", e)
+
+def build_csv_response(filename: str, headers, rows):
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(headers)
+
+    for row in rows:
+        writer.writerow([row.get(h, "") for h in headers])
+
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
+
 """
 This uses the data provided in the db_config.py file to intinialize and return
 a reference to the db connection. db_config.py is located in the config directory.
