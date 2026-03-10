@@ -2662,6 +2662,8 @@ def cart():
 		for productId in cartProductIds:
 			cartProductData.append(getProductData(productId))
 
+		cartProductData = adjustPrice(cartProductData)
+
 		return render_template("cart.html", layout="activenav.html", cartProductData=cartProductData)
 	return redirect(url_for("home"))
 
