@@ -999,7 +999,7 @@ def deleteUser(accountType, UserID):
 def home():
 	if 'UserID' in session:
 		getOrganization()
-		if session.get("Organization") != None and session.get("Role") == "Admin":
+		if session.get("Organization") != None and session.get("role") == "Admin":
 			session["Organization"]	= None		
 		return render_template("home.html", layout = "activenav.html")
 	return render_template("home.html", layout = "nav.html")
