@@ -68,10 +68,11 @@ def get_effective_org_name():
 
 def get_org_name_for_user(user_id):
     row = paramQueryDb("""
-        SELECT COALESCE(s.OrganizationName, d.OrganizationName) AS OrganizationName
+        SELECT o.Name AS OrganizationName
         FROM Users u
         LEFT JOIN Sponsors s ON u.UserID = s.SponsorID
         LEFT JOIN Drivers d ON u.UserID = d.DriverID
+        LEFT JOIN Organizations o ON o.OrganizationID = COALESCE(s.OrganizationID, d.OrganizationID)
         WHERE u.UserID = %s
     """, (user_id,))
     return row.get("OrganizationName") if row else None
