@@ -690,136 +690,176 @@ def userEdit(accountType, UserID):
 
 @application.route("/reports/<ReportType>")
 def report(ReportType):
-	if ReportType in ["points", "applications"]:
-		if "Organization" in session and session["Organization"] != None:
-			org_id = get_user_org_id()
-			if not org_id:
-				flash("Organization not found.", "validation")
-				return redirect(url_for("home"))
+    allowed_types = {"passwords", "points", "applications", "logins"}
+    if ReportType not in allowed_types:
+        flash("Unknown report requested.", "validation")
+        return redirect(url_for("home"))
 
-	start = request.args.get("start", "").strip()
-	end = request.args.get("end", "").strip()
+    org_id = get_user_org_id()
+    org_name = get_effective_org_name()
 
-	page = request.args.get("page", 1, type=int)
-	rowsPerPage = request.args.get("pageCount", 10, type=int)
-	offset = (page - 1) * rowsPerPage
+    start = request.args.get("start", "").strip()
+    end = request.args.get("end", "").strip()
+    driver_filter = request.args.get("driver", "").strip()
+    csv_export = request.args.get("format") == "csv"
 
-	where = ""
+    page = request.args.get("page", 1, type=int)
+    rowsPerPage = request.args.get("pageCount", 10, type=int)
+    offset = (page - 1) * rowsPerPage
 
-	if ("Organization" in session and session["Organization"] != None) or start or end:
-		where += "WHERE "
+    where_clauses = []
+    params = []
 
-	if ReportType in ["points", "applications"]:
-		if "Organization" in session and session["Organization"] != None:
-			params = [org_id]
-			if ReportType == "applications":
-				where += "o.OrganizationID=%s"
-			else:
-				where += "OrganizationID=%s"
-			if start or end:
-				where += " AND "
-		else:
-			params = []
-	else:
-		params = []
+    date_field = {
+        "passwords": "pa.DateAdjusted",
+        "points": "pa.DateAdjusted",
+        "applications": "a.DateApplied",
+        "logins": "LoginDate"
+    }[ReportType]
 
-	if start:
-		where += "DateAdjusted >= %s"
-		params.append(start + " 00:00:00")
-		if end:
-			where += " AND "
-	if end:
-		where += "DateAdjusted <= %s"
-		params.append(end + " 23:59:59")
+    if ReportType in ["points", "applications"] and org_name:
+        if not org_id:
+            flash("Organization not found.", "validation")
+            return redirect(url_for("home"))
+        where_clauses.append("OrganizationID=%s")
+        params.append(org_id)
 
-	if ReportType == "passwords":
-		rowTotal = selectDb(f"""
-			SELECT COUNT(*) AS totalRows
-			FROM PasswordAdjustments pa
-			JOIN Users u ON u.Username = pa.AdjustedUName
-			JOIN Users x ON x.Username = pa.AdjustedByUName
-			{where}
-			ORDER BY pa.DateAdjusted DESC
-			""", tuple(params))
-		params.append(rowsPerPage)
-		params.append(offset)
-		rows = selectDb(f"""
-			SELECT pa.DateAdjusted, pa.TypeOfChange,
-				x.Name AS ActorName,
-				u.Name AS TargetName
-			FROM PasswordAdjustments pa
-			JOIN Users u ON u.Username = pa.AdjustedUName
-			JOIN Users x ON x.Username = pa.AdjustedByUName
-			{where}
-			ORDER BY pa.DateAdjusted DESC
-			LIMIT %s OFFSET %s
-			""", tuple(params))
-	elif ReportType == "points":
-		rowTotal = selectDb(f"""
-			SELECT COUNT(*) AS totalRows
-			FROM PointAdjustments
-			{where}
-			ORDER BY DateAdjusted DESC
-			""", tuple(params))
-		params.append(rowsPerPage)
-		params.append(offset)
-		rows = selectDb(f"""
-			SELECT DriverUName, AdjustedByUName, AdjustmentType, AdjustmentPoints, AdjustmentReason, DateAdjusted
-			FROM PointAdjustments
-			{where}
-			ORDER BY DateAdjusted DESC
-			LIMIT %s OFFSET %s
-			""", tuple(params))
-	elif ReportType == "applications":
-		rowTotal = selectDb(f"""
-			SELECT COUNT(*) AS totalRows
-			FROM OrganizationApplications a
-			JOIN Organizations o ON a.OrganizationID = o.OrganizationID
-			{where}
-			ORDER BY DateApplied DESC
-			""", tuple(params))
-		params.append(rowsPerPage)
-		params.append(offset)
-		rows = selectDb(f"""
-			SELECT a.DriverUName, a.ReviewedByUName, a.ApplicationStatus, a.ReviewReason, a.DateApplied, o.Name
-			FROM OrganizationApplications a
-			JOIN Organizations o ON a.OrganizationID = o.OrganizationID
-			{where}
-			ORDER BY DateApplied DESC
-			LIMIT %s OFFSET %s
-			""", tuple(params))
-	elif ReportType == "logins":
-		rowTotal = selectDb(f"""
-			SELECT COUNT(*) AS totalRows
-			FROM Logins
-			{where}
-			ORDER BY LoginDate DESC
-			""", tuple(params))
-		params.append(rowsPerPage)
-		params.append(offset)
-		rows = selectDb(f"""
-			SELECT LoginDate, LoginUser, 
-			CASE
-				WHEN LoginResult = 1 THEN "Successful Login"
-				WHEN LoginResult = 0 THEN "Failed Login"
-			END AS LoginStatus
-			FROM Logins
-			{where}
-			ORDER BY LoginDate DESC
-			LIMIT %s OFFSET %s
-			""", tuple(params))
+    if start:
+        where_clauses.append(f"{date_field} >= %s")
+        params.append(start + " 00:00:00")
 
-	numPages = math.ceil(rowTotal[0]["totalRows"] / rowsPerPage)
+    if end:
+        where_clauses.append(f"{date_field} <= %s")
+        params.append(end + " 23:59:59")
 
-	if session.get("role") == "Admin" and session.get("Organization") == None:
-		nav = "activenav.html"
-	elif session.get("role") == "Admin" and session.get("Organization") != None:
-		nav = "orgnav.html"
-	else:
-		nav = "orgnav.html"
+    if ReportType == "points" and driver_filter:
+        like = f"%{driver_filter}%"
+        where_clauses.append("(u.Name LIKE %s OR u.Email LIKE %s OR u.Username LIKE %s)")
+        params.extend([like, like, like])
 
-	return render_template("logReports.html", layout=nav, rows=rows, start=start, end=end, ReportType=ReportType, page=page, pageNum=range(1, numPages + 1), pageRows=rowsPerPage)
+    where = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
 
+    if ReportType == "passwords":
+        count_query = f"""
+            SELECT COUNT(*) AS totalRows
+            FROM PasswordAdjustments pa
+            JOIN Users u ON u.Username = pa.AdjustedUName
+            LEFT JOIN Users x ON x.Username = pa.AdjustedByUName
+            {where}
+        """
+        data_query = f"""
+            SELECT
+                pa.DateAdjusted,
+                pa.TypeOfChange,
+                COALESCE(x.Name, pa.AdjustedByUName) AS Actor,
+                u.Name AS Target
+            FROM PasswordAdjustments pa
+            JOIN Users u ON u.Username = pa.AdjustedUName
+            LEFT JOIN Users x ON x.Username = pa.AdjustedByUName
+            {where}
+            ORDER BY pa.DateAdjusted DESC
+        """
+        csv_headers = ["DateAdjusted", "Actor", "Target", "TypeOfChange"]
+
+    elif ReportType == "points":
+        count_query = f"""
+            SELECT COUNT(*) AS totalRows
+            FROM PointAdjustments pa
+            JOIN Users u ON u.Username = pa.DriverUName
+            {where}
+        """
+        data_query = f"""
+            SELECT
+                pa.DateAdjusted,
+                u.Name AS DriverName,
+                pa.DriverUName,
+                pa.AdjustedByUName,
+                CONCAT(
+                    CASE WHEN pa.AdjustmentType='Deduct' THEN '-' ELSE '+' END,
+                    pa.AdjustmentPoints
+                ) AS DeltaPoints,
+                pa.AdjustmentType,
+                pa.AdjustmentPoints,
+                pa.AdjustmentReason
+            FROM PointAdjustments pa
+            JOIN Users u ON u.Username = pa.DriverUName
+            {where}
+            ORDER BY pa.DateAdjusted DESC
+        """
+        csv_headers = ["DateAdjusted", "DriverName", "DriverUName", "AdjustedByUName", "DeltaPoints", "AdjustmentReason"]
+
+    elif ReportType == "applications":
+        count_query = f"""
+            SELECT COUNT(*) AS totalRows
+            FROM OrganizationApplications a
+            JOIN Organizations o ON a.OrganizationID = o.OrganizationID
+            {where}
+        """
+        data_query = f"""
+            SELECT
+                a.DateApplied,
+                o.Name,
+                a.DriverUName,
+                a.AcceptedByUName AS ReviewedByUName,
+                a.ApplicationStatus,
+                a.ApplicationReason AS ReviewReason
+            FROM OrganizationApplications a
+            JOIN Organizations o ON a.OrganizationID = o.OrganizationID
+            {where}
+            ORDER BY a.DateApplied DESC
+        """
+        csv_headers = ["DateApplied", "Name", "DriverUName", "ReviewedByUName", "ApplicationStatus", "ReviewReason"]
+
+    else:
+        count_query = f"""
+            SELECT COUNT(*) AS totalRows
+            FROM Logins
+            {where}
+        """
+        data_query = f"""
+            SELECT
+                LoginDate,
+                LoginUser,
+                CASE
+                    WHEN LoginResult = 1 THEN 'Successful Login'
+                    WHEN LoginResult = 0 THEN 'Failed Login'
+                END AS LoginStatus
+            FROM Logins
+            {where}
+            ORDER BY LoginDate DESC
+        """
+        csv_headers = ["LoginDate", "LoginUser", "LoginStatus"]
+
+    rowTotal = selectDb(count_query, tuple(params)) or [{"totalRows": 0}]
+
+    if csv_export:
+        rows = selectDb(data_query, tuple(params)) or []
+        return build_csv_response(f"{ReportType}_report.csv", csv_headers, rows)
+
+    rows = selectDb(data_query + " LIMIT %s OFFSET %s", tuple(list(params) + [rowsPerPage, offset])) or []
+
+    total_rows = rowTotal[0]["totalRows"] if rowTotal else 0
+    numPages = max(1, math.ceil(total_rows / rowsPerPage)) if rowsPerPage else 1
+
+    if session.get("role") == "Admin" and session.get("Organization") == None:
+        nav = "activenav.html"
+    elif session.get("role") == "Admin" and session.get("Organization") != None:
+        nav = "orgnav.html"
+    else:
+        nav = "orgnav.html" if session.get("Organization") else "activenav.html"
+
+    return render_template(
+        "logReports.html",
+        layout=nav,
+        rows=rows,
+        start=start,
+        end=end,
+        driverFilter=driver_filter,
+        ReportType=ReportType,
+        page=page,
+        pageNum=range(1, numPages + 1),
+        pageRows=rowsPerPage
+    )
 @application.route("/<accountType>/users/<int:UserID>/edit", methods=["POST"])
 def userEditPost(accountType, UserID):	
 	"""if accountType == 'sponsor':
