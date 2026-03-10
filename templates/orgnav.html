@@ -13,11 +13,12 @@
 <body>
     <div class="topnav">
         <div class="nav-left">
-            <a href="/"> Home </a>
-            <a href="/catalog"> Catalog </a>
             {% if session.get('role') == "Admin" %}
-                <a href="/organizations"> Organizations </a>
+                <a href="/organizations"> Exit Organization </a>
+            {% else %}
+                <a href="/"> Exit Organization </a>
             {% endif %}
+            <a href="/catalog"> Catalog </a>
             {% if session.get('role') != "Driver" %}
                 {% if session.get('role') != "Driver" %}
                     <a href="/organization/applications"> Applications </a>
@@ -32,6 +33,35 @@
         <div class="nav-right">
             {% if session.get('role') != "Driver" %}
                 <a href="/organization/users">Users Status</a>
+                <div class="dropdown">
+                    <button class="dropbtn" type="button">Create Account</button>
+                    <div class="dropdown-content">
+                    {% if session.get('role') == "Admin" %}
+                        <a href="/adminRegister">Admin</a>
+                        <a href="/sponsorRegister">Sponsor</a>
+                        <a href="/register">Driver</a>
+                    {% elif session.get('role') == "Sponsor" %}
+                        <a href="/sponsorRegister">Sponsor</a>
+                        <a href="/register">Driver</a>
+                    {% endif %}
+                    </div>
+                </div>
+            <div class="dropdown">
+                <button class="dropbtn" type="button">Reports</button>
+                <div class="dropdown-content">
+                    <a href="/reports/applications">Application Report</a>
+                    {% if session.get('role') == "Admin" %}
+                    <a href="/reports/logins">Login Report</a>
+                    <a href="/reports/passwords">Password Report</a>
+                    {% endif %}
+                    <a href="/reports/points">Points Report</a>
+                </div>
+            </div>
+            {% elif session.get('role') == "Driver" %}
+                <form id="leaveform" method="POST" action="/organization/leave"
+                  style="display:inline;" onsubmit="return confirmOrgLeave();">
+                    <a onclick="document.getElementById('leaveform').submit()">Leave Organization</a>
+                </form>
             {% endif %}
             <div class="dropdown">
                 <button class="icon-user dropbtn" type="button">
@@ -45,6 +75,13 @@
                     {% elif session.get('role') == "Sponsor" %}
                         <a href="/sponsor/users">Edit Users</a>
                     {% endif %}
+                    {% if session.get("admin_real_UserID") %}
+                    <form method="POST" action="/admin/stop-view-as" style="margin:0;">
+                        <button class="button is-white is-fullwidth" type="submit">
+                            Stop Viewing As
+                        </button>
+                    </form>
+                    {% endif %}
                     <a href="/about"> About us </a>
                     <a href="/logout">Logout</a>
                 </div>
@@ -52,22 +89,6 @@
         </div>
     </div>
     <br> <br>
-    
-    {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-    <div class="container is-max-desktop mt-4">
-        {% for category, message in messages %}
-        <div class="notification
-            {% if category == 'success' %}is-success
-            {% elif category in ['validation', 'missing', 'mismatch'] %}is-warning
-            {% elif category in ['auth', 'notfound'] %}is-danger
-            {% else %}is-info{% endif %}">
-            {{ message }}
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-    {% endwith %}
 
     {% block content %}{% endblock %}
     

@@ -117,7 +117,49 @@ async function addToWishlist(event) {
 		})
 	});
 	let response = await request.json();
-	console.log(response);
+	if (request.ok) {
+		wishlistButton.classList.remove("wishlist-button-inactive");
+		wishlistButton.classList.add("wishlist-button-active");
+		wishlistButton.removeEventListener("click", addToWishlist);
+		wishlistButton.addEventListener("click", removeFromWishlist);
+	}
+}
+
+async function removeFromWishlist(event) {
+	let wishlistButton = event.target;
+	let productDiv = wishlistButton.parentElement;
+
+	let productDetailIndex = productDiv.dataset.index;
+
+	let productID = pageProductData[productDetailIndex].id;
+
+	let request = await fetch("/wishlist/remove", {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify({
+			productID: productID
+		})
+	});
+	let response = await request.json();
+	if (request.ok) {
+		wishlistButton.classList.add("wishlist-button-inactive");
+		wishlistButton.classList.remove("wishlist-button-active");
+		wishlistButton.removeEventListener("click", removeFromWishlist);
+		wishlistButton.addEventListener("click", addToWishlist);
+	}
+}
+
+function showWishlistButton(event) {
+	let productDiv = event.target;
+	let wishlistButton = productDiv.querySelector("button");
+	wishlistButton.style.display = "grid";
+}
+function hideWishlistButton(event) {
+	let productDiv = event.target;
+	let wishlistButton = productDiv.querySelector("button");
+	wishlistButton.style.display = "none";
 }
 
 //make api request in the backend for products
@@ -201,16 +243,24 @@ async function queryProducts() {
 		}
 		else if (userRole == "Driver") {
 			let wishlistButton = document.createElement("button");
-			wishlistButton.addEventListener("click", addToWishlist)
-			wishlistButton.classList.add("wishlist-button");
-			wishlistButton.innerText = "Add To Wishlist";
+			wishlistButton.innerText = "★";
 			productDiv.appendChild(wishlistButton);
+			if (product.wishlisted) {
+				wishlistButton.classList.add("wishlist-button-active");
+				wishlistButton.addEventListener("click", removeFromWishlist);
+			}
+			else {
+				wishlistButton.classList.add("wishlist-button-inactive");
+				wishlistButton.addEventListener("click", addToWishlist);
+			}
+			productDiv.addEventListener("mouseenter", showWishlistButton);
+			productDiv.addEventListener("mouseleave", hideWishlistButton);
 		}
 		productDiv.appendChild(name);
 		productDiv.appendChild(price);
 
 		//give product div an event listener that opens up the advanced details
-		productDiv.addEventListener("click", showProductDetails)
+		productDiv.addEventListener("click", showProductDetails);
 
 		//append elements to the grid;
 		grid.appendChild(productDiv);
@@ -244,71 +294,87 @@ function closePopup() {
 	popupEl.hidden = true;
 }
 
+async function addProductToCart(event) {
+	const cartButton = event.target.closest(".cart");
+	const productID = cartButton.dataset.productId;
+	let response = await fetch ("/cart/add", {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify({
+			productID: productID
+		})
+	});
+}
+
 function showProductDetails(event) {
 	//no action if the remove or add button was pressed
 	if (event.target.classList.contains("remove-button")) {return}
 	if (event.target.classList.contains("add-button")) {return}
-	if (event.target.classList.contains("wishlist-button")) {return}
+	if (event.target.classList.contains("wishlist-button-inactive")) {return}
+	if (event.target.classList.contains("wishlist-button-active")) {return}
 
 	let productDetailIndex = this.dataset.index;
 	let productDetails = pageProductData[productDetailIndex];
-	console.log(productDetails)
+	const userRole = getUserRole();
 
 	let productDetailsHtml = `
 		<div id="popup-content-bg">
 			<div id="popup-content-div">
+				<button class="cart" data-product-id="${productDetails.id}"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Ic_shopping_cart_48px.svg/640px-Ic_shopping_cart_48px.svg.png"></button>
 				<button id="popup-close">X</button>
 				<div id="popup-images"></div>
-				<h2>${productDetails.title}</H3>
+				<h2 class="product-name">${productDetails.title}</H3>
 				<div id="popup-price">
 					<div class="side-by-side">
-						<h3>Point Cost:</h3>
-						<p>${productDetails.price} Points</p>
+						<h3 class="popup-label">Point Cost:</h3>
+						<p class="popup-data">${productDetails.price} Points</p>
 					</div>
 				</div>
 				<div id="popup-availability">
 					<div class="side-by-side">
-						<h3>Availability:</h3>
-						<p>${productDetails.availabilityStatus}</p>
+						<h3 class="popup-label">Availability:</h3>
+						<p class="popup-data">${productDetails.availabilityStatus}</p>
 					</div>
 					<div class="side-by-side">
-						<h3>Stock:</h3>
-						<p>${productDetails.stock}</p>
+						<h3 class="popup-label">Stock:</h3>
+						<p class="popup-data">${productDetails.stock}</p>
 					</div>
 				</div>
 				<div id="popup-brand">
 					<div class="side-by-side">
-						<h3>Brand:</h3>
-						<p>${productDetails.brand}</p>
+						<h3 class="popup-label">Brand:</h3>
+						<p class="popup-data">${productDetails.brand==undefined ? "N/A" : productDetails.brand}</p>
 					</div>
 				</div>
 				<div id="popup-description">
 					<div class="side-by-side">
-						<h3>Description:</h3>
-						<p>${productDetails.description}</p>
+						<h3 class="popup-label">Description:</h3>
+						<p class="popup-data">${productDetails.description}</p>
 					</div>
 				</div>
 				<div id="popup-dimensions">
-					<h3>Dimensions:</h3>
+					<h3 class="popup-label">Dimensions:</h3>
 					<div class="side-by-side">
-						<h4>Depth:</h4>
-						<p>${productDetails.dimensions["depth"]} in</p>
+						<h4 class="popup-sub-label">Depth:</h4>
+						<p class="popup-sub-data">${productDetails.dimensions["depth"]} in</p>
 					</div>
 					<div class="side-by-side">
-						<h4>height:</h4>
-						<p>${productDetails.dimensions["height"]} in</p>
+						<h4 class="popup-sub-label">Height:</h4>
+						<p class="popup-sub-data">${productDetails.dimensions["height"]} in</p>
 					</div>
 					<div class="side-by-side">
-						<h4>width:</h4>
-						<p>${productDetails.dimensions["width"]} in</p>
+						<h4 class="popup-sub-label">Width:</h4>
+						<p class="popup-sub-data">${productDetails.dimensions["width"]} in</p>
 					</div>
 				</div>
 				<div id="popup-rating">
-					<h3>Overall Rating</h3>
-					<p>${productDetails.rating}/5</p>
+					<h3 class="popup-label">Overall Rating</h3>
+					<p class="popup-data">${productDetails.rating}/5 ★</p>
 				</div>
 				<div id="popup-reviews">
-					<h3>Reviews</h3>
+					<h3 class="popup-label">Reviews</h3>
 				</div>
 			</div>
 		</div>
@@ -317,6 +383,10 @@ function showProductDetails(event) {
 	//add product popup html to page
 	let popupEl = document.getElementById("popup-overlay-bg");
 	popupEl.innerHTML = productDetailsHtml;
+
+	//add event listener for cart button
+	let cartButton = document.querySelector(".cart");
+	cartButton.addEventListener("click", addProductToCart);
 
 	//add each image
 	let imageDiv = document.getElementById("popup-images");

@@ -8,36 +8,6 @@
 
 {% block content %}
 <h1>Home Page</h1>
-{% if session.get("UserID") %}
-<div class="container is-max-desktop mt-5 mb-5">
-  <h2 class="title is-4">Search Organizations</h2>
-
-  <form method="GET" action="/orgs">
-    <div class="field has-addons">
-      <div class="control is-expanded">
-        <input class="input" type="text" name="q" placeholder="Search organization name...">
-      </div>
-      <div class="control">
-        <div class="select">
-          <select name="mode">
-            <option value="contains">Contains</option>
-            <option value="starts_with">Starts with</option>
-            <option value="exact">Exact</option>
-          </select>
-        </div>
-      </div>
-      <div class="control">
-        <button class="button is-info" type="submit">Search</button>
-      </div>
-    </div>
-  </form>
-
-  <p class="mt-2">
-    <a href="/orgs">Browse all organizations</a>
-  </p>
-</div>
-{% endif %}
-
 {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
         <ul class=flashes>

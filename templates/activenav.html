@@ -17,31 +17,41 @@
             {% if session.get('Organization') == None and session.get('role') == "Driver" %}
                 <a href="/organization/apply"> Apply </a>
             {% elif session.get('role') != "Admin" %}
-                <a href="/catalog"> Catalog </a>
                 <a href="/organization"> Organization </a>
-                    {% if session.get('role') == "Sponsor" %}
-                        <a href="/sponsor/drivers">My Drivers</a>
-                        <a href="/sponsor/reports/points">Points Report</a>
-                        <a href="/sponsor/reports/passwords">Password Report</a>
-                    {% endif %}
             {% elif session.get('role') == "Admin" %}
                 <a href="/catalog"> Catalog </a>
                 <a href="/organizations"> Organizations </a>
             {% endif %}
         </div>
         <div class="nav-right">
-            {% if session.get('role') == "Admin" or session.get('role') == "Sponsor" %}
+            {% if session.get('role') == "Admin" %}
             <div class="dropdown">
                 <button class="dropbtn" type="button">Create Account</button>
                 <div class="dropdown-content">
-                    {% if session.get('role') == "Admin" %}
-                        <a href="/adminRegister">Admin</a>
-                        <a href="/sponsorRegister">Sponsor</a>
-                        <a href="/register">Driver</a>
-                    {% elif session.get('role') == "Sponsor" %}
-                        <a href="/sponsorRegister">Sponsor</a>
-                        <a href="/register">Driver</a>
-                    {% endif %}
+                    <a href="/adminRegister">Admin</a>
+                </div>
+            </div>
+            {% endif %}
+            {% if session.get('impersonating') %}
+            <section class="section pb-0">
+                <div class="notification is-warning is-light">
+                    <div class="is-flex is-justify-content-space-between is-align-items-center">
+                        <span><strong>Impersonation active:</strong> You are currently viewing the app as a driver.</span>
+                        <form method="POST" action="/impersonation/exit" style="margin:0;">
+                            <button class="button is-small is-dark" type="submit">Exit impersonation</button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+            {% endif %}
+            {% if session.get('role') == "Admin" %}
+            <div class="dropdown">
+                <button class="dropbtn" type="button">Reports</button>
+                <div class="dropdown-content">
+                    <a href="/reports/applications">Application Report</a>
+                    <a href="/reports/logins">Login Report</a>
+                    <a href="/reports/passwords">Password Report</a>
+                    <a href="/reports/points">Points Report</a>
                 </div>
             </div>
             {% endif %}
@@ -52,14 +62,20 @@
                 <div class="dropdown-content">
                     <a href="/profile">Profile</a>
                     <a href="/settings">Settings</a>
-                    {% if session.get('role') == "Admin" %}
+                
+                    {% if session.get('role') == "Driver" %}
+                        <a href="/wishlist">Wishlist</a>
+                    {% elif session.get('role') == "Admin" %}
                         <a href="/admin/users">Edit Users</a>
                     {% elif session.get('role') == "Sponsor" %}
                         <a href="/sponsor/users">Edit Users</a>
-                        <div class="dropdown-divider"></div>
-                        <a href="/sponsor/drivers">My Drivers</a>
-                        <a href="/sponsor/reports/points">Points Report</a>
-                        <a href="/sponsor/reports/passwords">Password Report</a>
+                    {% endif %}
+                    {% if session.get("admin_real_UserID") %}
+                    <form method="POST" action="/admin/stop-view-as" style="margin:0;">
+                        <button class="button is-white is-fullwidth" type="submit">
+                            Stop Viewing As
+                        </button>
+                    </form>
                     {% endif %}
                     <a href="/about"> About us </a>
                     <a href="/logout">Logout</a>

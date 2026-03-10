@@ -6,19 +6,17 @@
 <link rel="stylesheet" type="text/css" href="/static/css/form.css">
 {% endblock %}
 
-{% block page_js %}
-<script src="/static/js/password_strength.js"></script>
-{% endblock %}
-
 {% block content %}
     <div class="container is-max-desktop mt-6">
         <div class="box">
             {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                <div class="{{ category }}">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        {% if category == "validation" %}
+                            <div class="{{ category }}">{{ message }}</div>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
             {% endwith %}
             <h2 class="title is-2">Edit Profile</h2>
             <h5 class="title is-5">Please fill in all options that you would like to update.</h5>
@@ -39,6 +37,15 @@
                         <span class="icon is-small is-left">
                             <i class="fas fa-envelope"></i>
                         </span>
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                            {% if messages %}
+                                {% for category, message in messages %}
+                                    {% if category == "email" %}
+                                        <div class="{{ category }}">{{ message }}</div>
+                                    {% endif %}
+                                {% endfor %}
+                            {% endif %}
+                        {% endwith %}
                         <span class="error">
                             Please enter a valid email
                         </span>
@@ -63,6 +70,15 @@
                         <span class="icon is-small is-left">
                             <i class="fas fa-user"></i>
                         </span>
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                            {% if messages %}
+                                {% for category, message in messages %}
+                                    {% if category == "username" %}
+                                        <div class="{{ category }}">{{ message }}</div>
+                                    {% endif %}
+                                {% endfor %}
+                            {% endif %}
+                        {% endwith %}
                         <span class="error">
                             Please enter letters or digits with a minimum of 4 characters
                         </span>
@@ -70,11 +86,20 @@
                 </div>
                 <hr>
                 <h4 class="title is-4">Security</h4>
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            {% if category == "password" %}
+                                <div class="{{ category }}">{{ message }}</div>
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
 
                 <div class="field">
                 <label class="label">Current Password (required to change email or password)</label>
                 <div class="control has-icons-left">
-                    <input class="input" type="password" name="current_password" placeholder="Current password">
+                    <input class="input" type="password" name="currentPassword" placeholder="Current password">
                     <span class="icon is-small is-left"><i class="fas fa-lock"></i></span>
                     </div>
                 </div>
@@ -82,23 +107,48 @@
                 <div class="field">
                 <label class="label">New Password</label>
                 <div class="control has-icons-left">
-                    <input class="input" type="password" name="new_password" placeholder="New password">
+                    <input class="input" type="password" id="newPassword" name="newPassword" placeholder="New password">
                     <span class="icon is-small is-left"><i class="fas fa-lock"></i></span>
                 </div>
-                <p class="help">
-                    Must be 10+ chars and include upper, lower, number, and special character.
-                </p>
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                {% if category == "passwordErrors" %}
+                                    <div class="{{ category }}">{{ message }}</div>
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                <div id="passwordRequirements" >
+                    <p id="minLength" class="req invalid"> At least 10 characters </p>
+                    <p id="maxLength" class="req invalid" hidden> At most 128 characters </p>
+                    <p id="upper" class="req invalid"> Contains at least 1 uppercase letter </p>
+                    <p id="lower" class="req invalid"> Contains at least 1 lowercase letter </p>
+                    <p id="number" class="req invalid"> Contains at least 1 number </p>
+                    <p id="special" class="req invalid"> Contains at least 1 special character </p>
+                </div>
                 </div>
 
                 <div class="field">
                 <label class="label">Confirm New Password</label>
                 <div class="control has-icons-left">
-                    <input class="input" type="password" name="confirm_new_password" placeholder="Confirm new password">
+                    <input class="input" type="password" name="confirmNewPassword" placeholder="Confirm new password">
                     <span class="icon is-small is-left"><i class="fas fa-lock"></i></span>
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                {% if category == "confirmPassword" %}
+                                    <div class="{{ category }}">{{ message }}</div>
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
                     </div>
                 </div>
                 <button class="button is-block is-info is-large is-fullwidth">Update</button>
             </form>
         </div>
     </div>
+
+<script src="/static/js/form.js"></script>
 {% endblock %}

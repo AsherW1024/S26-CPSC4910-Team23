@@ -12,8 +12,16 @@
     border-color: red;
 }
 
-.username, .password, .registeredOrg, .failedAttempts, .required {
+.username, .password, .registeredOrg, .failedAttempts, .required, .invalid{
     color: red;
+}
+
+.req {
+    font-size: .9em;
+}
+
+.valid {
+    color: green;
 }
 
 /* ===== Auth page layout ===== */
@@ -69,7 +77,9 @@
 .registered,
 .registeredOrg,
 .missing,
-.mismatch {
+.mismatch,
+.passwordErrors,
+.confirmPassword {
     background: rgba(214, 40, 40, 0.10);
     color: #d62828;
     border: 1px solid rgba(214, 40, 40, 0.30);
@@ -87,25 +97,6 @@
     border-radius: 10px;
     font-weight: 700;
     margin: 0.5rem 0;
-}
-
-/* Error / warning style for all current categories */
-.username,
-.password,
-.registered,
-.registeredOrg,
-.missing,
-.mismatch {
-    color: #d62828;
-    font-weight: 600;
-    margin: 0.25rem 0;
-}
-
-/* Success style */
-.created {
-    color: #2a9d8f;
-    font-weight: 600;
-    margin: 0.25rem 0;
 }
 
 .select-many {

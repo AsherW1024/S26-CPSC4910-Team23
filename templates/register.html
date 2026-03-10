@@ -2,16 +2,20 @@
 <html lang="en">
 <head>
 	<meta charset="UTF-8">
+    <script src="/static/js/ui_prefs.js" defer></script>
 	<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.2/css/bulma.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/navigation.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/form.css">
 	<title>Register</title>
 </head>
 <body>
-    <div class="container is-max-desktop mt-6">
+    <div class="container is-max-desktop mt-6 no-nav">
         <!-- Back button: return to previous page, fallback to /home -->
         <div class="back-button-row">
             <button type="button"
                 class="button is-light back-button"
-                onclick="if (document.referrer) { window.history.back(); } else { window.location.href='/home'; }">
+                onclick="if (document.referrer) { window.history.back(); } else { window.location.href='/'; }">
                 <i class="fas fa-arrow-left"></i>
             </button>
         </div>
@@ -90,13 +94,18 @@
                             <span class="required">*</span>Password
                         </label>
                         <div class="control has-icons-left">
-                            <input class="input" type="password" name="password" placeholder="Password input" pattern=".{8,128}" required>
+                            <input class="input" type="password" id="password" name="password" placeholder="Password input" pattern=".{10,128}" required>
                             <span class="icon is-small is-left">
                                 <i class="fas fa-lock"></i>
                             </span>
-                            <span class="error">
-                                Please enter digits or letters with a minimum of 8 characters
-                            </span>
+                            <div id="passwordRequirements" >
+                                <p id="minLength" class="req invalid"> At least 10 characters </p>
+                                <p id="maxLength" class="req invalid" hidden> At most 128 characters </p>
+                                <p id="upper" class="req invalid"> Contains at least 1 uppercase letter </p>
+                                <p id="lower" class="req invalid"> Contains at least 1 lowercase letter </p>
+                                <p id="number" class="req invalid"> Contains at least 1 number </p>
+                                <p id="special" class="req invalid"> Contains at least 1 special character </p>
+                            </div>
                         </div>
                     </div>
                     <div class="field">
@@ -104,7 +113,7 @@
                             <span class="required">*</span>Confirm Password
                         </label>
                         <div class="control has-icons-left">
-                            <input class="input" type="password" name="confirm_password" placeholder="Confirm Password" pattern=".{8,128}" required>
+                            <input class="input" type="password" name="confirm_password" placeholder="Confirm Password" pattern=".{10,128}" required>
                             <span class="icon is-small is-left">
                                 <i class="fas fa-lock"></i>
                             </span>
@@ -113,26 +122,6 @@
                             </span>
                         </div>
                     </div>
-                    {% if accountType == "Driver" or accountType == "Sponsor" %}
-
-                    <div class="field">
-                        {% if accountType == "Driver"%}
-                            <label class="label">Organization Name</label>
-                        {% elif accountType == "Sponsor" %}
-                            <label class="label">
-                                <span class="required">*</span>Organization Name
-                            </label>
-                        {% endif %}
-                        <div class="control">
-                            <input class=input id="orgInput" placeholder="Start typing organization name...">
-                            <datalist id="orgOptions">
-                                {% for org in organizations %}
-                                    <option>{{ org.Name }}</option>
-                                {% endfor %}
-                            </datalist> 
-                        </div>
-                    </div>
-                    {% endif %}
                     <button class="button is-block is-info is-large is-fullwidth">Register</button>
                 </form>
             </div>
