@@ -2094,7 +2094,7 @@ def adjustPrice(data):
 	if point_value <= 0:
 		return data
 
-	#make the price equal to the price in dollars multiplied by the point value
+	#make the price equal to the price in dollars divided by the point value
 	#rounded to nearest whole point, always rounded up
 	if "products" in data:
 		for product in data["products"]:
@@ -2631,6 +2631,42 @@ def addToCart():
 		return jsonify({"message": "Success"}), 200
 	return jsonify({"message": "Permission error"}), 400
 
+@application.route("/cart/update", methods=["POST"])
+def updateCart():
+	if "UserID" in session and "OrgID" in session:
+		data = request.get_json()
+
+		amount = data.get("amount")
+		productID = data.get("productID")
+
+		userID = session.get("UserID")
+		orgID = session.get("OrgID")
+
+		#make sure amount is an int, above 0, and less than or equal to stock amount
+		if not isinstance(amount, int):
+			return jsonify({"message": "The value provided was not an integer"}), 400
+		if amount<1:
+			return jsonify({"message": "The value provided was below 1"}), 400
+		if amount>(getProductData(productID).get("stock")):
+			return jsonify({"message": "The value was greater than the amount of stock available"}), 400
+
+
+		updateCartQuery = """
+			UPDATE Cart
+			SET amount=%s
+			WHERE
+				userID=%s
+				AND orgID=%s
+				AND productID=%s
+		"""
+		try:
+			updateDb(query=updateCartQuery, params=(amount, userID, orgID, productID))
+		except Exception as e:
+			print(e)
+			return jsonify({"message": "Error updating amount"}), 400
+		return jsonify({"message": "Success"}), 200
+	return jsonify({"message": "Permission error"}), 400
+
 def getProductData(id):
 	response = requests.get(f"https://dummyjson.com/products/{id}")
 	if not response.ok:
@@ -2645,7 +2681,7 @@ def cart():
 		orgID = session.get("OrgID")
 
 		getCartItemsQuery = """
-			SELECT productID
+			SELECT productID, amount
 			FROM Cart
 			WHERE
 				userID=%s
@@ -2655,14 +2691,20 @@ def cart():
 
 		#collect just the product ids into a list
 		cartProductIds = []
+		#collect quantities of products into a list
+		cartQuantities = []
 		for row in rows:
 			cartProductIds.append(row.get("productID"))
+			cartQuantities.append(row.get("amount"))
 
 		cartProductData = []
 		for productId in cartProductIds:
 			cartProductData.append(getProductData(productId))
 
 		cartProductData = adjustPrice(cartProductData)
+
+		for i, amount in enumerate(cartQuantities):
+			cartProductData[i]["quantity"] = amount
 
 		return render_template("cart.html", layout="activenav.html", cartProductData=cartProductData)
 	return redirect(url_for("home"))

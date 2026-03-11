@@ -36,3 +36,9 @@
 .cell-content {
 	max-width: 10vw;
 }
+.increment-button{
+	background-color: rgb(164, 255, 164);
+}
+.decrement-button{
+	background-color: rgb(255, 194, 194);
+}
