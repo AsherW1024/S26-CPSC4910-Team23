@@ -1,7 +1,11 @@
 incrementButtons = document.querySelectorAll(".increment-button");
 decrementButtons = document.querySelectorAll(".decrement-button");
 removeButtons = document.querySelectorAll(".remove-cart-item");
+productRows = document.querySelectorAll(".product-row");
 
+for (const row of productRows) {
+	row.addEventListener("click", showProductPopup);
+}
 for (const button of incrementButtons) {
 	button.addEventListener("click", increaseAmount);
 }
@@ -10,6 +14,17 @@ for (const button of decrementButtons) {
 }
 for (const button of removeButtons) {
 	button.addEventListener("click", removeFromCart);
+}
+
+async function showProductPopup(event) {
+	productID = event.target.closest(".product-row").dataset.productId;
+	popupDiv = document.getElementById("popup-overlay-bg");
+	response = await fetch(`/product/${productID}`);
+	if (response.ok) {
+		popupHtml = await response.text();
+		popupDiv.innerHTML = popupHtml;
+		popupDiv.hidden = false;
+	}
 }
 
 async function removeFromCart(event) {
@@ -81,7 +96,6 @@ function decreaseAmount(event) {
 	const productID = productRow.dataset.productId;
 	const amountDisplay = controlDiv.querySelector(".amount-value");
 	let currentAmount = amountDisplay.innerText;
-	const productCost = parseInt(priceEl.innerText) / currentAmount;
 
 	if (currentAmount > 1) {
 		--amountDisplay.innerText;

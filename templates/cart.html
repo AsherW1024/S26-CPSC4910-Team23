@@ -23,7 +23,7 @@
 			</thead>
 			<tbody>
 				{% for product in cartProductData %}
-				<tr data-product-id="{{product.id}}">
+				<tr data-product-id="{{product.id}}" class="product-row">
 					<td class="cell"><div class="cell-content"><img src="{{product.thumbnail}}"></div></td>
 					<td class="cell"><div class="cell-content"><p>{{product.title}}</p></div></td>
 					<td class="cell"><div class="cell-content"><p class="product-price">{{product.price * product.quantity}} Points</p></div></td>
@@ -34,6 +34,7 @@
 			</tbody>
 		</table>
 	</div>
+	<div id="popup-overlay-bg" hidden></div>
 	<script src="/static/js/cart.js"></script>
 	{% else %}
 	<p>No products added to cart yet.</p>

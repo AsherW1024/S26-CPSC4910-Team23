@@ -2741,6 +2741,12 @@ def cart():
 		return render_template("cart.html", layout="activenav.html", cartProductData=cartProductData)
 	return redirect(url_for("home"))
 
+@application.route("/product/<int:productID>")
+def product_popup(productID):
+	productData = getProductData(productID)
+	productData = adjustPrice([productData])[0]
+	return render_template("product_popup.html", productDetails=productData)
+
 """
 This lets us test locally. Should not execute in AWS
 """

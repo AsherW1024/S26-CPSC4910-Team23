@@ -1,0 +1,128 @@
+#popup-overlay-bg {
+	background-color: rgba(0, 0, 0, 0.329);
+	position: fixed;
+	top: 0;
+	left: 0;
+	z-index: 99999;
+	justify-items: center;
+	align-content: center;
+	height: 100%;
+	width: 100%;
+}
+#popup-content-bg {
+	max-height: 80vh;
+	background-color: white;
+	max-width: 80%;
+	border-radius: 1.75em;
+	height: fit-content;
+	overflow: hidden;
+}
+
+#popup-content-div {
+	height: 80vh;
+	overflow-y: auto;
+	max-width: 100%;
+	justify-content: center;
+	padding-left: 5%;
+	padding-right: 5%;
+	position: relative;
+}
+#popup-content-div div{
+	display: block;
+	margin-top: 20px;
+	margin-bottom: 20px;
+	text-align: center;
+}
+
+#popup-close {
+	background-color: red;
+	color: white;
+	border: none;
+	box-shadow: inset;
+	border-radius: 50%;
+	position: sticky;
+	top: 4%;
+	float: right;
+	margin-right: -25px;
+	font-size: 2em;
+	padding-left: 14px;
+	padding-right: 14px;
+	padding-top: 0px;
+	padding-bottom: 0px;
+}
+
+.side-by-side {
+	display: flex;
+}
+.side-by-side * {
+	display: inline-block;
+}
+
+#popup-content-div h4{
+	font-size: 1.8vw;
+}
+
+#popup-content-div h3{
+	font-size: 2.5vw;
+	font-weight: bold;
+}
+#popup-content-div h2{
+	font-size: 4vw;
+}
+
+.review-div {
+	margin-top: 0.5em;
+	margin-bottom: 0.5em;
+	padding-top: 1em;
+	padding-bottom: 1em;
+	outline: solid black 0.1em;
+}
+
+#popup-images img{
+	max-width: 80%;
+	height: auto;
+}
+
+#popup-dimensions div {
+	margin: 0;
+}
+.product-name {
+	text-align: center;
+	font-size: 60px !important;
+	margin: 50px !important;
+	font-weight: bolder !important;
+	border-bottom: 1px solid;
+	padding-bottom: 15px;
+}
+.popup-label {
+	font-size: 25px !important;
+}
+.popup-data {
+	font-size: 25px;
+}
+.popup-sub-label {
+	font-size: 20px !important;
+}
+.popup-sub-data {
+	font-size: 20px !important;
+}
+.remove-from-wishlist-button {
+	background-color: red;
+	color: white;
+	user-select: none;
+	border: none;
+	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+	border-radius: 50%;
+	padding-left: 14px;
+	padding-right: 14px;
+	padding-top: 4px;
+	padding-bottom: 4px;
+	font-size: 30px;
+	display: none;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+	position: absolute;
+	right: 0;
+	top: 0;
+}
