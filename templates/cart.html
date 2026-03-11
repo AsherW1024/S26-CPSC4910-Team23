@@ -26,7 +26,7 @@
 				<tr data-product-id="{{product.id}}">
 					<td class="cell"><div class="cell-content"><img src="{{product.thumbnail}}"></div></td>
 					<td class="cell"><div class="cell-content"><p>{{product.title}}</p></div></td>
-					<td class="cell"><div class="cell-content"><p>{{product.price}} Points</p></div></td>
+					<td class="cell"><div class="cell-content"><p class="product-price">{{product.price * product.quantity}} Points</p></div></td>
 					<td class="cell"><div class="amount-control"><button class="decrement-button">-</button><p class="amount-value">{{product.quantity}}</p><button class="increment-button">+</button></div></td>
 					<td class="cell"><div class="cell-content"><button class="remove-cart-item">Remove</button></div></td>
 				</tr>

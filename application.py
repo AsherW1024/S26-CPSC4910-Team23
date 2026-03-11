@@ -2664,7 +2664,13 @@ def updateCart():
 		except Exception as e:
 			print(e)
 			return jsonify({"message": "Error updating amount"}), 400
-		return jsonify({"message": "Success"}), 200
+		
+		productData = getProductData(productID)
+		productPrice = adjustPrice([productData])[0].get("price")
+		
+		newPriceDisplay = productPrice*amount
+
+		return jsonify({"message": "Success", "newPriceDisplay": newPriceDisplay}), 200
 	return jsonify({"message": "Permission error"}), 400
 
 @application.route("/cart/remove", methods=["POST"])

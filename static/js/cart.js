@@ -38,6 +38,7 @@ function increaseAmount(event) {
 	const productRow = controlDiv.parentElement.parentElement;
 	const productID = productRow.dataset.productId;
 	const amountDisplay = controlDiv.querySelector(".amount-value");
+	const priceEl = productRow.querySelector(".product-price")
 	let currentAmount = amountDisplay.innerText++;
 
 	if(incrementStartValue==null){
@@ -59,6 +60,11 @@ function increaseAmount(event) {
 		if (!response.ok) {
 			amountDisplay.innerText = incrementStartValue;
 		}
+		else {
+			responseData = await response.json();
+			newPointAmount = responseData.newPriceDisplay;
+			priceEl.innerText = `${newPointAmount} Points`;
+		}
 		incrementStartValue=null;
 	}, 500);
 }
@@ -71,14 +77,17 @@ function decreaseAmount(event) {
 	clearTimeout(decrementTimer);
 	const controlDiv = event.target.parentElement;
 	const productRow = controlDiv.parentElement.parentElement;
+	const priceEl = productRow.querySelector(".product-price");
 	const productID = productRow.dataset.productId;
 	const amountDisplay = controlDiv.querySelector(".amount-value");
 	let currentAmount = amountDisplay.innerText;
+	const productCost = parseInt(priceEl.innerText) / currentAmount;
+
 	if (currentAmount > 1) {
 		--amountDisplay.innerText;
 	}
 	else {
-		return
+		++currentAmount;
 	}
 
 	if(decrementStartValue==null){
@@ -93,13 +102,18 @@ function decreaseAmount(event) {
 			},
 			body: JSON.stringify({
 				productID: productID,
-				amount: Number(currentAmount)+1
+				amount: Number(currentAmount)-1
 			})
 		});
 
 		if (!response.ok) {
 			amountDisplay.innerText = decrementStartValue;
 		}
-		decrementStartValue=null;
+		else {
+			responseData = await response.json();
+			newPointAmount = responseData.newPriceDisplay;
+			priceEl.innerText = `${newPointAmount} Points`;
+		}
+		decrementStartValue = null;
 	}, 500);
 }
