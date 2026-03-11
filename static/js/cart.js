@@ -1,11 +1,32 @@
 incrementButtons = document.querySelectorAll(".increment-button");
 decrementButtons = document.querySelectorAll(".decrement-button");
+removeButtons = document.querySelectorAll(".remove-cart-item");
 
 for (const button of incrementButtons) {
 	button.addEventListener("click", increaseAmount);
 }
 for (const button of decrementButtons) {
 	button.addEventListener("click", decreaseAmount);
+}
+for (const button of removeButtons) {
+	button.addEventListener("click", removeFromCart);
+}
+
+async function removeFromCart(event) {
+	const removeButton = event.target;
+	const productRow = removeButton.parentElement.parentElement.parentElement;
+	const productID = productRow.dataset.productId;
+	
+	response = await fetch("/cart/remove", {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify({
+			productID: productID
+		})
+	});
+	window.location.reload();
 }
 
 let incrementTimer = null;

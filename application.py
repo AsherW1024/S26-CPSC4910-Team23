@@ -2667,6 +2667,32 @@ def updateCart():
 		return jsonify({"message": "Success"}), 200
 	return jsonify({"message": "Permission error"}), 400
 
+@application.route("/cart/remove", methods=["POST"])
+def removeFromCart():
+	if "UserID" in session and "OrgID" in session:
+		data = request.get_json()
+
+		productID = data.get("productID")
+
+		userID = session.get("UserID")
+		orgID = session.get("OrgID")
+
+		deleteFromCartQuery = """
+			DELETE FROM Cart
+			WHERE
+				userID=%s
+				AND orgID=%s
+				AND productID=%s
+		"""
+		try:
+			updateDb(query=deleteFromCartQuery, params=(userID, orgID, productID))
+		except Exception as e:
+			print(e)
+			return jsonify({"message": "Error removing product from cart"}), 400
+		return redirect(url_for("cart"))
+
+	return jsonify({"message": "Permission error"}), 400
+
 def getProductData(id):
 	response = requests.get(f"https://dummyjson.com/products/{id}")
 	if not response.ok:
