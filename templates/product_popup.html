@@ -7,49 +7,49 @@
 		<div id="popup-price">
 			<div class="side-by-side">
 				<h3 class="popup-label">Point Cost:</h3>
-				<p class="popup-data">${productDetails.price} Points</p>
+				<p class="popup-data">{{productDetails.price}} Points</p>
 			</div>
 		</div>
 		<div id="popup-availability">
 			<div class="side-by-side">
 				<h3 class="popup-label">Availability:</h3>
-				<p class="popup-data">${productDetails.availabilityStatus}</p>
+				<p class="popup-data">{{productDetails.availabilityStatus}}</p>
 			</div>
 			<div class="side-by-side">
 				<h3 class="popup-label">Stock:</h3>
-				<p class="popup-data">${productDetails.stock}</p>
+				<p class="popup-data">{{productDetails.stock}}</p>
 			</div>
 		</div>
 		<div id="popup-brand">
 			<div class="side-by-side">
 				<h3 class="popup-label">Brand:</h3>
-				<p class="popup-data">${productDetails.brand==undefined ? "N/A" : productDetails.brand}</p>
+				<p class="popup-data">{{ "N/A" if productDetails.brand==None else productDetails.brand}}</p>
 			</div>
 		</div>
 		<div id="popup-description">
 			<div class="side-by-side">
 				<h3 class="popup-label">Description:</h3>
-				<p class="popup-data">${productDetails.description}</p>
+				<p class="popup-data">{{productDetails.description}}</p>
 			</div>
 		</div>
 		<div id="popup-dimensions">
 			<h3 class="popup-label">Dimensions:</h3>
 			<div class="side-by-side">
 				<h4 class="popup-sub-label">Depth:</h4>
-				<p class="popup-sub-data">${productDetails.dimensions["depth"]} in</p>
+				<p class="popup-sub-data">{{productDetails.dimensions["depth"]}} in</p>
 			</div>
 			<div class="side-by-side">
 				<h4 class="popup-sub-label">Height:</h4>
-				<p class="popup-sub-data">${productDetails.dimensions["height"]} in</p>
+				<p class="popup-sub-data">{{productDetails.dimensions["height"]}} in</p>
 			</div>
 			<div class="side-by-side">
 				<h4 class="popup-sub-label">Width:</h4>
-				<p class="popup-sub-data">${productDetails.dimensions["width"]} in</p>
+				<p class="popup-sub-data">{{productDetails.dimensions["width"]}} in</p>
 			</div>
 		</div>
 		<div id="popup-rating">
 			<h3 class="popup-label">Overall Rating</h3>
-			<p class="popup-data">${productDetails.rating}/5 ★</p>
+			<p class="popup-data">{{productDetails.rating}}/5 ★</p>
 		</div>
 		<div id="popup-reviews">
 			<h3 class="popup-label">Reviews</h3>
