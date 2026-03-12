@@ -53,6 +53,13 @@
 		</div>
 		<div id="popup-reviews">
 			<h3 class="popup-label">Reviews</h3>
+			{% for review in productDetails.reviews%}
+			<div class="review-div">
+				<h4>{{review.reviewerName}}</h4>
+				<p>{{review.rating}}/5 ★</p>
+				<p>{{review.comment}}</p>
+			</div>
+			{% endfor %}
 		</div>
 	</div>
 </div>
