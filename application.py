@@ -253,9 +253,7 @@ def getOrganization():
 							WHERE u.UserID = %s""", (session['UserID'],))
 
 		if org:
-			print("SESSION:", )
 			organization = org[0]["Name"]
-			print("org:", organization)
 			if organization is not None:
 				session['Organization'] = organization
 				session['OrgID'] = org[0]["OrganizationID"]
@@ -264,8 +262,6 @@ def getOrganization():
 				session['OrgID'] = 0
 		else:
 			session.pop("Organization", None)
-
-	print("SESSION ORG:", session.get("Organization"))
 
 
 #Creating accounts and organizations
