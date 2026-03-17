@@ -64,26 +64,45 @@
                 </form>
             {% endif %}
             <div class="dropdown">
-                <button class="icon-user dropbtn" type="button">
-                    <i class="fa fa-user fa-1x"></i>
+                <button class="icon-bars dropbtn" type="button">
+                    <i class="fa fa-bars fa-1x"></i>
                 </button>
                 <div class="dropdown-content">
-                    <a href="/profile">Profile</a>
-                    <a href="/settings">Settings</a>
-                    {% if session.get('role') == "Admin" %}
-                        <a href="/admin/users">Edit Users</a>
+                    <a href="/profile">
+                        <i class="fa fa-user fa-1x"></i> Profile
+                    </a>
+                    <a href="/settings">
+                        <i class="fa fa-gear fa-1x"></i> Settings
+                    </a>
+                    {% if session.get('role') == "Driver" %}
+                        <a href="/wishlist">
+                            <i class="fa fa-heart fa-1x"></i> Wishlist
+                        </a>
+                    {% elif session.get('role') == "Admin" %}
+                        <a href="/admin/users">
+                            <i class="fa fa-pen-to-square fa-1x"></i> Edit Users
+                        </a>
                     {% elif session.get('role') == "Sponsor" %}
-                        <a href="/sponsor/users">Edit Users</a>
+                        <a href="/sponsor/users">
+                            <i class="fa fa-pen-to-square fa-1x"></i> Edit Users
+                        </a>
                     {% endif %}
                     {% if session.get("admin_real_UserID") %}
                     <form method="POST" action="/admin/stop-view-as" style="margin:0;">
                         <button class="button is-white is-fullwidth" type="submit">
-                            Stop Viewing As
+                            <i class="fa fa-user-slash fa-1x"></i> Stop Viewing As
                         </button>
                     </form>
                     {% endif %}
-                    <a href="/about"> About us </a>
-                    <a href="/logout">Logout</a>
+                    <a href="/bugReport">
+                        <i class="fa fa-bug fa-1x"></i> Report a Bug 
+                    </a>
+                    <a href="/about"> 
+                        <i class="fa fa-circle-info fa-1x"></i> About us 
+                    </a>
+                    <a href="/logout">
+                        <i class="fa fa-arrow-right-from-bracket fa-1x"></i> Logout
+                    </a>
                 </div>
             </div>
         </div>

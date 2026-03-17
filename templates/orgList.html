@@ -56,13 +56,30 @@
           <td>{{ o.Name }}</td>
 
           {% if session.get('role') == "Admin" %}
-          <td><a class="button is-small" href="/organizations/{{ o.OrganizationID }}/view">View</a></td>
-          <td><a class="button is-small is-info" href="/organizations/{{ o.OrganizationID }}/enroll-driver">Enroll Driver</a></td>
+          <td>
+            {% if o.Status == "Active" %}
+            <form method="POST" action="/organizations/{{ o.OrganizationID }}/deactivate"
+              style="display:inline;" onsubmit="return confirmOrgDeactivate();">
+              <button class="button is-small is-warning" type="submit">
+                Deactivate
+              </button>
+            </form>
+            {% else %}
+            <form method="POST" action="/organizations/{{ o.OrganizationID }}/activate"
+              style="display:inline;" onsubmit="return confirmOrgActivate();">
+              <button class="button is-small is-success" type="submit">
+                Activate
+              </button>
+            </form>
+            {% endif %}
+          </td>
+          <td><a class="button is-small" {% if o.Status == "Inactive" %} disabled {% endif %} href="/organizations/{{ o.OrganizationID }}/view">View</a></td>
+          <td><a class="button is-small is-info" {% if o.Status == "Inactive" %} disabled {% endif %} href="/organizations/{{ o.OrganizationID }}/enroll-driver">Enroll Driver</a></td>
           <td>
             <form method="POST" action="/organizations/{{ o.OrganizationID }}/edit"
               style="display:inline;" onsubmit="return promptOrgRename({{ o.OrganizationID }});">
               <input type="hidden" name="newName" id="newName_{{ o.OrganizationID }}">
-              <button class="button is-small is-success" type="submit">
+              <button class="button is-small is-info" {% if o.Status == "Inactive" %} disabled {% endif %} type="submit">
                 Edit
               </button>
             </form>

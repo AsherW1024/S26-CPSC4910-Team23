@@ -15,9 +15,9 @@
     <div class="settings-row">
       <label for="themeSelect">Theme</label>
       <select id="themeSelect">
-        <option value="system">System</option>
-        <option value="light">Light</option>
-        <option value="dark">Dark</option>
+        <option value="system" {% if themePref=="system" %} selected {% endif %}>System</option>
+        <option value="light" {% if themePref=="light" %} selected {% endif %}>Light</option>
+        <option value="dark" {% if themePref=="dark" %} selected {% endif %}>Dark</option>
       </select>
       <div class="hint">“System” follows your device setting.</div>
     </div>
@@ -25,15 +25,35 @@
     <div class="settings-row">
       <label for="fontSelect">Font size</label>
       <select id="fontSelect">
-        <option value="sm">Small</option>
-        <option value="md">Default</option>
-        <option value="lg">Large</option>
-        <option value="xl">Extra Large</option>
+        <option value="sm" {% if fontPref=="sm" %} selected {% endif %}>Small</option>
+        <option value="md" {% if fontPref=="md" %} selected {% endif %}>Default</option>
+        <option value="lg" {% if fontPref=="lg" %} selected {% endif %}>Large</option>
+        <option value="xl" {% if fontPref=="xl" %} selected {% endif %}>Extra Large</option>
       </select>
       <div class="hint">Applies across all pages.</div>
     </div>
+
+    <div class="settings-row">
+      <label for="commMethod"> Communication Preference </label>
+        <form method="POST" action="/settings/communicationPreference" style="display:contents;">
+          <select id="commMethod" name="commPref" onchange="this.form.submit()">
+            <option value="Email" {% if currentPref=="Email" %} selected {% endif %}>Email</option>
+            {% if hasPhoneNum == True %}
+              <option value="PhoneNumber" {% if currentPref=="PhoneNumber" %} selected {% endif %}>Phone Number</option>
+            {% else %}
+              <option disabled>No phone number please enter one in your profile.</option>
+            {% endif %}
+          </select>
+        </form>
+    </div>
+    <div class="settings-row">
+      <label for="notifcheck"> Essential Notifications Only </label>
+      <form method="POST" action="/settings/essentialNotifications" style="display:inline;">
+        <input id="notifcheck" type="checkbox" {% if essentialNotifs==1 %} checked {% endif %} name="essentialNotif" onchange="this.form.submit()">  
+      </form>
+    </div>
   </div>
 </div>
-
+<script src="/static/js/ui_prefs.js"></script>
 <script src="/static/js/settings.js" defer></script>
 {% endblock %}
