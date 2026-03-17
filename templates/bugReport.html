@@ -1,0 +1,71 @@
+{% extends layout %}
+
+{% block title %}Adjust Driver Points{% endblock %}
+
+{% block page_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/form.css">
+{% endblock %}
+
+{% block content %}
+<div class="container is-max-desktop mt-6">
+  <div class="box">
+    <h1 class="title">Report a bug</h1>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+              <ul class=flashes>
+              {% for category, message in messages %}
+                  {% if category in ["validation"] %}
+                      <div class="{{ category }}">{{ message }}</div>
+                  {% endif %}
+              {% endfor %}
+              </ul>
+          {% endif %}
+      {% endwith %}
+
+    <form method="POST" action="/bugReport">
+      <div class="field">
+        <label class="label"> Title </label>
+        <div class="control">
+          <input class="input" type="text" name="title" required placeholder="Please enter a title for the bug report..." pattern="{3, 80}">
+        </div>
+        <span class="error">
+          Must be more than 3 letters          
+        </span>
+      </div>
+
+      <div class="field">
+        <label class="label"> Description </label>
+        <div class="control">
+          <textarea class="textarea" name="description" required placeholder="Please provide a detailed explanation of the bug occurence..."></textarea>
+        </div>
+        <span class="error">
+          Required for the report.         
+        </span>
+      </div>
+
+      <div class="field">
+        <label class="label"> Severity </label>
+        <select name="severityType" id="adjustment">
+          <option value="1"> 1 </option>
+          <option value="2"> 2 </option>
+          <option value="3"> 3 </option>
+          <option value="4"> 4 </option>
+          <option value="5"> 5 </option>
+        </select>
+      </div>
+
+      <input type="hidden" name="prevPage" value="{{ prevPage }}">
+
+      <div class="field is-grouped">
+        <div class="control">
+          <button class="button is-success" type="submit">Submit report</button>
+        </div>
+        <div class="control">
+          <a class="button is-light" href="{{ prevPage or url_for('home')}}">Cancel</a>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

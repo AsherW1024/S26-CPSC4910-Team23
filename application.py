@@ -244,8 +244,8 @@ def require_login():
     return None
 
 def getOrganization():
-	if "UserID" in session:
-		org = paramQueryDb("""SELECT o.Name, o.OrganizationID
+	if "UserID" in session and session["role"] != "Admin":
+		org = selectDb("""SELECT o.Name, o.OrganizationID
 							FROM Users u 
 							LEFT JOIN Sponsors s ON u.UserID = s.SponsorID 
 							LEFT JOIN Drivers d ON u.UserID = d.DriverID
@@ -253,15 +253,19 @@ def getOrganization():
 							WHERE u.UserID = %s""", (session['UserID'],))
 
 		if org:
-			organization = org["Name"]
+			print("SESSION:", )
+			organization = org[0]["Name"]
+			print("org:", organization)
 			if organization is not None:
 				session['Organization'] = organization
-				session['OrgID'] = org["OrganizationID"]
+				session['OrgID'] = org[0]["OrganizationID"]
 			else:
 				session['Organization'] = None
 				session['OrgID'] = 0
 		else:
 			session.pop("Organization", None)
+
+	print("SESSION ORG:", session.get("Organization"))
 
 
 #Creating accounts and organizations
@@ -302,6 +306,8 @@ def registerUser():
 
 	if exists:
 		flash("User already has an account", "registered")
+		if "role" in session:
+			return redirect(request.referrer)
 		return redirect(url_for("login"))
 
 	name = request.form.get("name")
@@ -1234,6 +1240,31 @@ def registerAboutEdits():
 
 	return redirect(url_for("about"))
 
+@application.route("/bugReport")
+def bugReport():
+	prevPage = request.referrer
+	return render_template("bugReport.html", layout="activenav.html", prevPage=prevPage)
+
+@application.route("/bugReport", methods=["POST"])
+def postBugReport():
+	title = request.form.get("title").strip()
+	description = request.form.get("description").strip()
+	severity = request.form.get("severityType")
+	prevPage = request.form.get("prevPage")
+
+	if not title:
+		flash("Title is required.", "validation")
+		return redirect(url_for("bugReport"))
+
+	if not description:
+		flash("Description is required.", "validation")
+		return redirect(url_for("bugReport"))
+
+	updateDb("""INSERT INTO BugReports (Title, Description, Severity)
+				VALUES (%s, %s, %s)""", (title, description, severity))
+	
+	return redirect(prevPage or url_for("home"))
+
 @application.route("/profile")
 def profile():
 
@@ -1366,7 +1397,29 @@ def registerProfileEdits():
 
 @application.route("/settings")
 def settings():
-	return render_template("settings.html", layout = "activenav.html") 
+	hasPhoneNum = False
+	prefs = selectDb("""
+			SELECT PrefCommMethod, EssentialNotifsOnly, PhoneNumber, ThemePref, FontPref
+			FROM Users 
+			WHERE UserID=%s
+			ORDER BY UserID
+		""", (session["UserID"],))
+	if prefs[0]["PhoneNumber"] != None:
+		hasPhoneNum = True
+	return render_template("settings.html", layout = "activenav.html", themePref=prefs[0]["ThemePref"] ,fontPref=prefs[0]["FontPref"] ,
+							currentPref=prefs[0]["PrefCommMethod"], hasPhoneNum=hasPhoneNum, essentialNotifs=prefs[0]["EssentialNotifsOnly"], ) 
+
+@application.route("/settings/communicationPreference", methods=["POST"])
+def communicationPreference():
+	commPref = request.form.get("commPref")
+	updateDb(f"UPDATE Users SET PrefCommMethod=%s WHERE UserID=%s", (commPref, session["UserID"]))
+	return redirect(url_for("settings"))
+
+@application.route("/settings/essentialNotifications", methods=["POST"])
+def essentialNotifications():
+	essentialNotif = 1 if request.form.get("essentialNotif") else 0
+	updateDb(f"UPDATE Users SET EssentialNotifsOnly=%s WHERE UserID=%s", (essentialNotif, session["UserID"]))
+	return redirect(url_for("settings"))
 
 @application.route("/organizations")
 def organizations():
@@ -1389,7 +1442,7 @@ def organizations():
 			ORDER BY Name
 		""", (like,))
 		orgs = selectDb("""
-			SELECT OrganizationID, Name
+			SELECT OrganizationID, Name, Status
 			FROM Organizations 
 			WHERE Name LIKE %s
 			ORDER BY Name
@@ -1402,7 +1455,7 @@ def organizations():
 			ORDER BY Name
 		""")
 		orgs = selectDb("""
-			SELECT OrganizationID, Name
+			SELECT OrganizationID, Name, Status
 			FROM Organizations
 			ORDER BY Name
 			LIMIT %s OFFSET %s
@@ -1411,6 +1464,20 @@ def organizations():
 	numPages = math.ceil(rowTotal[0]["totalRows"] / rowsPerPage)
 	
 	return render_template("orgList.html", layout="activenav.html", orgs=orgs, q=q, page=page, pageNum=range(1, numPages + 1), pageRows=rowsPerPage)
+
+@application.route("/organizations/<int:OrgID>/deactivate", methods=["POST"])
+def organizationDeactivate(OrgID):
+	updateDb("UPDATE Organizations SET Status = %s WHERE OrganizationID = %s", ("Inactive", OrgID))
+	
+	flash("Organization deactivated successfully.", "success")
+	return redirect(url_for("organizations"))
+
+@application.route("/organizations/<int:OrgID>/activate", methods=["POST"])
+def organizationActivate(OrgID):
+	updateDb("UPDATE Organizations SET Status = %s WHERE OrganizationID = %s", ("Active", OrgID))
+	
+	flash("Organization activated successfully.", "success")
+	return redirect(url_for("organizations"))
 
 @application.route("/organizations/<int:OrgID>/view")
 def organizationView(OrgID):
@@ -1641,9 +1708,9 @@ def adjustDriverPointsPost(UserID):
 	organization = paramQueryDb("""SELECT OrganizationID FROM Organizations WHERE Name = %s""", (session["Organization"],))
 	try:
 		updateDb("""
-		INSERT INTO PointAdjustments(OrganizationID, AdjustedByUName, DriverUName, AdjustmentType, AdjustmentPoints, AdjustmentReason, DateAdjusted)
-		VALUES (%s, %s, %s, %s, %s, %s)
-		""", (organization.get("OrganizationID"), user.get("Username"), driver["Username"], adjustmentType, points, reason, datetime.now()))
+		INSERT INTO PointAdjustments(OrganizationID, AdjustedByUName, DriverUName, AdjustmentType, DriverTotalPoints, AdjustmentPoints, AdjustmentReason, DateAdjusted)
+		VALUES (%s, %s, %s, %s, %s, %s, %s)
+		""", (organization.get("OrganizationID"), user.get("Username"), driver["Username"], adjustmentType, newTotal, points, reason, datetime.now()))
 	except Exception as e:
 		# If table doesn't exist, keep app working
 		print("PointDeductions insert skipped:", e)
