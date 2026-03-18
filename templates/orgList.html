@@ -54,7 +54,7 @@
         {% for o in orgs %}
         <tr>
           <td>{{ o.Name }}</td>
-
+          <td>{{ o.Status }}</td>
           {% if session.get('role') == "Admin" %}
           <td>
             {% if o.Status == "Active" %}
