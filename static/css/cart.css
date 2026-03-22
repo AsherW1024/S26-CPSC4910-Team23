@@ -4,7 +4,7 @@
 .table-container {
 	width: 95%;
 	background-color: rgba(230, 230, 230, 0.884);
-	border-radius: 3%;
+	border-radius: 20px;
 	padding: 2%;
 	margin-bottom: 20px;
 }
@@ -41,4 +41,21 @@
 }
 .decrement-button{
 	background-color: rgb(255, 194, 194);
+}
+.checkout-container{
+	display: grid;
+}
+.checkout-button {
+	font-size: 40px;
+	padding: 20px;
+	justify-self: center;
+	background-color: rgb(164, 164, 255);
+	border-radius: 75px;
+	border: none;
+	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+	text-decoration: none;
+	color: black;
+}
+.checkout-button:hover {
+	color: black;
 }

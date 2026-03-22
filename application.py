@@ -2810,6 +2810,66 @@ def product_popup(productID):
 	productData = adjustPrice([productData])[0]
 	return render_template("product_popup.html", productDetails=productData)
 
+@application.route("/cart/checkout")
+def checkout():
+	if "UserID" not in session:
+		return redirect(url_for("home"))
+	try:
+		userID = session.get("UserID")
+		orgID = session.get("OrgID")
+		getCartItemsQuery = """
+			SELECT 
+				productID,
+				amount
+			FROM Cart
+			WHERE
+				userID=%s
+				AND orgID=%s
+		"""
+		cartItems = selectDb(query=getCartItemsQuery, params=(userID, orgID))
+		if cartItems==[]:
+			raise Exception("User has no items in their cart")
+
+		#find the unit price for each product based on org rules
+		for product in cartItems:
+			productData = getProductData(product["productID"])
+			product["price"] = productData.get("price")
+		cartItems = adjustPrice(cartItems)
+
+		#calculate total price for all cart items
+		total = 0
+		for product in cartItems:
+			unitPrice = int(product.get("price"))
+			quantity = int(product.get("amount"))
+			total += (unitPrice*quantity)
+
+		#grab the user's point total from db
+		getDriverPointsQuery = """
+			SELECT TotalPoints
+			FROM Drivers
+			WHERE 
+				DriverID=%s
+				AND OrganizationID=%s
+		"""
+		driverPointTotal = paramQueryDb(query=getDriverPointsQuery, params=(userID, orgID)).get("TotalPoints")
+
+		#don't let user get past cart screen unless they have enough points
+		if driverPointTotal < total:
+			raise Exception("Driver does not have enough points to complete the order")
+		
+		#TO-DO: continue the order stuff
+
+	except Exception as e:
+		print(e)
+		return redirect(url_for("cart"))
+	return render_template("checkout.html", layout="activenav.html")
+
+@application.route("/orders", methods=["POST"])
+def makeOrder():
+	if "UserID" not in session:
+		return
+	return redirect(url_for("cart"))
+
 """
 This lets us test locally. Should not execute in AWS
 """
