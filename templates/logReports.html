@@ -1,147 +1,153 @@
+{% block page_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/reports.css">
+{% endblock %}
+
 {% extends layout %}
 {% block title %}
     {% if ReportType == "passwords" %}Password Report{% elif ReportType == "points" %}Points Report{% elif ReportType == "logins" %}Login report{% elif ReportType == "applications" %}Applications report{% endif %}
 {% endblock %}
 {% block content %}
-<div class="container is-max-desktop mt-6">
-  <div class="box">
-    {% if ReportType == "passwords" %}
-      <h2 class="title is-2">Password Changes Report</h2>
-    {% elif ReportType == "points" %}
-      <h2 class="title is-2">Point Tracking Report</h2>
-    {% elif ReportType == "logins" %}
-      <h2 class="title is-2">Login Attempts Report</h2>
-    {% elif ReportType == "applications" %}
-      <h2 class="title is-2">Application Requests Report</h2>
-    {% endif %}
+<div class="reports-page">
+  <div class="container is-max-desktop mt-6">
+    <div class="box">
+      {% if ReportType == "passwords" %}
+        <h2 class="title is-2">Password Changes Report</h2>
+      {% elif ReportType == "points" %}
+        <h2 class="title is-2">Point Tracking Report</h2>
+      {% elif ReportType == "logins" %}
+        <h2 class="title is-2">Login Attempts Report</h2>
+      {% elif ReportType == "applications" %}
+        <h2 class="title is-2">Application Requests Report</h2>
+      {% endif %}
 
-    <form method="GET" class="mb-4">
-      <div class="columns is-multiline">
-        <div class="column is-3">
-          <label class="label">Start Date</label>
-          <input class="input" type="date" name="start" value="{{ start }}">
-        </div>
+      <form method="GET" class="mb-4">
+        <div class="columns is-multiline">
+          <div class="column is-3">
+            <label class="label">Start Date</label>
+            <input class="input" type="date" name="start" value="{{ start }}">
+          </div>
 
-        <div class="column is-3">
-          <label class="label">End Date</label>
-          <input class="input" type="date" name="end" value="{{ end }}">
-        </div>
+          <div class="column is-3">
+            <label class="label">End Date</label>
+            <input class="input" type="date" name="end" value="{{ end }}">
+          </div>
 
-        {% if ReportType == "points" %}
-        <div class="column is-3">
-          <label class="label">Driver Filter</label>
-          <input class="input" type="text" name="driver" placeholder="Name, email, or username" value="{{ driverFilter }}">
-        </div>
-        {% endif %}
+          {% if ReportType == "points" %}
+          <div class="column is-3">
+            <label class="label">Driver Filter</label>
+            <input class="input" type="text" name="driver" placeholder="Name, email, or username" value="{{ driverFilter }}">
+          </div>
+          {% endif %}
 
-        <div class="column is-2">
-          <label class="label">Rows per Page</label>
-          <div class="select is-fullwidth">
-            <select name="pageCount" onchange="this.form.submit()">
-              <option value="10" {% if pageRows==10 %}selected{% endif %}>10</option>
-              <option value="25" {% if pageRows==25 %}selected{% endif %}>25</option>
-              <option value="50" {% if pageRows==50 %}selected{% endif %}>50</option>
-              <option value="100" {% if pageRows==100 %}selected{% endif %}>100</option>
-            </select>
+          <div class="column is-2">
+            <label class="label">Rows per Page</label>
+            <div class="select is-fullwidth">
+              <select name="pageCount" onchange="this.form.submit()">
+                <option value="10" {% if pageRows==10 %}selected{% endif %}>10</option>
+                <option value="25" {% if pageRows==25 %}selected{% endif %}>25</option>
+                <option value="50" {% if pageRows==50 %}selected{% endif %}>50</option>
+                <option value="100" {% if pageRows==100 %}selected{% endif %}>100</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="column is-2">
+            <label class="label">&nbsp;</label>
+            <button class="button is-light is-fullwidth" type="submit">Filter</button>
           </div>
         </div>
 
-        <div class="column is-2">
-          <label class="label">&nbsp;</label>
-          <button class="button is-light is-fullwidth" type="submit">Filter</button>
+        <div class="mt-2">
+          <button class="button is-info" type="submit" name="format" value="csv">Download CSV</button>
         </div>
-      </div>
+      </form>
 
-      <div class="mt-2">
-        <button class="button is-info" type="submit" name="format" value="csv">Download CSV</button>
-      </div>
-    </form>
-
-    <table class="table is-fullwidth is-striped">
-      <thead>
-        <tr>
-          {% if ReportType == "passwords" %}
-            <th>Date</th><th>Actor</th><th>Target</th><th>Type</th>
-          {% elif ReportType == "points" %}
-            <th>Date</th><th>Driver Name</th><th>Driver Username</th><th>Adjusted By</th><th>Delta</th><th>Reason</th>
-          {% elif ReportType == "logins" %}
-            <th>Date</th><th>User</th><th>Status</th>
-          {% elif ReportType == "applications" %}
-            <th>Date</th><th>Organization</th><th>Driver</th><th>Reviewed By</th><th>Status</th><th>Reason</th>
-          {% endif %}
-        </tr>
-      </thead>
-      <tbody>
-        {% for r in rows %}
-        <tr>
-          {% if ReportType == "passwords" %}
-            <td>{{ r.DateAdjusted }}</td>
-            <td>{{ r.Actor }}</td>
-            <td>{{ r.Target }}</td>
-            <td>{{ r.TypeOfChange }}</td>
-          {% elif ReportType == "points" %}
-            <td>{{ r.DateAdjusted }}</td>
-            <td>{{ r.DriverName }}</td>
-            <td>{{ r.DriverUName }}</td>
-            <td>{{ r.AdjustedByUName }}</td>
-            <td>{{ r.DeltaPoints }}</td>
-            <td>{{ r.AdjustmentReason }}</td>
-          {% elif ReportType == "logins" %}
-            <td>{{ r.LoginDate }}</td>
-            <td>{{ r.LoginUser }}</td>
-            <td>{{ r.LoginStatus }}</td>
-          {% elif ReportType == "applications" %}
-            <td>{{ r.DateApplied }}</td>
-            <td>{{ r.Name }}</td>
-            <td>{{ r.DriverUName }}</td>
-            <td>{{ r.ReviewedByUName }}</td>
-            <td>{{ r.ApplicationStatus }}</td>
-            <td>{{ r.ReviewReason }}</td>
-          {% endif %}
-        </tr>
-        {% else %}
-        <tr>
-          <td colspan="6">No rows found.</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-
-    <nav class="pagination is-centered" role="navigation">
-      {% if page > 1 %}
-        <a href="?page={{ page - 1 }}&pageCount={{ pageRows }}&start={{ start }}&end={{ end }}{% if driverFilter %}&driver={{ driverFilter }}{% endif %}" class="pagination-previous">Previous</a>
-      {% else %}
-        <a href="#" class="pagination-previous" disabled>Previous</a>
-      {% endif %}
-
-      {% if pageNum|length > 1 and page < pageNum|length %}
-        <a href="?page={{ page + 1 }}&pageCount={{ pageRows }}&start={{ start }}&end={{ end }}{% if driverFilter %}&driver={{ driverFilter }}{% endif %}" class="pagination-next">Next page</a>
-      {% else %}
-        <a href="#" class="pagination-next" disabled>Next page</a>
-      {% endif %}
-
-      <ul class="pagination-list">
-        {% set notellipsis = [true] %}
-        {% for p in pageNum %}
-          {% set show = p == 1 or p % 10 == 0 or p == page or p == pageNum|length or (p >= page - 3 and p <= page + 3) %}
-          {% if show %}
-            {% if p == page %}
-              <a href="" class="pagination-link is-current" aria-label="Page {{ p }}" aria-current="page">{{ p }}</a>
-              {% if notellipsis.pop() %} {% endif %}
-              {% if notellipsis.append(true) %} {% endif %}
-            {% else %}
-              <li><a href="?page={{ p }}&pageCount={{ pageRows }}&start={{ start }}&end={{ end }}{% if driverFilter %}&driver={{ driverFilter }}{% endif %}" class="pagination-link">{{ p }}</a></li>
-              {% if notellipsis.pop() %} {% endif %}
-              {% if notellipsis.append(true) %} {% endif %}
+      <table class="table is-fullwidth is-striped">
+        <thead>
+          <tr>
+            {% if ReportType == "passwords" %}
+              <th>Date</th><th>Actor</th><th>Target</th><th>Type</th>
+            {% elif ReportType == "points" %}
+              <th>Date</th><th>Driver Name</th><th>Driver Username</th><th>Adjusted By</th><th>Delta</th><th>Reason</th>
+            {% elif ReportType == "logins" %}
+              <th>Date</th><th>User</th><th>Status</th>
+            {% elif ReportType == "applications" %}
+              <th>Date</th><th>Organization</th><th>Driver</th><th>Reviewed By</th><th>Status</th><th>Reason</th>
             {% endif %}
-          {% elif notellipsis[0] %}
-            <li><span class="pagination-ellipsis">&hellip;</span></li>
-            {% if notellipsis.pop() %} {% endif %}
-            {% if notellipsis.append(false) %} {% endif %}
-          {% endif %}
-        {% endfor %}
-      </ul>
-    </nav>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+          <tr>
+            {% if ReportType == "passwords" %}
+              <td>{{ r.DateAdjusted }}</td>
+              <td>{{ r.Actor }}</td>
+              <td>{{ r.Target }}</td>
+              <td>{{ r.TypeOfChange }}</td>
+            {% elif ReportType == "points" %}
+              <td>{{ r.DateAdjusted }}</td>
+              <td>{{ r.DriverName }}</td>
+              <td>{{ r.DriverUName }}</td>
+              <td>{{ r.AdjustedByUName }}</td>
+              <td>{{ r.DeltaPoints }}</td>
+              <td>{{ r.AdjustmentReason }}</td>
+            {% elif ReportType == "logins" %}
+              <td>{{ r.LoginDate }}</td>
+              <td>{{ r.LoginUser }}</td>
+              <td>{{ r.LoginStatus }}</td>
+            {% elif ReportType == "applications" %}
+              <td>{{ r.DateApplied }}</td>
+              <td>{{ r.Name }}</td>
+              <td>{{ r.DriverUName }}</td>
+              <td>{{ r.ReviewedByUName }}</td>
+              <td>{{ r.ApplicationStatus }}</td>
+              <td>{{ r.ReviewReason }}</td>
+            {% endif %}
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="6">No rows found.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <nav class="pagination is-centered" role="navigation">
+        {% if page > 1 %}
+          <a href="?page={{ page - 1 }}&pageCount={{ pageRows }}&start={{ start }}&end={{ end }}{% if driverFilter %}&driver={{ driverFilter }}{% endif %}" class="pagination-previous">Previous</a>
+        {% else %}
+          <a href="#" class="pagination-previous" disabled>Previous</a>
+        {% endif %}
+
+        {% if pageNum|length > 1 and page < pageNum|length %}
+          <a href="?page={{ page + 1 }}&pageCount={{ pageRows }}&start={{ start }}&end={{ end }}{% if driverFilter %}&driver={{ driverFilter }}{% endif %}" class="pagination-next">Next page</a>
+        {% else %}
+          <a href="#" class="pagination-next" disabled>Next page</a>
+        {% endif %}
+
+        <ul class="pagination-list">
+          {% set notellipsis = [true] %}
+          {% for p in pageNum %}
+            {% set show = p == 1 or p % 10 == 0 or p == page or p == pageNum|length or (p >= page - 3 and p <= page + 3) %}
+            {% if show %}
+              {% if p == page %}
+                <a href="" class="pagination-link is-current" aria-label="Page {{ p }}" aria-current="page">{{ p }}</a>
+                {% if notellipsis.pop() %} {% endif %}
+                {% if notellipsis.append(true) %} {% endif %}
+              {% else %}
+                <li><a href="?page={{ p }}&pageCount={{ pageRows }}&start={{ start }}&end={{ end }}{% if driverFilter %}&driver={{ driverFilter }}{% endif %}" class="pagination-link">{{ p }}</a></li>
+                {% if notellipsis.pop() %} {% endif %}
+                {% if notellipsis.append(true) %} {% endif %}
+              {% endif %}
+            {% elif notellipsis[0] %}
+              <li><span class="pagination-ellipsis">&hellip;</span></li>
+              {% if notellipsis.pop() %} {% endif %}
+              {% if notellipsis.append(false) %} {% endif %}
+            {% endif %}
+          {% endfor %}
+        </ul>
+      </nav>
+    </div>
   </div>
 </div>
 {% endblock %}

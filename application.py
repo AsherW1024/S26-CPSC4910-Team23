@@ -1405,6 +1405,27 @@ def settings():
 	return render_template("settings.html", layout = "activenav.html", themePref=prefs[0]["ThemePref"] ,fontPref=prefs[0]["FontPref"] ,
 							currentPref=prefs[0]["PrefCommMethod"], hasPhoneNum=hasPhoneNum, essentialNotifs=prefs[0]["EssentialNotifsOnly"], ) 
 
+@application.route("/settings/appearance", methods=["POST"])
+def settingsAppearance():
+    theme_pref = request.form.get("themePref", "system")
+    font_pref = request.form.get("fontPref", "md")
+
+    allowed_themes = {"system", "light", "dark"}
+    allowed_fonts = {"sm", "md", "lg", "xl"}
+
+    if theme_pref not in allowed_themes:
+        theme_pref = "system"
+    if font_pref not in allowed_fonts:
+        font_pref = "md"
+
+    updateDb(
+        "UPDATE Users SET ThemePref=%s, FontPref=%s WHERE UserID=%s",
+        (theme_pref, font_pref, session["UserID"])
+    )
+
+    flash("Appearance settings updated.", "success")
+    return redirect(url_for("settings"))
+
 @application.route("/settings/communicationPreference", methods=["POST"])
 def communicationPreference():
 	commPref = request.form.get("commPref")

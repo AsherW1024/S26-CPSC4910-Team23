@@ -7,17 +7,18 @@
 {% endblock %}
 
 {% block content %}
-<h1>Profile</h1>
-<a href="/profile/edit">
-	<button class="button">Edit Profile</button>
-</a>
-<p>{{ profile.Name }}</p>
-<br>
-<p>{{ profile.Username }}</p>
-<br>
-<p>{{ profile.Email }}</p>
-<br>
-<p>{{ profile.PhoneNumber }}</p>
-<br>
-<p>end of profile</p>
+<div class="profile-page">
+    <div class="profile-card">
+        <h1>Profile</h1>
+
+        <div class="profile-actions">
+            <a href="/profile/edit" class="button is-light">Edit Profile</a>
+        </div>
+
+        <p>{{ profile.Name }}</p>
+        <p>{{ profile.Username }}</p>
+        <p>{{ profile.Email }}</p>
+        <p>{{ profile.PhoneNumber }}</p>
+    </div>
+</div>
 {% endblock %}

@@ -1,0 +1,12 @@
+.reports-page {
+    min-height: calc(100vh - 52px);
+    padding: 24px 20px 40px;
+    box-sizing: border-box;
+    background: var(--page-bg);
+    color: var(--page-text);
+}
+
+.reports-page .box {
+    border-radius: 16px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+}
