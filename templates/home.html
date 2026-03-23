@@ -7,23 +7,25 @@
 {% endblock %}
 
 {% block content %}
-<div class="home-hero">
-    <h1>Home Page</h1>
+<div class="home-page">
+    <div class="home-card">
+        <h1>Home Page</h1>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <ul class=flashes>
-            {% for category, message in messages %}
-                {% if category in ["driver", "admin", "sponsor"] %}
-                    <h2 class="{{ category }}">{{ message }}</h2>
-                {% endif %}
-            {% endfor %}
-            </ul>
-        {% endif %}
-    {% endwith %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class=flashes>
+                {% for category, message in messages %}
+                    {% if category in ["driver", "admin", "sponsor"] %}
+                        <h2 class="{{ category }}">{{ message }}</h2>
+                    {% endif %}
+                {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
 
-    <p>We welcome you to our good driving team!</p>
-    <p>We help sponsors incentivize good driving through rewards.</p>
-    <p>We hope you enjoy our system!</p>
+        <p>We welcome you to our good driving team!</p>
+        <p>We help sponsors incentivize good driving through rewards.</p>
+        <p>We hope you enjoy our system!</p>
+    </div>
 </div>
 {% endblock %}

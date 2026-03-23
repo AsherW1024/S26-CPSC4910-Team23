@@ -3,15 +3,16 @@
 {% block title %}Organization{% endblock %}
 
 {% block page_css %}
-<link rel="stylesheet" type="text/css" href="/static/css/about.css">
+<link rel="stylesheet" type="text/css" href="/static/css/organization_page.css">
 {% endblock %}
 
 {% block content %}
-    <h1>{{ organizationName }}</h1>
-    <br>
-    <p>We welcome you to {{ organizationName }} good driving team!</p>
-    <br>
-    <p>We help sponsors incentivize good driving through rewards.</p>
-    <br>
-    <p>We hope you enjoy our system!</p>
+<div class="organization-page">
+    <div class="organization-card">
+        <h1>{{ organizationName }}</h1>
+        <p>We welcome you to {{ organizationName }} good driving team!</p>
+        <p>We help sponsors incentivize good driving through rewards.</p>
+        <p>We hope you enjoy our system!</p>
+    </div>
+</div>
 {% endblock %}

@@ -1,4 +1,4 @@
-.home-page {
+.organization-page {
 	min-height: calc(100vh - 52px);
 	display: flex;
 	justify-content: center;
@@ -9,25 +9,20 @@
 	color: var(--page-text);
 }
 
-.home-card {
+.organization-card {
 	width: 100%;
 	max-width: 1100px;
 	text-align: center;
 }
 
-.home-card h1 {
+.organization-card h1 {
 	color: #0073e6;
 	font-size: 6vw;
 	margin-top: 0;
 	margin-bottom: 30px;
 }
 
-.home-card p {
+.organization-card p {
 	font-size: 2vw;
 	margin: 24px 0;
-}
-
-.home-card h2 {
-	color: #0073e6;
-	font-size: 4vw;
 }

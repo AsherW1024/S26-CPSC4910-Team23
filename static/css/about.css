@@ -1,16 +1,40 @@
-h1 {
+.about-page {
+	min-height: calc(100vh - 52px);
+	background: var(--page-bg);
+	color: var(--page-text);
+	display: flex;
+	justify-content: center;
+	align-items: flex-start;
+	padding: 40px 20px 60px;
+	box-sizing: border-box;
+}
+
+.about-card {
+	width: 100%;
+	max-width: 950px;
+	text-align: center;
+}
+
+.about-card h1 {
 	color: #0073e6;
 	font-size: 6vw;
-	text-align: center;
+	margin-top: 0;
+	margin-bottom: 24px;
 }
 
-p {
+.about-actions {
+	display: flex;
+	justify-content: center;
+	margin-bottom: 30px;
+}
+
+.about-card p {
 	font-size: 2vw;
-	text-align: center;
+	margin: 22px 0;
+	color: var(--page-text);
 }
 
-h2 {
+.about-card h2 {
 	color: #0073e6;
 	font-size: 4vw;
-	text-align: center;
 }
