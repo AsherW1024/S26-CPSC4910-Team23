@@ -3,25 +3,29 @@
 {% block title %}Home Page{% endblock %}
 
 {% block page_css %}
-<link rel="stylesheet" type="text/css" href="/static/css/about.css">
+<link rel="stylesheet" type="text/css" href="/static/css/home.css">
 {% endblock %}
 
 {% block content %}
-<h1>Home Page</h1>
-{% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-        <ul class=flashes>
-        {% for category, message in messages %}
-            {% if category in ["driver", "admin", "sponsor"] %}
-                <h2 class="{{ category }}">{{ message }}</h2>
+<div class="home-page">
+    <div class="home-card">
+        <h1>Home Page</h1>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class=flashes>
+                {% for category, message in messages %}
+                    {% if category in ["driver", "admin", "sponsor"] %}
+                        <h2 class="{{ category }}">{{ message }}</h2>
+                    {% endif %}
+                {% endfor %}
+                </ul>
             {% endif %}
-        {% endfor %}
-        </ul>
-    {% endif %}
-{% endwith %}
-<p>We welcome you to our good driving team!</p>
-<br>
-<p>We help sponsors incentivize good driving through rewards.</p>
-<br>
-<p>We hope you enjoy our system!</p>
+        {% endwith %}
+
+        <p>We welcome you to our good driving team!</p>
+        <p>We help sponsors incentivize good driving through rewards.</p>
+        <p>We hope you enjoy our system!</p>
+    </div>
+</div>
 {% endblock %}

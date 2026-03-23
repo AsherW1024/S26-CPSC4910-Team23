@@ -1,16 +1,35 @@
-body {
-	font-family: Arial, sans-serif;
-	background-color: #f5f5f5;
-	color: #333;
-	text-align: center;
-	align-content: center;
+.profile-page {
+	min-height: calc(100vh - 52px);
+	background: #0f1115;
+	color: #f4f6fb;
+	display: flex;
+	justify-content: center;
+	align-items: flex-start;
+	padding: 40px 20px 60px;
+	box-sizing: border-box;
 }
 
-h1 {
+.profile-card {
+	width: 100%;
+	max-width: 900px;
+	text-align: center;
+}
+
+.profile-card h1 {
 	color: #0073e6;
 	font-size: 6vw;
+	margin-top: 0;
+	margin-bottom: 24px;
 }
 
-p {
+.profile-actions {
+	display: flex;
+	justify-content: center;
+	margin-bottom: 30px;
+}
+
+.profile-card p {
 	font-size: 2vw;
+	margin: 22px 0;
+	color: #f4f6fb;
 }

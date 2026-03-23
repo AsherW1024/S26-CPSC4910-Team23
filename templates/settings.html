@@ -12,26 +12,32 @@
   <p class="muted">Customize how the site looks for your device.</p>
 
   <div class="settings-card">
-    <div class="settings-row">
-      <label for="themeSelect">Theme</label>
-      <select id="themeSelect">
-        <option value="system" {% if themePref=="system" %} selected {% endif %}>System</option>
-        <option value="light" {% if themePref=="light" %} selected {% endif %}>Light</option>
-        <option value="dark" {% if themePref=="dark" %} selected {% endif %}>Dark</option>
-      </select>
-      <div class="hint">“System” follows your device setting.</div>
-    </div>
-
-    <div class="settings-row">
-      <label for="fontSelect">Font size</label>
-      <select id="fontSelect">
-        <option value="sm" {% if fontPref=="sm" %} selected {% endif %}>Small</option>
-        <option value="md" {% if fontPref=="md" %} selected {% endif %}>Default</option>
-        <option value="lg" {% if fontPref=="lg" %} selected {% endif %}>Large</option>
-        <option value="xl" {% if fontPref=="xl" %} selected {% endif %}>Extra Large</option>
-      </select>
-      <div class="hint">Applies across all pages.</div>
-    </div>
+    <form method="POST" action="/settings/appearance">
+      <div class="settings-row">
+        <label for="themeSelect">Theme</label>
+        <select id="themeSelect" name="themePref">
+          <option value="system" {% if themePref=="system" %} selected {% endif %}>System</option>
+          <option value="light" {% if themePref=="light" %} selected {% endif %}>Light</option>
+          <option value="dark" {% if themePref=="dark" %} selected {% endif %}>Dark</option>
+        </select>
+        <div class="hint">“System” follows your device setting.</div>
+      </div>
+    
+      <div class="settings-row">
+        <label for="fontSelect">Font size</label>
+        <select id="fontSelect" name="fontPref">
+          <option value="sm" {% if fontPref=="sm" %} selected {% endif %}>Small</option>
+          <option value="md" {% if fontPref=="md" %} selected {% endif %}>Default</option>
+          <option value="lg" {% if fontPref=="lg" %} selected {% endif %}>Large</option>
+          <option value="xl" {% if fontPref=="xl" %} selected {% endif %}>Extra Large</option>
+        </select>
+        <div class="hint">Applies across all pages.</div>
+      </div>
+    
+      <div class="settings-row">
+        <button class="button is-info" type="submit">Save Appearance</button>
+      </div>
+    </form>
 
     <div class="settings-row">
       <label for="commMethod"> Communication Preference </label>
