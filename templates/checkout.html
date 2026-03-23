@@ -4,13 +4,13 @@
 
 {% block page_css %}
 <link rel="stylesheet" type="text/css" href="/static/css/form.css">
-<link rel="stylesheet" type="text/css" href="/static/css/checkout.css"
+<link rel="stylesheet" type="text/css" href="/static/css/checkout.css">
 {% endblock %}
 
 {% block content %}
 <div class="form-container">
 	<div class="box">
-		<form method="POST" action="/orders">
+		<form method="POST" action="/orders/confirm">
 			<div class="field">
 				<label class="label">Street Address</label>
 				<div class="control">

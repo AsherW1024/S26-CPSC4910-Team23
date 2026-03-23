@@ -2907,6 +2907,56 @@ def checkout():
 	#if user has enough points for the order, continue to checkout screen
 	return render_template("checkout.html", layout="activenav.html")
 
+def getCartData(userID, orgID):
+	getCartItemsQuery = """
+		SELECT productID, amount
+		FROM Cart
+		WHERE
+			userID=%s
+			AND orgID=%s
+	"""
+	rows = selectDb(query=getCartItemsQuery, params=(userID, orgID))
+	#collect just the product ids into a list
+	cartProductIds = []
+	#collect quantities of products into a list
+	cartQuantities = []
+	for row in rows:
+		cartProductIds.append(row.get("productID"))
+		cartQuantities.append(row.get("amount"))
+
+	cartProductData = []
+	for productId in cartProductIds:
+		cartProductData.append(getProductData(productId))
+
+	cartProductData = adjustPrice(cartProductData)
+
+	for i, amount in enumerate(cartQuantities):
+		cartProductData[i]["quantity"] = amount
+
+	return cartProductData
+
+@application.route("/orders/confirm", methods=["POST"])
+def orderConfirmation():
+	if "UserID" not in session:
+		return redirect(url_for("home"))
+	
+	#grab cart data
+	userID = session.get("UserID")
+	orgID = session.get("OrgID")
+	cartData = getCartData(userID=userID, orgID=orgID)
+
+	#grab address data from form
+	addressDict = {}
+	addressDict["address"] = request.form.get("address")
+	addressDict["city"] = request.form.get("city")
+	addressDict["state"] = request.form.get("state")
+
+	#calculate order total
+	orderTotal = getCartTotal()
+
+	#send user to confirmation screen to confirm before the pull the trigger on their order
+	return render_template("confirm_order.html", layout="activenav.html", cart=cartData, address=addressDict, total=orderTotal)
+
 @application.route("/orders", methods=["POST"])
 def makeOrder():
 	if "UserID" not in session:
