@@ -2810,6 +2810,59 @@ def product_popup(productID):
 	productData = adjustPrice([productData])[0]
 	return render_template("product_popup.html", productDetails=productData)
 
+def getCartTotal():
+	userID = session.get("UserID")
+	orgID = session.get("OrgID")
+	getCartItemsQuery = """
+		SELECT 
+			productID,
+			amount
+		FROM Cart
+		WHERE
+			userID=%s
+			AND orgID=%s
+	"""
+	cartItems = selectDb(query=getCartItemsQuery, params=(userID, orgID))
+	if cartItems==[]:
+		raise Exception("User has no items in their cart")
+
+	#find the unit price for each product based on org rules
+	for product in cartItems:
+		productData = getProductData(product["productID"])
+		product["price"] = productData.get("price")
+	cartItems = adjustPrice(cartItems)
+
+	#calculate total
+	total = 0
+	for product in cartItems:
+		unitPrice = int(product.get("price"))
+		quantity = int(product.get("amount"))
+		total += (unitPrice*quantity)
+	return total
+
+def getDriverPoints():
+	#grab the user's point total from db
+	userID = session.get("UserID")
+	orgID = session.get("OrgID")
+	getDriverPointsQuery = """
+		SELECT TotalPoints
+		FROM Drivers
+		WHERE 
+			DriverID=%s
+			AND OrganizationID=%s
+	"""
+	return paramQueryDb(query=getDriverPointsQuery, params=(userID, orgID)).get("TotalPoints")
+
+def adjustDriverPoints(driverID, orgID, newPointTotal):
+	adjustDriverPointsQuery = """
+		UPDATE Drivers
+		SET TotalPoints=%s
+		WHERE
+			DriverID=%s
+			AND OrganizationID=%s
+	"""
+	updateDb(query=adjustDriverPointsQuery, params=(newPointTotal, driverID, orgID))
+
 @application.route("/cart/checkout")
 def checkout():
 	if "UserID" not in session:
@@ -2817,57 +2870,56 @@ def checkout():
 	try:
 		userID = session.get("UserID")
 		orgID = session.get("OrgID")
-		getCartItemsQuery = """
-			SELECT 
-				productID,
-				amount
-			FROM Cart
-			WHERE
-				userID=%s
-				AND orgID=%s
-		"""
-		cartItems = selectDb(query=getCartItemsQuery, params=(userID, orgID))
-		if cartItems==[]:
-			raise Exception("User has no items in their cart")
 
-		#find the unit price for each product based on org rules
-		for product in cartItems:
-			productData = getProductData(product["productID"])
-			product["price"] = productData.get("price")
-		cartItems = adjustPrice(cartItems)
+		cartTotal = getCartTotal()
 
-		#calculate total price for all cart items
-		total = 0
-		for product in cartItems:
-			unitPrice = int(product.get("price"))
-			quantity = int(product.get("amount"))
-			total += (unitPrice*quantity)
-
-		#grab the user's point total from db
-		getDriverPointsQuery = """
-			SELECT TotalPoints
-			FROM Drivers
-			WHERE 
-				DriverID=%s
-				AND OrganizationID=%s
-		"""
-		driverPointTotal = paramQueryDb(query=getDriverPointsQuery, params=(userID, orgID)).get("TotalPoints")
+		driverPointTotal = getDriverPoints()
 
 		#don't let user get past cart screen unless they have enough points
-		if driverPointTotal < total:
+		if driverPointTotal < cartTotal:
 			raise Exception("Driver does not have enough points to complete the order")
-		
-		#TO-DO: continue the order stuff
 
+	#go back to cart screen if an error occurs
 	except Exception as e:
 		print(e)
 		return redirect(url_for("cart"))
+	#if user has enough points for the order, continue to checkout screen
 	return render_template("checkout.html", layout="activenav.html")
 
 @application.route("/orders", methods=["POST"])
 def makeOrder():
 	if "UserID" not in session:
-		return
+		return redirect(url_for("home"))
+	
+	try:
+		userID = session.get("UserID")
+		orgID = session.get("OrgID")
+
+		cartTotal = getCartTotal("userID, orgID")
+		driverPointTotal = getDriverPoints()
+		newDriverPointTotal = driverPointTotal-cartTotal
+
+		#lower driver's point total
+		adjustDriverPoints(userID, orgID, newDriverPointTotal)
+
+		#insert info into Orders table
+		address = request.form.get("address")
+		city = request.form.get("address")
+		state = request.form.get("state")
+		insertOrderQuery = """
+			INSERT INTO Orders
+				(userID, orgID, pointTotal, deliveryAddress, deliveryCity, deliveryState, estimatedArrival)
+			VALUES 
+				(%s,%s,%s,%s,%s,%s,current_timestamp)
+		"""
+		updateDb(query=insertOrderQuery, params=(userID,orgID,cartTotal,address,city,state))
+		#insert list of items into OrderItems table
+		#TODO
+
+	except Exception as e:
+		print(e)
+		return redirect(url_for("checkout"))
+
 	return redirect(url_for("cart"))
 
 """
