@@ -223,6 +223,7 @@ p{
 	grid-template-columns: (1fr);
 	justify-items: center;
 	position: relative;
+	text-align: center;
 }
 
 .not-included {

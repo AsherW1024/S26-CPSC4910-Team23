@@ -1,0 +1,39 @@
+{% extends layout %}
+
+{% block title %}Orders{% endblock %}
+
+{% block page_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/previous_orders.css">
+{% endblock %}
+
+{% block content %}
+<div class="content">
+	<h1>Previous Orders</h1>
+	<div class="table-container">
+		<table class="orders-table">
+			<thead>
+				<tr>
+					<th>Image</th>
+					<th>Number of Items</th>
+					<th>Total</th>
+					<th>Date Ordered</th>
+					<th>Time Ordered</th>
+					<th>Delivery Address</th>
+				</tr>
+			</thead>
+			<tbody>
+				{%for order in orders%}
+				<tr data-order-id="{{order.get('productID')}}" class="order-row">
+					<td class="cell"><div class="cell-content"><img src="{{order.get('thumbnail')}}"></div></td>
+					<td class="cell"><div class="cell-content"><p>{{order.get("itemQuantity")}}</p></div></td>
+					<td class="cell"><div class="cell-content"><p>{{order.get('pointTotal')}} Points</p></div></td>
+					<td class="cell"><div class="cell-content"><p>{{order.get('orderDate')}}</p></div></td>
+					<td class="cell"><div class="cell-content"><p>{{order.get('orderTime')}}</p></div></td>
+					<td class="cell"><div class="cell-content"><p>{{order.get('deliveryAddress')}} {{order.get('deliveryCity')}}, {{order.get('deliveryState')}}</p></div></td>
+				</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	</div>
+</div>
+{%endblock%}

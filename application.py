@@ -3021,6 +3021,69 @@ def makeOrder():
 
 	return redirect(url_for("cart"))
 
+@application.route("/orders")
+def previousOrders():
+	if "UserID" not in session or session.get("role") != "Driver":
+		return redirect(url_for("home"))
+	userID = session.get("UserID")
+	orgID = session.get("OrgID")
+	getOrdersQuery = """
+		SELECT
+			orderID,
+			pointTotal,
+			deliveryAddress,
+			deliveryCity,
+			deliveryState,
+			estimatedArrival,
+			orderTime
+		FROM Orders
+		WHERE
+			userID=%s
+			AND orgID=%s
+		ORDER BY orderTime DESC
+	"""
+	previousOrders = selectDb(query=getOrdersQuery, params=(userID,orgID))
+
+	if len(previousOrders)<1:
+		return redirect(url_for("home"))
+
+	for order in previousOrders:
+		#convert order date/time into clean strings
+		uglyDateTime = order.get("orderTime")
+		order.pop("orderTime")
+		order["orderDate"] = uglyDateTime.strftime("%b %d, %Y")
+		order["orderTime"] = uglyDateTime.strftime("%I:%M %p")
+		#also clean estimated delivery date
+		uglyDateTime = order.get("estimatedArrival")
+		order.pop("estimatedArrival")
+		order["estimatedArrival"] = uglyDateTime.strftime("%b %d, %Y")
+		#add a list of products to the dictionary
+		#get list of items associated with the order
+		getOrderItemsQuery = """
+			SELECT
+				productID,
+				unitPrice,
+				totalPrice,
+				amount
+			FROM OrderItems
+			WHERE orderID=%s
+		"""
+		orderItems = selectDb(query=getOrderItemsQuery, params=(order.get("orderID")))
+		order["orderItems"] = orderItems
+
+		#get total number of items ordered
+		itemCount = 0
+		for item in orderItems:
+			quantity = item.get("amount")
+			itemCount += quantity
+		order["itemQuantity"] = itemCount
+
+		firstProductID = order.get("orderItems")[0].get("productID")
+		orderThumbnail = getProductData(firstProductID).get("thumbnail")
+		order["thumbnail"] = orderThumbnail
+
+	return render_template("previous_orders.html", layout="activenav.html", orders=previousOrders)
+
 """
 This lets us test locally. Should not execute in AWS
 """
