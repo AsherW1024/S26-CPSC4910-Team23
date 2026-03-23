@@ -2831,9 +2831,7 @@ def product_popup(productID):
 	productData = adjustPrice([productData])[0]
 	return render_template("product_popup.html", productDetails=productData)
 
-def getCartTotal():
-	userID = session.get("UserID")
-	orgID = session.get("OrgID")
+def getCartTotal(userID, orgID):
 	getCartItemsQuery = """
 		SELECT 
 			productID,
@@ -2892,7 +2890,7 @@ def checkout():
 		userID = session.get("UserID")
 		orgID = session.get("OrgID")
 
-		cartTotal = getCartTotal()
+		cartTotal = getCartTotal(userID, orgID)
 
 		driverPointTotal = getDriverPoints()
 
@@ -2952,7 +2950,7 @@ def orderConfirmation():
 	addressDict["state"] = request.form.get("state")
 
 	#calculate order total
-	orderTotal = getCartTotal()
+	orderTotal = getCartTotal(userID, orgID)
 
 	#send user to confirmation screen to confirm before the pull the trigger on their order
 	return render_template("confirm_order.html", layout="activenav.html", cart=cartData, address=addressDict, total=orderTotal)
@@ -2966,7 +2964,7 @@ def makeOrder():
 		userID = session.get("UserID")
 		orgID = session.get("OrgID")
 
-		cartTotal = getCartTotal("userID, orgID")
+		cartTotal = getCartTotal(userID, orgID)
 		driverPointTotal = getDriverPoints()
 		newDriverPointTotal = driverPointTotal-cartTotal
 
@@ -2975,17 +2973,47 @@ def makeOrder():
 
 		#insert info into Orders table
 		address = request.form.get("address")
-		city = request.form.get("address")
+		city = request.form.get("city")
 		state = request.form.get("state")
+
+		#insert into Order table with a cursor to keep track of that entry's orderID
+		connection = getDbConnection()
+		cursor = connection.cursor()
 		insertOrderQuery = """
 			INSERT INTO Orders
 				(userID, orgID, pointTotal, deliveryAddress, deliveryCity, deliveryState, estimatedArrival)
 			VALUES 
 				(%s,%s,%s,%s,%s,%s,current_timestamp)
 		"""
-		updateDb(query=insertOrderQuery, params=(userID,orgID,cartTotal,address,city,state))
+		cursor.execute(query=insertOrderQuery, args=(userID,orgID,cartTotal,address,city,state))
+		connection.commit()
+		orderID = cursor.lastrowid
+		cursor.close()
+
 		#insert list of items into OrderItems table
-		#TODO
+		cartItems = getCartData(userID, orgID)
+		insertOrderItemQuery = """
+			INSERT INTO OrderItems
+				(orderID, productID, unitPrice, totalPrice, amount)
+			VALUES
+				(%s,%s,%s,%s,%s)
+		"""
+		for item in cartItems:
+			productID = item.get("id")
+			unitPrice = item.get("price")
+			amount = item.get("quantity")
+			totalPrice = unitPrice*amount
+			updateDb(insertOrderItemQuery, params=(orderID,productID,unitPrice,totalPrice,amount))
+
+		#delete all items from user's cart
+		deleteCartItemsQuery = """
+			DELETE FROM Cart
+			WHERE
+				userID=%s
+				AND orgID=%s
+		"""
+		updateDb(query=deleteCartItemsQuery, params=(userID,orgID))
+
 
 	except Exception as e:
 		print(e)

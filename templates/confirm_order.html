@@ -68,7 +68,12 @@
 	</div>
 
 	<div class="confirm-button-wrapper">
-		<button class="confirm-button">Confirm</button>
+		<form action=/orders method="post">
+			<input name="address" value="{{address.get('address')}}"" hidden>
+			<input name="city" value="{{address.get('city')}}" hidden>
+			<input name="state" value="{{address.get('state')}}" hidden>
+			<button type="submit" class="confirm-button">Confirm</button>
+		</form>
 	</div>
 
 {% endblock %}
