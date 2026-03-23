@@ -10,6 +10,7 @@ import secrets
 import hashlib
 import csv
 import io
+from datetime import date
 
 application = Flask(__name__)
 application.secret_key = os.urandom(24)  # Use a secure random key in production
@@ -2981,11 +2982,11 @@ def makeOrder():
 		cursor = connection.cursor()
 		insertOrderQuery = """
 			INSERT INTO Orders
-				(userID, orgID, pointTotal, deliveryAddress, deliveryCity, deliveryState, estimatedArrival)
+				(userID, orgID, pointTotal, deliveryAddress, deliveryCity, deliveryState, orderTime, estimatedArrival)
 			VALUES 
-				(%s,%s,%s,%s,%s,%s,current_timestamp)
+				(%s,%s,%s,%s,%s,%s,%s,%s + INTERVAL 1 WEEK)
 		"""
-		cursor.execute(query=insertOrderQuery, args=(userID,orgID,cartTotal,address,city,state))
+		cursor.execute(query=insertOrderQuery, args=(userID,orgID,cartTotal,address,city,state,datetime.now(),datetime.now()))
 		connection.commit()
 		orderID = cursor.lastrowid
 		cursor.close()
@@ -3045,9 +3046,14 @@ def previousOrders():
 	previousOrders = selectDb(query=getOrdersQuery, params=(userID,orgID))
 
 	if len(previousOrders)<1:
-		return redirect(url_for("home"))
+		return render_template("previous_orders.html", layout="activenav.html", orders=[])
 
 	for order in previousOrders:
+		#determine order status
+		if date.today() >= order.get("estimatedArrival"):
+			order["status"] = "Delivered"
+		else: 
+			order["status"] = "In Transit"
 		#convert order date/time into clean strings
 		uglyDateTime = order.get("orderTime")
 		order.pop("orderTime")
