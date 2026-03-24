@@ -1183,6 +1183,60 @@ def adminEnrollDriverPage(OrganizationID):
 		targetOrg=org
 	)
 
+def get_org_by_name(org_name):
+    return paramQueryDb("""
+        SELECT OrganizationID, Name
+        FROM Organizations
+        WHERE Name = %s
+    """, (org_name,))
+
+def get_driver_by_identifier(identifier):
+    return paramQueryDb("""
+        SELECT u.UserID, u.Name, u.Email, u.Username, d.OrganizationID
+        FROM Users u
+        JOIN Drivers d ON d.DriverID = u.UserID
+        WHERE u.UserType = 'Driver'
+          AND (u.Username = %s OR u.Email = %s OR u.Name = %s)
+        LIMIT 1
+    """, (identifier, identifier, identifier))
+
+@application.route("/organizations/enroll-driver", methods=["GET", "POST"])
+@permission_required("manage_users")
+def enroll_driver_without_numeric_ids():
+    if request.method == "GET":
+        organizations = selectDb("""
+            SELECT OrganizationID, Name
+            FROM Organizations
+            ORDER BY Name
+        """, ()) or []
+        return render_template(
+            "enroll_driver_lookup.html",
+            layout="activenav.html",
+            organizations=organizations
+        )
+
+    org_name = request.form.get("organizationName", "").strip()
+    driver_identifier = request.form.get("driverIdentifier", "").strip()
+
+    org = get_org_by_name(org_name)
+    if not org:
+        flash("Organization not found.", "notfound")
+        return redirect(url_for("enroll_driver_without_numeric_ids"))
+
+    driver = get_driver_by_identifier(driver_identifier)
+    if not driver:
+        flash("Driver not found.", "notfound")
+        return redirect(url_for("enroll_driver_without_numeric_ids"))
+
+    updateDb("""
+        UPDATE Drivers
+        SET OrganizationID = %s
+        WHERE DriverID = %s
+    """, (org["OrganizationID"], driver["UserID"]))
+
+    flash(f"Enrolled {driver['Name']} into {org['Name']}.", "success")
+    return redirect(url_for("enroll_driver_without_numeric_ids"))
+
 @application.route("/organizations/<int:OrganizationID>/enroll-driver/<int:UserID>", methods=["POST"])
 def adminEnrollDriverPost(OrganizationID, UserID):
 	guard = require_admin()
