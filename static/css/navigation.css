@@ -167,3 +167,65 @@ body, input, select, textarea, button {
 .select {
   z-index: 0;
 }
+
+@media (max-width: 1024px) {
+  .topnav {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .topnav .nav-left,
+  .topnav .nav-right {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .dropdown-content {
+    min-width: 220px;
+    right: 0;
+    left: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .topnav a,
+  .topnav .dropbtn,
+  .topnav .icon-bars {
+    width: 100%;
+    text-align: left;
+  }
+
+  .table-container {
+    overflow-x: auto;
+    width: 100%;
+  }
+
+  .box,
+  .notification {
+    margin-bottom: 1rem;
+  }
+
+  .columns {
+    display: block;
+  }
+
+  .column {
+    width: 100%;
+    margin-bottom: 0.75rem;
+  }
+
+  .button {
+    width: 100%;
+    margin-bottom: 0.5rem;
+  }
+
+  .field .control,
+  .input,
+  .select,
+  .select select {
+    width: 100%;
+  }
+}
