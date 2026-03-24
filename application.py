@@ -1510,6 +1510,56 @@ def report(ReportType):
         pageRows=rowsPerPage
     )
 
+@application.route("/reports/sales-by-product")
+@permission_required("view_reports")
+def sales_by_product_report():
+    org_id = request.args.get("orgID", type=int)
+    export_format = request.args.get("format", "").lower()
+
+    rows = get_sales_by_product_rows(org_id=org_id)
+
+    summary = {
+        "productCount": len(rows),
+        "quantitySold": sum(int(r.get("quantitySold") or 0) for r in rows),
+        "grossSales": sum(float(r.get("grossSales") or 0) for r in rows)
+    }
+
+    if export_format == "csv":
+        return build_csv_response(
+            "sales_by_product_report.csv",
+            ["productID", "productName", "category", "brand", "orderCount", "quantitySold", "grossSales"],
+            rows
+        )
+
+    return render_template(
+        "sales_by_product_report.html",
+        layout="nav.html" if not session.get("UserID") else ("orgnav.html" if session.get("Organization") else "activenav.html"),
+        rows=rows,
+        summary=summary
+    )
+
+@application.route("/reports/refunds-impact")
+@permission_required("view_reports")
+def refunds_impact_report():
+    org_id = request.args.get("orgID", type=int)
+    export_format = request.args.get("format", "").lower()
+
+    summary, rows = get_refund_cancellation_impact_rows(org_id=org_id)
+
+    if export_format == "csv":
+        return build_csv_response(
+            "refunds_impact_report.csv",
+            ["orderID", "orgID", "pointTotal", "status", "orderTime"],
+            rows
+        )
+
+    return render_template(
+        "refunds_impact_report.html",
+        layout="nav.html" if not session.get("UserID") else ("orgnav.html" if session.get("Organization") else "activenav.html"),
+        summary=summary,
+        rows=rows
+    )
+
 @application.route("/admin/audit-logs")
 @permission_required("view_audit_logs")
 def audit_logs():
