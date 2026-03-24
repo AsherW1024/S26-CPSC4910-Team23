@@ -622,6 +622,45 @@ DEFAULT_ROLE_PERMISSIONS = {
     'Driver': {'view_profile', 'checkout', 'view_orders'}
 }
 
+@application.before_request
+def enforce_idle_timeout_and_security_headers():
+    if request.endpoint == 'static':
+        return None
+    if 'UserID' in session:
+        now = datetime.utcnow()
+        last_activity_raw = session.get('last_activity')
+        if last_activity_raw:
+            try:
+                last_activity = datetime.fromisoformat(last_activity_raw)
+                idle_minutes = (now - last_activity).total_seconds() / 60.0
+                if idle_minutes >= IDLE_TIMEOUT_MINUTES:
+                    session.clear()
+                    flash('Your session expired after inactivity. Please log in again.', 'failedAttempts')
+                    return redirect(url_for('login'))
+                if idle_minutes >= max(IDLE_TIMEOUT_MINUTES - IDLE_WARNING_MINUTES, 1) and not session.get('idle_warning_shown'):
+                    flash(f'For security, inactive sessions are logged out after {IDLE_TIMEOUT_MINUTES} minutes.', 'registered')
+                    session['idle_warning_shown'] = True
+            except Exception:
+                pass
+        session['last_activity'] = now.isoformat()
+    return None
+
+@application.after_request
+def apply_security_headers(response):
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    if os.environ.get('FLASK_ENV') == 'production':
+        response.headers['Content-Security-Policy'] = "default-src 'self' https: data: 'unsafe-inline' 'unsafe-eval'"
+    return response
+
+@application.context_processor
+def inject_permission_context():
+    return {
+        'current_permissions': get_role_permissions(session.get('role')),
+        'idle_timeout_minutes': IDLE_TIMEOUT_MINUTES
+    }
+
 def init_security_tables():
     ddl_statements = [
         """CREATE TABLE IF NOT EXISTS LoginAttemptTracker (
