@@ -740,12 +740,6 @@ def permission_required(permission_name):
 def normalize_login_identifier(identifier):
     return (identifier or '').strip().lower()
 
-def get_request_ip():
-    forwarded_for = request.headers.get("X-Forwarded-For")
-    if forwarded_for:
-        return forwarded_for.split(",")[0].strip()
-    return request.remote_addr
-
 def get_active_lockout(scope_type, scope_value):
     if not scope_value:
         return None
