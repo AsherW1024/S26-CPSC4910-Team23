@@ -1614,6 +1614,30 @@ def refunds_impact_report():
         rows=rows
     )
 
+@application.route("/admin/orders/<int:order_id>/status", methods=["POST"])
+@permission_required("manage_users")
+def admin_update_order_status(order_id):
+    status_name = request.form.get("statusName", "").strip()
+    notes = request.form.get("notes", "").strip()
+
+    allowed_statuses = {"Refunded", "Cancelled", "Completed"}
+    if status_name not in allowed_statuses:
+        flash("Invalid order status.", "validation")
+        return redirect(url_for("refunds_impact_report"))
+
+    existing_order = paramQueryDb("SELECT orderID FROM Orders WHERE orderID = %s", (order_id,))
+    if not existing_order:
+        flash("Order not found.", "notfound")
+        return redirect(url_for("refunds_impact_report"))
+
+    updateDb("""
+        INSERT INTO OrderStatusAudit (OrderID, StatusName, Notes)
+        VALUES (%s, %s, %s)
+    """, (order_id, status_name, notes))
+
+    flash(f"Order {order_id} marked as {status_name}.", "success")
+    return redirect(url_for("refunds_impact_report"))
+
 @application.route("/reports/invoices")
 @permission_required("view_reports")
 def invoice_report():

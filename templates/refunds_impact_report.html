@@ -13,16 +13,24 @@
 
       <div class="columns is-multiline">
         <div class="column is-3">
-          <div class="notification is-light"><strong>Gross Sales:</strong> {{ "%.2f"|format(summary.grossSales) }}</div>
+          <div class="notification is-light">
+            <strong>Gross Sales:</strong> {{ "%.2f"|format(summary.grossSales) }}
+          </div>
         </div>
         <div class="column is-3">
-          <div class="notification is-light"><strong>Refund Total:</strong> {{ "%.2f"|format(summary.refundTotal) }}</div>
+          <div class="notification is-light">
+            <strong>Refund Total:</strong> {{ "%.2f"|format(summary.refundTotal) }}
+          </div>
         </div>
         <div class="column is-3">
-          <div class="notification is-light"><strong>Cancelled Total:</strong> {{ "%.2f"|format(summary.cancelledTotal) }}</div>
+          <div class="notification is-light">
+            <strong>Cancelled Total:</strong> {{ "%.2f"|format(summary.cancelledTotal) }}
+          </div>
         </div>
         <div class="column is-3">
-          <div class="notification is-warning is-light"><strong>Net Sales:</strong> {{ "%.2f"|format(summary.netSales) }}</div>
+          <div class="notification is-warning is-light">
+            <strong>Net Sales:</strong> {{ "%.2f"|format(summary.netSales) }}
+          </div>
         </div>
       </div>
 
@@ -35,6 +43,7 @@
               <th>Total</th>
               <th>Status</th>
               <th>Order Time</th>
+              <th>Update</th>
             </tr>
           </thead>
           <tbody>
@@ -45,10 +54,29 @@
               <td>{{ "%.2f"|format(row.pointTotal) }}</td>
               <td>{{ row.status }}</td>
               <td>{{ row.orderTime }}</td>
+              <td>
+                <form method="POST" action="/admin/orders/{{ row.orderID }}/status">
+                  <div class="field has-addons">
+                    <div class="control">
+                      <div class="select is-small">
+                        <select name="statusName">
+                          <option value="Completed" {% if row.status == "Completed" %}selected{% endif %}>Completed</option>
+                          <option value="Refunded" {% if row.status == "Refunded" %}selected{% endif %}>Refunded</option>
+                          <option value="Cancelled" {% if row.status == "Cancelled" %}selected{% endif %}>Cancelled</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="control">
+                      <button class="button is-small is-light" type="submit">Save</button>
+                    </div>
+                  </div>
+                  <input type="hidden" name="notes" value="">
+                </form>
+              </td>
             </tr>
             {% else %}
             <tr>
-              <td colspan="5">No order rows found.</td>
+              <td colspan="6">No order rows found.</td>
             </tr>
             {% endfor %}
           </tbody>
