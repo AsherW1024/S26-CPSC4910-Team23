@@ -646,10 +646,11 @@ def login():
 @application.route("/login", methods=["POST"])
 def loginUser():
     identifier = request.form.get("identifier", "").strip()
+    password = request.form.get("password", "").strip()
     normalized_identifier = normalize_login_identifier(identifier)
     request_ip = get_request_ip()
 
-    if not identifier or not request.form.get("password", "").strip():
+    if not identifier or not password:
         flash("Please enter both your username/email and password.", "username")
         return redirect(url_for("login"))
 
@@ -667,28 +668,29 @@ def loginUser():
         ip_remaining = record_failed_login('ip', request_ip)
         acct_remaining = record_failed_login('account', normalized_identifier) if normalized_identifier else ip_remaining
         remaining = acct_remaining if normalized_identifier else ip_remaining
+
+        if identifier:
+            updateDb(
+                """INSERT INTO Logins (LoginDate, LoginUser, LoginResult)
+                VALUES (%s, %s, %s)""",
+                (datetime.now(), identifier, False)
+            )
+
         flash(f"Please enter the correct credentials. Attempts left {remaining} of {LOGIN_MAX_ATTEMPTS}", "username")
-    if identifier:
-        updateDb(
-            """INSERT INTO Logins (LoginDate, LoginUser, LoginResult)
-            VALUES (%s, %s, %s)""",
-        (datetime.now(), identifier, False)
-    )
         return redirect(url_for("login"))
 
-    password = request.form.get("password")
-    hashPassword = exists["Password_hash"]
-
-    if not check_password_hash(hashPassword, password):
+    if not check_password_hash(exists["Password_hash"], password):
         ip_remaining = record_failed_login('ip', request_ip)
         acct_remaining = record_failed_login('account', normalized_identifier) if normalized_identifier else ip_remaining
         remaining = acct_remaining if normalized_identifier else ip_remaining
-        flash(f"Please enter the correct credentials. Attempts left {remaining} of {LOGIN_MAX_ATTEMPTS}", "password")
+
         updateDb(
             """INSERT INTO Logins (LoginDate, LoginUser, LoginResult)
             VALUES (%s, %s, %s)""",
             (datetime.now(), identifier, False)
         )
+
+        flash(f"Please enter the correct credentials. Attempts left {remaining} of {LOGIN_MAX_ATTEMPTS}", "password")
         return redirect(url_for("login"))
 
     remember = request.form.get("remember")
