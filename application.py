@@ -147,6 +147,18 @@ def build_csv_response(filename: str, headers, rows):
         headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )
 
+def get_about_info():
+    rows = queryDb("SELECT TeamNum, VersionNum, ReleaseDate, ProductName, ProductDescription FROM Admins WHERE AdminID = 1")
+    if rows and len(rows) > 0 and rows[0]:
+        return rows[0]
+    return {
+        "TeamNum": "",
+        "VersionNum": "",
+        "ReleaseDate": "",
+        "ProductName": "",
+        "ProductDescription": ""
+    }
+
 def get_encryption_key():
     raw = os.environ.get('FIELD_ENCRYPTION_KEY') or hashlib.sha256(application.secret_key.encode('utf-8')).digest()
     if isinstance(raw, str):
@@ -1478,18 +1490,30 @@ for example.
 """
 @application.route("/about")
 def about():
-	#query db to find out how many accounts are in accounts table
-	aboutInfo = queryDb("SELECT TeamNum, VersionNum, ReleaseDate, ProductName, ProductDescription FROM Admins WHERE AdminID = 1")[0]
+    aboutInfo = get_about_info()
 
-	if not aboutInfo:
-		flash("About info missing (Admins.AdminID=1).", "notfound")
-		aboutInfo = {"TeamNum":"","VersionNum":"","ReleaseDate":"","ProductName":"","ProductDescription":""}
-	
-	if 'UserID' in session:
-		return render_template("about.html", layout = "activenav.html", accountType=session['role'], Team=aboutInfo['TeamNum'], Version=aboutInfo['VersionNum'], 
-			Release=aboutInfo['ReleaseDate'], Name=aboutInfo['ProductName'], Description=aboutInfo['ProductDescription'])
-	return render_template("about.html", layout = "nav.html", accountType="Driver", Team=aboutInfo['TeamNum'], Version=aboutInfo['VersionNum'], 
-		Release=aboutInfo['ReleaseDate'], Name=aboutInfo['ProductName'], Description=aboutInfo['ProductDescription'])
+    if 'UserID' in session:
+        return render_template(
+            "about.html",
+            layout="activenav.html",
+            accountType=session['role'],
+            Team=aboutInfo['TeamNum'],
+            Version=aboutInfo['VersionNum'],
+            Release=aboutInfo['ReleaseDate'],
+            Name=aboutInfo['ProductName'],
+            Description=aboutInfo['ProductDescription']
+        )
+
+    return render_template(
+        "about.html",
+        layout="nav.html",
+        accountType="Driver",
+        Team=aboutInfo['TeamNum'],
+        Version=aboutInfo['VersionNum'],
+        Release=aboutInfo['ReleaseDate'],
+        Name=aboutInfo['ProductName'],
+        Description=aboutInfo['ProductDescription']
+    )
 
 @application.route('/about/export')
 def about_export():
