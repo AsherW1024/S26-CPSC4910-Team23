@@ -1408,6 +1408,31 @@ def about():
 	return render_template("about.html", layout = "nav.html", accountType="Driver", Team=aboutInfo['TeamNum'], Version=aboutInfo['VersionNum'], 
 		Release=aboutInfo['ReleaseDate'], Name=aboutInfo['ProductName'], Description=aboutInfo['ProductDescription'])
 
+@application.route('/about/export')
+def about_export():
+    guard = require_admin()
+    if guard:
+        return guard
+
+    aboutInfo = get_about_info()
+    format_type = request.args.get('format', 'json').lower()
+
+    if format_type == 'csv':
+        row = {
+            'TeamNum': aboutInfo.get('TeamNum', ''),
+            'VersionNum': aboutInfo.get('VersionNum', ''),
+            'ReleaseDate': aboutInfo.get('ReleaseDate', ''),
+            'ProductName': aboutInfo.get('ProductName', ''),
+            'ProductDescription': aboutInfo.get('ProductDescription', '')
+        }
+        return build_csv_response(
+            'about_page_export.csv',
+            ['TeamNum', 'VersionNum', 'ReleaseDate', 'ProductName', 'ProductDescription'],
+            [row]
+        )
+
+    return jsonify(aboutInfo)
+
 @application.route("/about/edit")
 def editAbout():
 	guard = require_admin()
