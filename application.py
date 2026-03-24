@@ -33,6 +33,10 @@ LOGIN_LOCKOUT_MINUTES = int(os.environ.get('LOGIN_LOCKOUT_MINUTES', 15))
 PASSWORD_MIN_LEN = 10
 PASSWORD_MAX_LEN = 128
 
+# Define security tables and seed default permissions on startup
+init_security_tables()
+seed_default_role_permissions()
+
 def password_policy_errors(pw: str):
     """Return a list of human-readable password policy errors."""
     errors = []
@@ -608,6 +612,134 @@ def reset_password_post(token):
 
     flash("Password reset successful. Please login.", "success")
     return redirect(url_for("login"))
+
+DEFAULT_ROLE_PERMISSIONS = {
+    'Admin': {
+        'view_reports', 'export_reports', 'view_audit_logs', 'manage_role_permissions',
+        'manage_security_settings', 'edit_about', 'manage_users'
+    },
+    'Sponsor': {'view_org_users', 'assume_driver_identity', 'adjust_driver_points'},
+    'Driver': {'view_profile', 'checkout', 'view_orders'}
+}
+
+def init_security_tables():
+    ddl_statements = [
+        """CREATE TABLE IF NOT EXISTS LoginAttemptTracker (
+            TrackerID INT AUTO_INCREMENT PRIMARY KEY,
+            ScopeType VARCHAR(20) NOT NULL,
+            ScopeValue VARCHAR(255) NOT NULL,
+            FailedCount INT NOT NULL DEFAULT 0,
+            LockedUntil DATETIME NULL,
+            LastFailedAt DATETIME NULL,
+            CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_login_attempt_scope (ScopeType, ScopeValue)
+        )""",
+        """CREATE TABLE IF NOT EXISTS RolePermissions (
+            PermissionID INT AUTO_INCREMENT PRIMARY KEY,
+            RoleName VARCHAR(32) NOT NULL,
+            PermissionName VARCHAR(100) NOT NULL,
+            IsAllowed TINYINT(1) NOT NULL DEFAULT 1,
+            CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_role_permission (RoleName, PermissionName)
+        )"""
+    ]
+    for ddl in ddl_statements:
+        try:
+            updateDb(ddl)
+        except Exception as e:
+            print('init_security_tables skipped:', e)
+
+def seed_default_role_permissions():
+    for role, permissions in DEFAULT_ROLE_PERMISSIONS.items():
+        for permission in permissions:
+            try:
+                updateDb("""
+                    INSERT INTO RolePermissions (RoleName, PermissionName, IsAllowed)
+                    VALUES (%s, %s, 1)
+                    ON DUPLICATE KEY UPDATE UpdatedAt = CURRENT_TIMESTAMP
+                """, (role, permission))
+            except Exception as e:
+                print('seed_default_role_permissions skipped:', e)
+
+def get_role_permissions(role_name):
+    if not role_name:
+        return set()
+    rows = selectDb("SELECT PermissionName FROM RolePermissions WHERE RoleName=%s AND IsAllowed=1", (role_name,))
+    if rows:
+        return {row['PermissionName'] for row in rows}
+    return set(DEFAULT_ROLE_PERMISSIONS.get(role_name, set()))
+
+def has_permission(permission_name):
+    return permission_name in get_role_permissions(session.get('role'))
+
+def permission_required(permission_name):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            guard = require_login()
+            if guard:
+                return guard
+            if not has_permission(permission_name):
+                flash('You do not have permission to access that page.', 'auth')
+                return redirect(url_for('home'))
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
+
+def normalize_login_identifier(identifier):
+    return (identifier or '').strip().lower()
+
+def get_request_ip():
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    return request.remote_addr
+
+def get_active_lockout(scope_type, scope_value):
+    if not scope_value:
+        return None
+    row = paramQueryDb("""
+        SELECT FailedCount, LockedUntil
+        FROM LoginAttemptTracker
+        WHERE ScopeType=%s AND ScopeValue=%s
+    """, (scope_type, scope_value))
+    if row and row.get('LockedUntil') and datetime.utcnow() < row['LockedUntil']:
+        return row
+    return None
+
+def clear_login_attempts(scope_type, scope_value):
+    if not scope_value:
+        return
+    updateDb("DELETE FROM LoginAttemptTracker WHERE ScopeType=%s AND ScopeValue=%s", (scope_type, scope_value))
+
+def record_failed_login(scope_type, scope_value):
+    if not scope_value:
+        return LOGIN_MAX_ATTEMPTS - 1
+    row = paramQueryDb("SELECT FailedCount FROM LoginAttemptTracker WHERE ScopeType=%s AND ScopeValue=%s", (scope_type, scope_value))
+    failed_count = (row.get('FailedCount') if row else 0) + 1
+    locked_until = datetime.utcnow() + timedelta(minutes=LOGIN_LOCKOUT_MINUTES) if failed_count >= LOGIN_MAX_ATTEMPTS else None
+    updateDb("""
+        INSERT INTO LoginAttemptTracker (ScopeType, ScopeValue, FailedCount, LockedUntil, LastFailedAt)
+        VALUES (%s, %s, %s, %s, %s)
+        ON DUPLICATE KEY UPDATE
+            FailedCount=%s,
+            LockedUntil=%s,
+            LastFailedAt=%s
+    """, (scope_type, scope_value, failed_count, locked_until, datetime.utcnow(), failed_count, locked_until, datetime.utcnow()))
+    return max(LOGIN_MAX_ATTEMPTS - failed_count, 0)
+
+def get_login_lockout_message(identifier=None):
+    ip = get_request_ip()
+    normalized_identifier = normalize_login_identifier(identifier)
+    for scope_type, scope_value, scope_label in (('ip', ip, 'your IP address'), ('account', normalized_identifier, 'this account')):
+        active = get_active_lockout(scope_type, scope_value)
+        if active:
+            remaining = active['LockedUntil'] - datetime.utcnow()
+            minutes_remaining = max(int(remaining.total_seconds() // 60) + 1, 1)
+            return f'Too many failed attempts for {scope_label}. Try again in {minutes_remaining} minute(s).', minutes_remaining
+    return None, 0
 
 def stop_admin_view_as_session():
 	if "admin_real_UserID" not in session:
