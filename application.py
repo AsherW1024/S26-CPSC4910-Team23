@@ -33,10 +33,6 @@ LOGIN_LOCKOUT_MINUTES = int(os.environ.get('LOGIN_LOCKOUT_MINUTES', 15))
 PASSWORD_MIN_LEN = 10
 PASSWORD_MAX_LEN = 128
 
-# Define security tables and seed default permissions on startup
-init_security_tables()
-seed_default_role_permissions()
-
 def password_policy_errors(pw: str):
     """Return a list of human-readable password policy errors."""
     errors = []
@@ -779,6 +775,10 @@ def get_login_lockout_message(identifier=None):
             minutes_remaining = max(int(remaining.total_seconds() // 60) + 1, 1)
             return f'Too many failed attempts for {scope_label}. Try again in {minutes_remaining} minute(s).', minutes_remaining
     return None, 0
+
+# Define security tables and seed default permissions on startup
+init_security_tables()
+seed_default_role_permissions()
 
 def stop_admin_view_as_session():
 	if "admin_real_UserID" not in session:
