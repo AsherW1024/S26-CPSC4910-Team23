@@ -147,6 +147,43 @@ def build_csv_response(filename: str, headers, rows):
         headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )
 
+def get_encryption_key():
+    raw = os.environ.get('FIELD_ENCRYPTION_KEY') or hashlib.sha256(application.secret_key.encode('utf-8')).digest()
+    if isinstance(raw, str):
+        raw = raw.encode('utf-8')
+    if len(raw) != 32:
+        raw = hashlib.sha256(raw).digest()
+    return base64.urlsafe_b64encode(raw)
+
+def get_fernet():
+    return Fernet(get_encryption_key())
+
+def encrypt_value(value):
+    if value in (None, ''):
+        return value
+    if isinstance(value, str) and value.startswith('enc::'):
+        return value
+    token = get_fernet().encrypt(str(value).encode('utf-8')).decode('utf-8')
+    return f'enc::{token}'
+
+def decrypt_value(value):
+    if value in (None, ''):
+        return value
+    if not isinstance(value, str) or not value.startswith('enc::'):
+        return value
+    try:
+        return get_fernet().decrypt(value[5:].encode('utf-8')).decode('utf-8')
+    except InvalidToken:
+        return value
+
+def decrypt_fields(record, fields):
+    if not record:
+        return record
+    for field in fields:
+        if field in record:
+            record[field] = decrypt_value(record.get(field))
+    return record
+
 """
 This uses the data provided in the db_config.py file to intinialize and return
 a reference to the db connection. db_config.py is located in the config directory.
