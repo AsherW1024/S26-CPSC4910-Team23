@@ -3708,9 +3708,9 @@ def makeOrder():
 		adjustDriverPoints(userID, orgID, newDriverPointTotal)
 
 		#insert info into Orders table
-		address = encrypt_value(request.form.get("address"))
-		city = encrypt_value(request.form.get("city"))
-		state = encrypt_value(request.form.get("state"))
+		address = request.form.get("address")
+		city = request.form.get("city")
+		state = request.form.get("state")
 
 		#insert into Order table with a cursor to keep track of that entry's orderID
 		connection = getDbConnection()
