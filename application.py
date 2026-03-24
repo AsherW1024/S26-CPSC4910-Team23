@@ -1,4 +1,5 @@
 from flask import Flask, render_template, redirect, url_for, request, session, flash, jsonify, Response
+from functools import wraps
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 import pymysql
@@ -8,14 +9,23 @@ import requests
 import math
 import secrets
 import hashlib
+import base64
 import csv
 import io
 from datetime import date
+from cryptography.fernet import Fernet, InvalidToken
 
 application = Flask(__name__)
-application.secret_key = os.urandom(24)  # Use a secure random key in production
+application.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-change-me-secret-key")
 application.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=1)
+application.config['SESSION_COOKIE_HTTPONLY'] = True
+application.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+application.config['SESSION_COOKIE_SECURE'] = os.environ.get('FLASK_ENV') == 'production'
 
+IDLE_TIMEOUT_MINUTES = int(os.environ.get('IDLE_TIMEOUT_MINUTES', 20))
+IDLE_WARNING_MINUTES = int(os.environ.get('IDLE_WARNING_MINUTES', 5))
+LOGIN_MAX_ATTEMPTS = int(os.environ.get('LOGIN_MAX_ATTEMPTS', 5))
+LOGIN_LOCKOUT_MINUTES = int(os.environ.get('LOGIN_LOCKOUT_MINUTES', 15))
 # -----------------------------
 # Security / Validation Helpers
 # -----------------------------
