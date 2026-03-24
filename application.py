@@ -1560,6 +1560,78 @@ def refunds_impact_report():
         rows=rows
     )
 
+@application.route("/reports/invoices")
+@permission_required("view_reports")
+def invoice_report():
+    fee_rate = request.args.get("feeRate", default=0.01, type=float)
+    export_format = request.args.get("format", "").lower()
+
+    rows = get_invoice_rows(fee_rate=fee_rate)
+
+    if export_format == "csv":
+        return build_csv_response(
+            "invoice_report.csv",
+            ["orgID", "organizationName", "orderCount", "salesTotal", "feeRate", "feeAmount", "invoiceTotal", "feeExplanation"],
+            rows
+        )
+
+    return render_template(
+        "invoice_report.html",
+        layout="nav.html" if not session.get("UserID") else ("orgnav.html" if session.get("Organization") else "activenav.html"),
+        rows=rows,
+        feeRate=fee_rate
+    )
+
+@application.route("/reports/invoices/resend", methods=["POST"])
+@permission_required("view_reports")
+def resend_invoice_email():
+    org_id = request.form.get("orgID", type=int)
+    invoice_month = request.form.get("invoiceMonth", "").strip() or datetime.now().strftime("%Y-%m")
+
+    org = paramQueryDb("""
+        SELECT OrganizationID, Name
+        FROM Organizations
+        WHERE OrganizationID = %s
+    """, (org_id,))
+
+    if not org:
+        flash("Organization not found.", "notfound")
+        return redirect(url_for("invoice_report"))
+
+    sponsor = paramQueryDb("""
+        SELECT u.Email
+        FROM Sponsors s
+        JOIN Users u ON u.UserID = s.SponsorID
+        WHERE s.OrganizationID = %s
+        ORDER BY u.UserID
+        LIMIT 1
+    """, (org_id,))
+
+    recipient_email = sponsor.get("Email") if sponsor else None
+
+    updateDb("""
+        INSERT INTO InvoiceEmailLog (OrgID, InvoiceMonth, RecipientEmail, ActionTaken, TriggeredByUserID, Notes)
+        VALUES (%s, %s, %s, %s, %s, %s)
+    """, (
+        org_id,
+        invoice_month,
+        recipient_email,
+        "resent",
+        session.get("UserID"),
+        f"Invoice resend triggered for {org.get('Name')}"
+    ))
+
+    try:
+        updateDb("""
+            INSERT INTO Logins (LoginDate, LoginUser, LoginResult)
+            VALUES (%s, %s, %s)
+        """, (datetime.now(), f"invoice-resend-org-{org_id}", True))
+    except Exception as e:
+        print("invoice resend audit log skipped:", e)
+
+    flash(f"Invoice resend recorded for {org.get('Name')}.", "success")
+    return redirect(url_for("invoice_report"))
+
 @application.route("/admin/audit-logs")
 @permission_required("view_audit_logs")
 def audit_logs():
