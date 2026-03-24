@@ -146,6 +146,184 @@ def build_csv_response(filename: str, headers, rows):
         mimetype="text/csv",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )
+def format_currency(value):
+    try:
+        return f"{float(value):.2f}"
+    except Exception:
+        return "0.00"
+
+def ensure_reporting_tables():
+    ddl_statements = [
+        """
+        CREATE TABLE IF NOT EXISTS InvoiceEmailLog (
+            InvoiceEmailLogID INT AUTO_INCREMENT PRIMARY KEY,
+            OrgID INT NOT NULL,
+            InvoiceMonth VARCHAR(7) NOT NULL,
+            RecipientEmail VARCHAR(255) NULL,
+            ActionTaken VARCHAR(50) NOT NULL,
+            TriggeredByUserID INT NULL,
+            Notes TEXT NULL,
+            CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS OrderStatusAudit (
+            OrderStatusAuditID INT AUTO_INCREMENT PRIMARY KEY,
+            OrderID INT NOT NULL,
+            StatusName VARCHAR(50) NOT NULL,
+            Notes TEXT NULL,
+            CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    ]
+    for ddl in ddl_statements:
+        try:
+            updateDb(ddl)
+        except Exception as e:
+            print("ensure_reporting_tables skipped:", e)
+
+def get_sales_by_product_rows(org_id=None):
+    base_query = """
+        SELECT
+            oi.productID,
+            COUNT(DISTINCT o.orderID) AS orderCount,
+            SUM(oi.amount) AS quantitySold,
+            SUM(oi.totalPrice) AS grossSales
+        FROM OrderItems oi
+        JOIN Orders o ON o.orderID = oi.orderID
+    """
+    params = []
+    where_clauses = []
+
+    if org_id:
+        where_clauses.append("o.orgID = %s")
+        params.append(org_id)
+
+    if where_clauses:
+        base_query += " WHERE " + " AND ".join(where_clauses)
+
+    base_query += """
+        GROUP BY oi.productID
+        ORDER BY grossSales DESC, quantitySold DESC
+    """
+
+    rows = selectDb(base_query, tuple(params)) or []
+
+    enriched_rows = []
+    for row in rows:
+        product_id = row.get("productID")
+        try:
+            product_data = getProductData(product_id) or {}
+        except Exception:
+            product_data = {}
+
+        enriched_rows.append({
+            "productID": product_id,
+            "productName": product_data.get("title") or f"Product {product_id}",
+            "category": product_data.get("category") or "",
+            "brand": product_data.get("brand") or "",
+            "orderCount": row.get("orderCount") or 0,
+            "quantitySold": row.get("quantitySold") or 0,
+            "grossSales": float(row.get("grossSales") or 0)
+        })
+
+    return enriched_rows
+
+def get_refund_cancellation_impact_rows(org_id=None):
+    base_query = """
+        SELECT
+            o.orderID,
+            o.orgID,
+            o.pointTotal,
+            o.orderTime,
+            COALESCE(MAX(CASE WHEN osa.StatusName='Refunded' THEN 1 ELSE 0 END), 0) AS isRefunded,
+            COALESCE(MAX(CASE WHEN osa.StatusName='Cancelled' THEN 1 ELSE 0 END), 0) AS isCancelled
+        FROM Orders o
+        LEFT JOIN OrderStatusAudit osa ON osa.OrderID = o.orderID
+    """
+    params = []
+    where_clauses = []
+
+    if org_id:
+        where_clauses.append("o.orgID = %s")
+        params.append(org_id)
+
+    if where_clauses:
+        base_query += " WHERE " + " AND ".join(where_clauses)
+
+    base_query += """
+        GROUP BY o.orderID, o.orgID, o.pointTotal, o.orderTime
+        ORDER BY o.orderTime DESC
+    """
+
+    rows = selectDb(base_query, tuple(params)) or []
+
+    summary = {
+        "grossSales": 0.0,
+        "refundTotal": 0.0,
+        "cancelledTotal": 0.0,
+        "netSales": 0.0
+    }
+
+    detailed_rows = []
+    for row in rows:
+        point_total = float(row.get("pointTotal") or 0)
+        is_refunded = int(row.get("isRefunded") or 0) == 1
+        is_cancelled = int(row.get("isCancelled") or 0) == 1
+
+        summary["grossSales"] += point_total
+        if is_refunded:
+            summary["refundTotal"] += point_total
+        if is_cancelled:
+            summary["cancelledTotal"] += point_total
+
+        status = "Completed"
+        if is_refunded:
+            status = "Refunded"
+        elif is_cancelled:
+            status = "Cancelled"
+
+        detailed_rows.append({
+            "orderID": row.get("orderID"),
+            "orgID": row.get("orgID"),
+            "pointTotal": point_total,
+            "status": status,
+            "orderTime": row.get("orderTime")
+        })
+
+    summary["netSales"] = summary["grossSales"] - summary["refundTotal"] - summary["cancelledTotal"]
+    return summary, detailed_rows
+
+def get_invoice_rows(fee_rate=0.01):
+    rows = selectDb("""
+        SELECT
+            o.orgID,
+            org.Name AS OrganizationName,
+            COUNT(DISTINCT o.orderID) AS orderCount,
+            SUM(o.pointTotal) AS salesTotal
+        FROM Orders o
+        LEFT JOIN Organizations org ON org.OrganizationID = o.orgID
+        GROUP BY o.orgID, org.Name
+        ORDER BY salesTotal DESC
+    """, ()) or []
+
+    invoice_rows = []
+    for row in rows:
+        sales_total = float(row.get("salesTotal") or 0)
+        fee_amount = round(sales_total * fee_rate, 2)
+        invoice_rows.append({
+            "orgID": row.get("orgID"),
+            "organizationName": row.get("OrganizationName") or f"Organization {row.get('orgID')}",
+            "orderCount": row.get("orderCount") or 0,
+            "salesTotal": sales_total,
+            "feeRate": fee_rate,
+            "feeAmount": fee_amount,
+            "invoiceTotal": round(sales_total + fee_amount, 2),
+            "feeExplanation": f"{int(fee_rate * 100)}% fee applied to sales total"
+        })
+    return invoice_rows
+
+ensure_reporting_tables()
 
 def get_about_info():
     rows = queryDb("SELECT TeamNum, VersionNum, ReleaseDate, ProductName, ProductDescription FROM Admins WHERE AdminID = 1")
