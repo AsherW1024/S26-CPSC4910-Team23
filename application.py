@@ -445,86 +445,88 @@ def registerOrganization():
 	session["createOrg"] = orgName
 	return redirect(url_for("sRegister"))
 
-
 #Logging in and out 
 @application.route("/login")
 def login():
-	session.setdefault('attempts', 5)
-	if 'lockoutTime' in session:
-		lockout = datetime.fromisoformat(session.get('lockoutTime'))
-		now = datetime.utcnow()
-		if now < lockout:
-			remainingTime = lockout - now
-			minutesRemaining = int(remainingTime.total_seconds() // 60) + 1
-			flash("Too many failed attempts. Locked for %d minutes." % minutesRemaining, "failedAttempts")
-			return render_template("login.html")
-		else:
-			session['attempts'] = 5
-			session.pop('lockoutTime', None)
-	return render_template("login.html")
+    message, _ = get_login_lockout_message()
+    if message:
+        flash(message, "failedAttempts")
+    return render_template("login.html")
 
 @application.route("/login", methods=["POST"])
 def loginUser():
+    identifier = request.form.get("identifier", "").strip()
+    normalized_identifier = normalize_login_identifier(identifier)
+    request_ip = get_request_ip()
 
-	session.setdefault("attempts", 5)
+    message, _ = get_login_lockout_message(identifier)
+    if message:
+        flash(message, "failedAttempts")
+        return redirect(url_for("login"))
 
-	if session['attempts'] <= 0:
-		session['lockoutTime'] = (datetime.utcnow() + timedelta(minutes=15)).isoformat()
+    exists = paramQueryDb(
+        "SELECT UserID AS id, Username, Password_hash, UserType FROM Users WHERE Email=%s OR Username=%s",
+        (identifier, identifier)
+    )
 
-	if 'lockoutTime' in session:
-		lockout = datetime.fromisoformat(session.get('lockoutTime'))
-		now = datetime.utcnow()
-		if now < lockout:
-			return redirect(url_for("login"))
-		else:
-			session.pop('lockoutTime', None)
-
-	identifier = request.form.get("identifier")
-	exists = paramQueryDb("SELECT UserID AS id, Username, Password_hash, UserType FROM Users WHERE Email=%s OR Username=%s", 
-		(identifier, identifier))
-
-	if not exists:
-		session['attempts'] -= 1
-		flash("Please enter the correct credentials, Attempts left %d of 5" % (session['attempts'] + 1), "username")
-		updateDb(
+    if not exists:
+        ip_remaining = record_failed_login('ip', request_ip)
+        acct_remaining = record_failed_login('account', normalized_identifier)
+        remaining = min(ip_remaining, acct_remaining)
+        flash(f"Please enter the correct credentials. Attempts left {remaining} of {LOGIN_MAX_ATTEMPTS}", "username")
+        updateDb(
             """INSERT INTO Logins (LoginDate, LoginUser, LoginResult)
-            VALUES (%s, %s, %s)""", (datetime.now(), "", False))
-		return redirect(url_for("login"))
+            VALUES (%s, %s, %s)""",
+            (datetime.now(), "", False)
+        )
+        return redirect(url_for("login"))
 
-	password = request.form.get("password")
-	hashPassword = exists["Password_hash"]
+    password = request.form.get("password")
+    hashPassword = exists["Password_hash"]
 
-	if not check_password_hash(hashPassword, password):
-		session['attempts'] -= 1
-		flash("Please enter the correct credentials, Attempts left %d of 5" % (session['attempts'] + 1), "password")
-		updateDb(
+    if not check_password_hash(hashPassword, password):
+        ip_remaining = record_failed_login('ip', request_ip)
+        acct_remaining = record_failed_login('account', normalized_identifier)
+        remaining = min(ip_remaining, acct_remaining)
+        flash(f"Please enter the correct credentials. Attempts left {remaining} of {LOGIN_MAX_ATTEMPTS}", "password")
+        updateDb(
             """INSERT INTO Logins (LoginDate, LoginUser, LoginResult)
-            VALUES (%s, %s, %s)""", (datetime.now(), identifier, False))
-		return redirect(url_for("login"))
+            VALUES (%s, %s, %s)""",
+            (datetime.now(), identifier, False)
+        )
+        return redirect(url_for("login"))
 
-	remember = request.form.get("remember")
-	if remember:
-		session.permanent = True
-	else:
-		session.permanent = False
+    remember = request.form.get("remember")
+    session.permanent = bool(remember)
 
-	session.pop('attempts', None)
-	session['UserID'] = exists['id']
-	session['role'] = exists['UserType']
-	updateDb(
+    clear_login_attempts('ip', request_ip)
+    clear_login_attempts('account', normalized_identifier)
+
+    session['UserID'] = exists['id']
+    session['role'] = exists['UserType']
+    session['last_activity'] = datetime.utcnow().isoformat()
+    session.pop('idle_warning_shown', None)
+
+    updateDb(
         """INSERT INTO Logins (LoginDate, LoginUser, LoginResult)
-        VALUES (%s, %s, %s) """, (datetime.now(), exists['Username'], True))
+        VALUES (%s, %s, %s) """,
+        (datetime.now(), exists['Username'], True)
+    )
 
-	if exists['UserType'] == "Admin":
-		flash("Welcome Admin, we appreciate your visit to our website!", "admin")
-	elif exists['UserType'] == "Sponsor":
-		flash("Welcome Sponsor, we appreciate your visit to our website!", "sponsor")
-	elif exists['UserType'] == "Driver":
-		flash("Welcome Driver, we appreciate your visit to our website!", "driver")
+    try:
+        updateDb("UPDATE Users SET LastLogin=%s WHERE UserID=%s", (datetime.now(), exists['id']))
+    except Exception as e:
+        print('LastLogin update skipped:', e)
 
-	getOrganization()
+    if exists['UserType'] == "Admin":
+        flash("Welcome Admin, we appreciate your visit to our website!", "admin")
+    elif exists['UserType'] == "Sponsor":
+        flash("Welcome Sponsor, we appreciate your visit to our website!", "sponsor")
+    elif exists['UserType'] == "Driver":
+        flash("Welcome Driver, we appreciate your visit to our website!", "driver")
 
-	return redirect(url_for("home"))
+    getOrganization()
+    return redirect(url_for("home"))
 
 # Forgot password
 @application.route("/forgot_password")
