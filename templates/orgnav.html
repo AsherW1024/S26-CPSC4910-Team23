@@ -49,6 +49,7 @@
             <div class="dropdown">
                 <button class="dropbtn" type="button">Reports</button>
                 <div class="dropdown-content">
+                    <a href="/admin/audit-logs">Audit Log Search</a>
                     <a href="/reports/applications">Application Report</a>
                     {% if session.get('role') == "Admin" %}
                     <a href="/reports/logins">Login Report</a>

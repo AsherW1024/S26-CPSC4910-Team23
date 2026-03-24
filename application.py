@@ -1323,6 +1323,87 @@ def report(ReportType):
         pageNum=range(1, numPages + 1),
         pageRows=rowsPerPage
     )
+
+@application.route("/admin/audit-logs")
+@permission_required("view_audit_logs")
+def audit_logs():
+    keyword = request.args.get("q", "").strip()
+    export_format = request.args.get("format", "").lower()
+
+    base_query = """
+        SELECT *
+        FROM (
+            SELECT
+                pa.DateAdjusted AS EventDate,
+                'PasswordAdjustments' AS SourceTable,
+                pa.TypeOfChange AS EventType,
+                COALESCE(actor.Name, pa.AdjustedByUName) AS Actor,
+                COALESCE(target.Name, pa.AdjustedUName) AS Target,
+                CONCAT('Password change event for ', pa.AdjustedUName) AS Details
+            FROM PasswordAdjustments pa
+            LEFT JOIN Users actor ON actor.Username = pa.AdjustedByUName
+            LEFT JOIN Users target ON target.Username = pa.AdjustedUName
+
+            UNION ALL
+
+            SELECT
+                l.LoginDate AS EventDate,
+                'Logins' AS SourceTable,
+                CASE
+                    WHEN l.LoginResult = 1 THEN 'Successful Login'
+                    ELSE 'Failed Login'
+                END AS EventType,
+                COALESCE(u.Name, l.LoginUser) AS Actor,
+                '' AS Target,
+                CONCAT('Login user: ', l.LoginUser) AS Details
+            FROM Logins l
+            LEFT JOIN Users u ON (u.Email = l.LoginUser OR u.Username = l.LoginUser)
+
+            UNION ALL
+
+            SELECT
+                p.DateAdjusted AS EventDate,
+                'PointAdjustments' AS SourceTable,
+                p.AdjustmentType AS EventType,
+                p.AdjustedByUName AS Actor,
+                p.DriverUName AS Target,
+                CONCAT('Points: ', p.AdjustmentPoints, ' | Reason: ', COALESCE(p.AdjustmentReason, '')) AS Details
+            FROM PointAdjustments p
+        ) audit_rows
+    """
+
+    params = []
+    if keyword:
+        like = f"%{keyword}%"
+        base_query += """
+            WHERE
+                SourceTable LIKE %s OR
+                EventType LIKE %s OR
+                Actor LIKE %s OR
+                Target LIKE %s OR
+                Details LIKE %s
+        """
+        params.extend([like, like, like, like, like])
+
+    base_query += " ORDER BY EventDate DESC"
+
+    rows = selectDb(base_query, tuple(params)) or []
+
+    if export_format == "csv":
+        return build_csv_response(
+            "audit_logs.csv",
+            ["EventDate", "SourceTable", "EventType", "Actor", "Target", "Details"],
+            rows
+        )
+
+    nav = "orgnav.html" if session.get("Organization") else "activenav.html"
+    return render_template(
+        "audit_logs.html",
+        layout=nav,
+        rows=rows,
+        keyword=keyword
+    )
+
 @application.route("/<accountType>/users/<int:UserID>/edit", methods=["POST"])
 def userEditPost(accountType, UserID):	
 	"""if accountType == 'sponsor':
