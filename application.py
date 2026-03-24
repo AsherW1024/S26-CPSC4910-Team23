@@ -649,6 +649,10 @@ def loginUser():
     normalized_identifier = normalize_login_identifier(identifier)
     request_ip = get_request_ip()
 
+    if not identifier or not request.form.get("password", "").strip():
+        flash("Please enter both your username/email and password.", "username")
+        return redirect(url_for("login"))
+
     message, _ = get_login_lockout_message(identifier)
     if message:
         flash(message, "failedAttempts")
@@ -661,14 +665,15 @@ def loginUser():
 
     if not exists:
         ip_remaining = record_failed_login('ip', request_ip)
-        acct_remaining = record_failed_login('account', normalized_identifier)
-        remaining = min(ip_remaining, acct_remaining)
+        acct_remaining = record_failed_login('account', normalized_identifier) if normalized_identifier else ip_remaining
+        remaining = acct_remaining if normalized_identifier else ip_remaining
         flash(f"Please enter the correct credentials. Attempts left {remaining} of {LOGIN_MAX_ATTEMPTS}", "username")
+    if identifier:
         updateDb(
             """INSERT INTO Logins (LoginDate, LoginUser, LoginResult)
             VALUES (%s, %s, %s)""",
-            (datetime.now(), "", False)
-        )
+        (datetime.now(), identifier, False)
+    )
         return redirect(url_for("login"))
 
     password = request.form.get("password")
@@ -676,8 +681,8 @@ def loginUser():
 
     if not check_password_hash(hashPassword, password):
         ip_remaining = record_failed_login('ip', request_ip)
-        acct_remaining = record_failed_login('account', normalized_identifier)
-        remaining = min(ip_remaining, acct_remaining)
+        acct_remaining = record_failed_login('account', normalized_identifier) if normalized_identifier else ip_remaining
+        remaining = acct_remaining if normalized_identifier else ip_remaining
         flash(f"Please enter the correct credentials. Attempts left {remaining} of {LOGIN_MAX_ATTEMPTS}", "password")
         updateDb(
             """INSERT INTO Logins (LoginDate, LoginUser, LoginResult)
@@ -938,19 +943,30 @@ def clear_login_attempts(scope_type, scope_value):
 def record_failed_login(scope_type, scope_value):
     if not scope_value:
         return LOGIN_MAX_ATTEMPTS - 1
-    row = paramQueryDb("SELECT FailedCount FROM LoginAttemptTracker WHERE ScopeType=%s AND ScopeValue=%s", (scope_type, scope_value))
-    failed_count = (row.get('FailedCount') if row else 0) + 1
+
+    existing = paramQueryDb("""
+        SELECT FailedCount, LockedUntil
+        FROM LoginAttemptTracker
+        WHERE ScopeType=%s AND ScopeValue=%s
+    """, (scope_type, scope_value))
+
+    current_failed = int(existing.get("FailedCount") or 0) if existing else 0
+    failed_count = current_failed + 1
     locked_until = datetime.utcnow() + timedelta(minutes=LOGIN_LOCKOUT_MINUTES) if failed_count >= LOGIN_MAX_ATTEMPTS else None
+
     updateDb("""
         INSERT INTO LoginAttemptTracker (ScopeType, ScopeValue, FailedCount, LockedUntil, LastFailedAt)
         VALUES (%s, %s, %s, %s, %s)
         ON DUPLICATE KEY UPDATE
-            FailedCount=%s,
-            LockedUntil=%s,
-            LastFailedAt=%s
-    """, (scope_type, scope_value, failed_count, locked_until, datetime.utcnow(), failed_count, locked_until, datetime.utcnow()))
-    return max(LOGIN_MAX_ATTEMPTS - failed_count, 0)
+            FailedCount = %s,
+            LockedUntil = %s,
+            LastFailedAt = %s
+    """, (
+        scope_type, scope_value, failed_count, locked_until, datetime.utcnow(),
+        failed_count, locked_until, datetime.utcnow()
+    ))
 
+    return max(LOGIN_MAX_ATTEMPTS - failed_count, 0)
 def get_login_lockout_message(identifier=None):
     ip = get_request_ip()
     normalized_identifier = normalize_login_identifier(identifier)
