@@ -323,8 +323,6 @@ def get_invoice_rows(fee_rate=0.01):
         })
     return invoice_rows
 
-ensure_reporting_tables()
-
 def get_about_info():
     rows = queryDb("SELECT TeamNum, VersionNum, ReleaseDate, ProductName, ProductDescription FROM Admins WHERE AdminID = 1")
     if rows and len(rows) > 0 and rows[0]:
@@ -452,6 +450,8 @@ def selectDb(query: str, params=None):
 	finally:
 		if connection:
 			connection.close()
+
+ensure_reporting_tables()
 
 """
 Check if the user is an admin and logged in. 
