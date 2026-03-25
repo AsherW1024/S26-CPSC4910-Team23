@@ -3825,6 +3825,12 @@ def previousOrders():
 
 	return render_template("previous_orders.html", layout="activenav.html", orders=previousOrders)
 
+@application.route("/bulkRegister")
+def bulkRegister():
+	if "UserID" not in session or session.get("role")=="Driver":
+		return redirect(url_for("home"))
+	return render_template("bulk_upload.html", layout="activenav.html")
+
 """
 This lets us test locally. Should not execute in AWS
 """
