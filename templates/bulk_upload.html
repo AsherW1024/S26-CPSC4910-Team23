@@ -5,5 +5,30 @@
 {% endblock %}
 
 {% block content %}
-	
+<div class="content">
+	<h1>Bulk User Upload</h1>
+	<div class="page-info-div">
+		{% if session.get("role")=="Sponsor" %}
+		<p>Use the file upload below to upload a .txt file containg the user information you want to upload</p>
+		<p>It should be formatted like...</p>
+		<p>type|first name|last name|email address|points|reason for points</p>
+		<p>The type refers to the user type, driver or sponsor that the rest of the line is defining the data for</p>
+		<p>Use the character D to define or add points to a driver account and the character S for sponsor accounts</p>
+		{% elif session.get("role")=="Admin" %}
+		<p>Use the file upload below to upload a .txt file containg the user information you want to upload</p>
+		<p>It should be formatted like...</p>
+		<p>type|organization name|first name|last name|email address|points|reason for points</p>
+		<p>The type refers to the user type driver, sponsor, or organization that the rest of the line is defining the data for</p>
+		<p>Use the character D for driver, the character S for sponsor, or the character O for orgnaization</p>
+		<p>If the type is defined as O, please only include the type (O) and the organization. The rest of the line does not need to be defined</p>
+		{% endif %}
+	</div>
+	<div class="file-upload-div">
+		<form {% if session.get("role")=="Sponsor" %}action="/users/bulk/sponsor"{% elif session.get("role")=="Admin"%}action="/users/bulk/admin"{% endif %} method="post" class="file-upload">
+			<label for="bulk-update-file">Upload a .txt file with the correct format:</label>
+			<input type="file" name="bulk-update-file" accept=".txt" required>
+			<button type="submit">Bulk Update</button>
+		</form>
+	</div>
+</div>
 {% endblock %}
