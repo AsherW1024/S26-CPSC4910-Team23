@@ -16,7 +16,7 @@
             {% if session.get('role') == "Admin" %}
                 <a href="/organizations"> Exit Organization </a>
             {% elif session.get('role') == "Driver" %}
-                <a href="/driver/organizations"> Exit Organization </a>
+                <a href="/{{ session.get('UserID') }}/organizations"> Exit Organization </a>
             {% else %}
                 <a href="/"> Exit Organization </a>
             {% endif %}

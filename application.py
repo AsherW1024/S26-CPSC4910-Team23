@@ -710,7 +710,6 @@ def loginUser():
         (datetime.now(), exists['Username'], True)
     )
 
-<<<<<<< Updated upstream
     try:
         updateDb("UPDATE Users SET LastLogin=%s WHERE UserID=%s", (datetime.now(), exists['id']))
     except Exception as e:
@@ -725,17 +724,6 @@ def loginUser():
 
     getOrganization()
     return redirect(url_for("home"))
-=======
-	if exists['UserType'] == "Admin":
-		flash("Welcome Admin, we appreciate your visit to our website!", "admin")
-	elif exists['UserType'] == "Sponsor":
-		flash("Welcome Sponsor, we appreciate your visit to our website!", "sponsor")
-		getOrganization()
-	elif exists['UserType'] == "Driver":
-		flash("Welcome Driver, we appreciate your visit to our website!", "driver")
-
-	return redirect(url_for("home"))
->>>>>>> Stashed changes
 
 # Forgot password
 @application.route("/forgot_password")
