@@ -15,6 +15,8 @@
         <div class="nav-left">
             {% if session.get('role') == "Admin" %}
                 <a href="/organizations"> Exit Organization </a>
+            {% elif session.get('role') == "Driver" %}
+                <a href="/driver/organizations"> Exit Organization </a>
             {% else %}
                 <a href="/"> Exit Organization </a>
             {% endif %}
@@ -28,9 +30,17 @@
                     {% endif %}
                 {% endif %}
             {% endif %}
+            {% if session.get('role') == "Driver" %}
+                <a href="/cart"> Cart </a>
+            {% endif %}
 
         </div>
         <div class="nav-right">
+            {% if session.get('role') == "Driver" %}
+                <b>
+                    Points: {{ session.get("Points") }}
+                </b>
+            {% endif %}
             {% if session.get('role') != "Driver" %}
                 <a href="/organization/users">Users Status</a>
                 <div class="dropdown">

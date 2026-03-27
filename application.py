@@ -82,7 +82,7 @@ def get_org_name_for_user(user_id):
         SELECT o.Name AS OrganizationName
         FROM Users u
         LEFT JOIN Sponsors s ON u.UserID = s.SponsorID
-        LEFT JOIN Drivers d ON u.UserID = d.DriverID
+        LEFT JOIN DriverOrganizations d ON u.UserID = d.DriverID
         LEFT JOIN Organizations o ON o.OrganizationID = COALESCE(s.OrganizationID, d.OrganizationID)
         WHERE u.UserID = %s
     """, (user_id,))
@@ -482,11 +482,11 @@ def require_login():
     return None
 
 def getOrganization():
-	if "UserID" in session and session["role"] != "Admin":
+	if "UserID" in session and session["role"] == "Sponsor":
 		org = selectDb("""SELECT o.Name, o.OrganizationID
 							FROM Users u 
 							LEFT JOIN Sponsors s ON u.UserID = s.SponsorID 
-							LEFT JOIN Drivers d ON u.UserID = d.DriverID
+							LEFT JOIN DriverOrganizations d ON u.UserID = d.DriverID
 							LEFT JOIN Organizations o ON o.OrganizationID=COALESCE(s.OrganizationID, d.OrganizationID)
 							WHERE u.UserID = %s""", (session['UserID'],))
 
@@ -710,6 +710,7 @@ def loginUser():
         (datetime.now(), exists['Username'], True)
     )
 
+<<<<<<< Updated upstream
     try:
         updateDb("UPDATE Users SET LastLogin=%s WHERE UserID=%s", (datetime.now(), exists['id']))
     except Exception as e:
@@ -724,6 +725,17 @@ def loginUser():
 
     getOrganization()
     return redirect(url_for("home"))
+=======
+	if exists['UserType'] == "Admin":
+		flash("Welcome Admin, we appreciate your visit to our website!", "admin")
+	elif exists['UserType'] == "Sponsor":
+		flash("Welcome Sponsor, we appreciate your visit to our website!", "sponsor")
+		getOrganization()
+	elif exists['UserType'] == "Driver":
+		flash("Welcome Driver, we appreciate your visit to our website!", "driver")
+
+	return redirect(url_for("home"))
+>>>>>>> Stashed changes
 
 # Forgot password
 @application.route("/forgot_password")
@@ -1079,7 +1091,7 @@ def adminViewAsUser(UserID):
 			   o.Name AS OrganizationName
 		FROM Users u
 		LEFT JOIN Sponsors s ON u.UserID = s.SponsorID
-		LEFT JOIN Drivers d ON u.UserID = d.DriverID
+		LEFT JOIN DriverOrganizations d ON u.UserID = d.DriverID
 		LEFT JOIN Organizations o ON o.OrganizationID = COALESCE(s.OrganizationID, d.OrganizationID)
 		WHERE u.UserID = %s
 	""", (UserID,))
@@ -1150,7 +1162,7 @@ def adminEnrollDriverPage(OrganizationID):
 		rowTotal = selectDb("""
 			SELECT COUNT(*) AS totalRows
 			FROM Users u
-			JOIN Drivers d ON u.UserID = d.DriverID
+			JOIN DriverOrganizations d ON u.UserID = d.DriverID
 			WHERE u.UserType = "Driver"
 			  AND (d.OrganizationID IS NULL OR d.OrganizationID = 0)
 			  AND (u.Name LIKE %s OR u.Email LIKE %s OR u.Username LIKE %s)
@@ -1159,7 +1171,7 @@ def adminEnrollDriverPage(OrganizationID):
 		drivers = selectDb("""
 			SELECT u.UserID, u.Name, u.Email, u.Username
 			FROM Users u
-			JOIN Drivers d ON u.UserID = d.DriverID
+			JOIN DriverOrganizations d ON u.UserID = d.DriverID
 			WHERE u.UserType = "Driver"
 			  AND (d.OrganizationID IS NULL OR d.OrganizationID = 0)
 			  AND (u.Name LIKE %s OR u.Email LIKE %s OR u.Username LIKE %s)
@@ -1170,7 +1182,7 @@ def adminEnrollDriverPage(OrganizationID):
 		rowTotal = selectDb("""
 			SELECT COUNT(*) AS totalRows
 			FROM Users u
-			JOIN Drivers d ON u.UserID = d.DriverID
+			JOIN DriverOrganizations d ON u.UserID = d.DriverID
 			WHERE u.UserType = "Driver"
 			  AND (d.OrganizationID IS NULL OR d.OrganizationID = 0)
 		""", ())
@@ -1178,7 +1190,7 @@ def adminEnrollDriverPage(OrganizationID):
 		drivers = selectDb("""
 			SELECT u.UserID, u.Name, u.Email, u.Username
 			FROM Users u
-			JOIN Drivers d ON u.UserID = d.DriverID
+			JOIN DriverOrganizations d ON u.UserID = d.DriverID
 			WHERE u.UserType = "Driver"
 			  AND (d.OrganizationID IS NULL OR d.OrganizationID = 0)
 			ORDER BY u.Name
@@ -1274,7 +1286,7 @@ def adminEnrollDriverPost(OrganizationID, UserID):
 	driver = paramQueryDb("""
 		SELECT u.UserID, u.Name, u.Username, d.OrganizationID
 		FROM Users u
-		JOIN Drivers d ON u.UserID = d.DriverID
+		JOIN DriverOrganizations d ON u.UserID = d.DriverID
 		WHERE u.UserID = %s AND u.UserType = "Driver"
 	""", (UserID,))
 
@@ -1448,7 +1460,7 @@ def report(ReportType):
 			FROM PasswordAdjustments pa
 			JOIN Users u ON u.Username = pa.AdjustedUName
 			LEFT JOIN Sponsors ts ON u.UserID = ts.SponsorID
-			LEFT JOIN Drivers td ON u.UserID = td.DriverID
+			LEFT JOIN DriverOrganizations td ON u.UserID = td.DriverID
 			LEFT JOIN Organizations ts_org ON ts.OrganizationID = ts_org.OrganizationID
 			LEFT JOIN Organizations td_org ON td.OrganizationID = td_org.OrganizationID
 			LEFT JOIN Users x ON x.Username = pa.AdjustedByUName
@@ -1463,7 +1475,7 @@ def report(ReportType):
 			FROM PasswordAdjustments pa
 			JOIN Users u ON u.Username = pa.AdjustedUName
 			LEFT JOIN Sponsors ts ON u.UserID = ts.SponsorID
-			LEFT JOIN Drivers td ON u.UserID = td.DriverID
+			LEFT JOIN DriverOrganizations td ON u.UserID = td.DriverID
 			LEFT JOIN Organizations ts_org ON ts.OrganizationID = ts_org.OrganizationID
 			LEFT JOIN Organizations td_org ON td.OrganizationID = td_org.OrganizationID
 			LEFT JOIN Users x ON x.Username = pa.AdjustedByUName
@@ -1527,7 +1539,7 @@ def report(ReportType):
 			FROM Logins l
 			LEFT JOIN Users lu ON (lu.Email = l.LoginUser OR lu.Username = l.LoginUser)
 			LEFT JOIN Sponsors ls ON lu.UserID = ls.SponsorID
-			LEFT JOIN Drivers ld ON lu.UserID = ld.DriverID
+			LEFT JOIN DriverOrganizations ld ON lu.UserID = ld.DriverID
 			LEFT JOIN Organizations ls_org ON ls.OrganizationID = ls_org.OrganizationID
 			LEFT JOIN Organizations ld_org ON ld.OrganizationID = ld_org.OrganizationID
 			{where}
@@ -1543,7 +1555,7 @@ def report(ReportType):
 			FROM Logins l
 			LEFT JOIN Users lu ON (lu.Email = l.LoginUser OR lu.Username = l.LoginUser)
 			LEFT JOIN Sponsors ls ON lu.UserID = ls.SponsorID
-			LEFT JOIN Drivers ld ON lu.UserID = ld.DriverID
+			LEFT JOIN DriverOrganizations ld ON lu.UserID = ld.DriverID
 			LEFT JOIN Organizations ls_org ON ls.OrganizationID = ls_org.OrganizationID
 			LEFT JOIN Organizations ld_org ON ld.OrganizationID = ld_org.OrganizationID
 			{where}
@@ -1868,7 +1880,7 @@ def deleteUser(accountType, UserID):
 def home():
 	if 'UserID' in session:
 		getOrganization()
-		if session.get("Organization") != None and session.get("role") == "Admin":
+		if session.get("Organization") != None and session.get("role") != "Sponsor":
 			session["Organization"]	= None		
 		return render_template("home.html", layout = "activenav.html")
 	return render_template("home.html", layout = "nav.html")
@@ -2174,11 +2186,57 @@ def essentialNotifications():
 	updateDb(f"UPDATE Users SET EssentialNotifsOnly=%s WHERE UserID=%s", (essentialNotif, session["UserID"]))
 	return redirect(url_for("settings"))
 
+@application.route("/<int:UserID>/organizations")
+def DriverOrganizations(UserID):
+	session["Organization"]	= None
+
+	q = request.args.get("q", "").strip()
+	like = f"%{q}%"
+	
+	page = request.args.get("page", 1, type=int)
+	rowsPerPage = request.args.get("pageCount", 10, type=int)
+	offset = (page - 1) * rowsPerPage
+
+	if q:
+		rowTotal = selectDb("""
+			SELECT COUNT(*) AS totalRows
+			FROM DriverOrganizations d LEFT JOIN Organizations o ON d.OrganizationID = o.OrganizationID 
+			WHERE o.Name LIKE %s AND d.DriverID = %s
+			ORDER BY Name
+		""", (like, UserID))
+		orgs = selectDb("""
+			SELECT d.OrganizationID, o.Name, o.Status
+			FROM DriverOrganizations d LEFT JOIN Organizations o ON d.OrganizationID = o.OrganizationID  
+			WHERE Name LIKE %s AND d.DriverID = %s
+			ORDER BY o.Name
+			LIMIT %s OFFSET %s
+		""", (like, UserID, rowsPerPage, offset))
+	else:
+		rowTotal = selectDb("""
+			SELECT COUNT(*) AS totalRows
+			FROM DriverOrganizations d LEFT JOIN Organizations o ON d.OrganizationID = o.OrganizationID 
+			WHERE d.DriverID = %s
+			ORDER BY Name
+		""", (UserID,))
+		orgs = selectDb("""
+			SELECT d.OrganizationID, o.Name, o.Status
+			FROM DriverOrganizations d LEFT JOIN Organizations o ON d.OrganizationID = o.OrganizationID 
+			WHERE d.DriverID = %s
+			ORDER BY Name
+			LIMIT %s OFFSET %s
+		""", (UserID, rowsPerPage, offset))
+	
+	numPages = math.ceil(rowTotal[0]["totalRows"] / rowsPerPage)
+	
+	return render_template("orgList.html", layout="activenav.html", orgs=orgs, q=q, page=page, pageNum=range(1, numPages + 1), pageRows=rowsPerPage, status="Approved")
+
 @application.route("/organizations")
 def organizations():
 	guard = require_admin()
 	if guard: 
 		return guard
+
+	session["Organization"]	= None
 	
 	q = request.args.get("q", "").strip()
 	like = f"%{q}%"
@@ -2213,7 +2271,7 @@ def organizations():
 			ORDER BY Name
 			LIMIT %s OFFSET %s
 		""", (rowsPerPage, offset))
-
+	
 	numPages = math.ceil(rowTotal[0]["totalRows"] / rowsPerPage)
 	
 	return render_template("orgList.html", layout="activenav.html", orgs=orgs, q=q, page=page, pageNum=range(1, numPages + 1), pageRows=rowsPerPage)
@@ -2234,14 +2292,23 @@ def organizationActivate(OrgID):
 
 @application.route("/organizations/<int:OrgID>/view")
 def organizationView(OrgID):
-    org = paramQueryDb("SELECT Name, OrganizationID FROM Organizations WHERE OrganizationID = %s", (OrgID,))
-    if not org:
-        flash("Organization not found.", "validation")
-        return redirect(url_for("organizations"))
+	org = ""
+	if session['role'] == "Driver":
+		org = paramQueryDb("""SELECT o.Name, o.OrganizationID, d.TotalPoints
+							FROM DriverOrganizations d JOIN Organizations o ON d.OrganizationID = o.OrganizationID
+							WHERE d.OrganizationID = %s and d.DriverID = %s""", (OrgID, session["UserID"]))
+		
+		session["Points"] = org["TotalPoints"]
+	else:
+		org = paramQueryDb("SELECT Name, OrganizationID FROM Organizations WHERE OrganizationID = %s", (OrgID,))
+	
+	if not org: 
+		flash("Organization not found.", "validation")
+		return redirect(url_for("organizations"))
 
-    session["Organization"] = org["Name"]
-    session["OrgID"] = org["OrganizationID"]
-    return redirect(url_for("organization"))
+	session["Organization"] = org["Name"]
+	session["OrgID"] = org["OrganizationID"]
+	return redirect(url_for("organization"))
 
 @application.route("/organizations/<int:OrgID>/edit", methods=["POST"])
 def organizationEdit(OrgID):
@@ -2282,7 +2349,7 @@ def organizationUsers():
 		rowTotal = selectDb("""
 			SELECT COUNT(*) AS totalRows
 			FROM Users u LEFT JOIN Sponsors s ON u.UserID = s.SponsorID 
-			LEFT JOIN Drivers d ON u.UserID = d.DriverID
+			LEFT JOIN DriverOrganizations d ON u.UserID = d.DriverID
 			LEFT JOIN Organizations o ON o.OrganizationID=COALESCE(s.OrganizationID, d.OrganizationID)
 			WHERE (u.Name LIKE %s OR u.Email LIKE %s OR u.Username LIKE %s) AND 
 				  (u.UserType = "Sponsor" OR u.UserType = "Driver") AND 
@@ -2292,7 +2359,7 @@ def organizationUsers():
 		users = selectDb("""
 			SELECT u.UserID, u.UserType, u.UserID, u.Name, u.Email, u.Username, o.Name, d.TotalPoints
 			FROM Users u LEFT JOIN Sponsors s ON u.UserID = s.SponsorID 
-			LEFT JOIN Drivers d ON u.UserID = d.DriverID
+			LEFT JOIN DriverOrganizations d ON u.UserID = d.DriverID
 			LEFT JOIN Organizations o ON o.OrganizationID=COALESCE(s.OrganizationID, d.OrganizationID)
 			WHERE (u.Name LIKE %s OR u.Email LIKE %s OR u.Username LIKE %s) AND 
 				  (u.UserType = "Sponsor" OR u.UserType = "Driver") AND 
@@ -2304,7 +2371,7 @@ def organizationUsers():
 		rowTotal = selectDb("""
 			SELECT COUNT(*) AS totalRows
 			FROM Users u LEFT JOIN Sponsors s ON u.UserID = s.SponsorID 
-			LEFT JOIN Drivers d ON u.UserID = d.DriverID
+			LEFT JOIN DriverOrganizations d ON u.UserID = d.DriverID
 			LEFT JOIN Organizations o ON o.OrganizationID=COALESCE(s.OrganizationID, d.OrganizationID)
 			WHERE (u.UserType = "Sponsor" OR u.UserType = "Driver") AND 
 				  (o.Name = %s)
@@ -2313,7 +2380,7 @@ def organizationUsers():
 		users = selectDb("""
 			SELECT u.UserID, u.UserType, u.UserID, u.Name, u.Email, u.Username, o.Name, d.TotalPoints
 			FROM Users u LEFT JOIN Sponsors s ON u.UserID = s.SponsorID 
-			LEFT JOIN Drivers d ON u.UserID = d.DriverID
+			LEFT JOIN DriverOrganizations d ON u.UserID = d.DriverID
 			LEFT JOIN Organizations o ON o.OrganizationID=COALESCE(s.OrganizationID, d.OrganizationID)
 			WHERE (u.UserType = "Sponsor" OR u.UserType = "Driver") AND 
 				  (o.Name = %s)
@@ -2338,7 +2405,7 @@ def assume_driver_identity(UserID):
     driver = paramQueryDb("""
         SELECT u.UserID, u.UserType, u.Name, o.Name AS OrganizationName
         FROM Users u
-        JOIN Drivers d ON u.UserID = d.DriverID
+        JOIN DriverOrganizations d ON u.UserID = d.DriverID
         JOIN Organizations o ON d.OrganizationID = o.OrganizationID
         WHERE u.UserID=%s
           AND u.UserType='Driver'
@@ -2396,7 +2463,7 @@ def adjustDriverPoints(UserID):
     driver = paramQueryDb("""
         SELECT u.UserID, u.Name AS DriverName, u.Email, u.Username, o.Name AS OrgName, d.TotalPoints
         FROM Users u
-        JOIN Drivers d ON u.UserID = d.DriverID
+        JOIN DriverOrganizations d ON u.UserID = d.DriverID
 		JOIN Organizations o ON d.OrganizationID = o.OrganizationID
         WHERE u.UserID=%s AND u.UserType='Driver'
     """, (UserID,))
@@ -2437,9 +2504,9 @@ def adjustDriverPointsPost(UserID):
 	driver = paramQueryDb("""
 		SELECT u.UserID, u.Username, d.TotalPoints
 		FROM Users u
-		JOIN Drivers d ON u.UserID = d.DriverID
-		WHERE u.UserID=%s AND u.UserType='Driver'
-		""", (UserID,))
+		JOIN DriverOrganizations d ON u.UserID = d.DriverID
+		WHERE d.DriverID=%s AND d.OrganizationID = %s AND u.UserType='Driver'
+		""", (UserID, session["OrgID"]))
 
 	if not driver:
 		flash("Driver not found.", "notfound")
@@ -2454,7 +2521,7 @@ def adjustDriverPointsPost(UserID):
 			newTotal = 0  # clamp (or change to block if your rules require)
 
 	# Update driver points
-	updateDb("UPDATE Drivers SET TotalPoints=%s WHERE DriverID=%s", (newTotal, UserID))
+	updateDb("UPDATE DriverOrganizations SET TotalPoints=%s WHERE DriverID=%s", (newTotal, UserID))
 
 	# Try to record feedback in an audit table if it exists (won't crash if not)
 	user = paramQueryDb("""SELECT Username FROM Users WHERE UserID = %s""", (session["UserID"],))
@@ -2482,54 +2549,76 @@ def removeOrgUser(UserID):
 
 @application.route("/organization/apply")
 def apply():
-	user = selectDb("SELECT Username FROM Users WHERE UserID = %s", (session["UserID"],))
-	username = user[0]["Username"]
-	orgs = selectDb("SELECT OrganizationID, Name FROM Organizations ORDER BY Name DESC", ())
-	application = selectDb("""SELECT o.Name, a.ApplicationStatus 
-							FROM OrganizationApplications a JOIN Organizations o ON a.OrganizationID = o.OrganizationID
-							WHERE a.DriverUName = %s and a.ApplicationStatus = %s""", (username, "Pending"))
-	if application:
-		app = application[0]
-	else:
-		app = None
-	return render_template("enroll.html", layout="activenav.html", orgs=orgs, application=app)
+	#guard = require_admin()
+	#if guard: 
+	#	return guard
 	
-@application.route("/organization/leave", methods=["POST"])
-def organization_leave():
-    if "UserID" not in session:
-        flash("Please login first.", "auth")
-        return redirect(url_for("login"))
+	q = request.args.get("q", "").strip()
+	like = f"%{q}%"
+	
+	page = request.args.get("page", 1, type=int)
+	rowsPerPage = request.args.get("pageCount", 10, type=int)
+	offset = (page - 1) * rowsPerPage
 
-    if session.get("role") != "Driver":
-        flash("Drivers only.", "auth")
-        return redirect(url_for("organization"))
+	user = paramQueryDb("SELECT Username FROM Users WHERE UserID=%s", (session["UserID"],))
+	username = user["Username"]
 
-    updateDb(
-        "UPDATE Drivers SET OrganizationID=%s WHERE DriverID=%s",
-        (None, session["UserID"])
-    )
+	if q:
+		rowTotal = selectDb("""
+			SELECT COUNT(*) AS totalRows
+			FROM Organizations o LEFT JOIN OrganizationApplications a ON a.OrganizationID = o.OrganizationID AND a.DriverUName = %s
+			WHERE Name LIKE %s
+			ORDER BY Name
+		""", (username, like))
+		orgs = selectDb("""
+			SELECT o.OrganizationID, Name, Status,
+				CASE
+					WHEN a.ApplicationStatus = "Pending" THEN 'Applied'
+					WHEN a.ApplicationStatus = "Pending" THEN 'Accepted'
+					WHEN a.ApplicationStatus = "Pending" THEN 'Rejected'
+					ELSE "NotApplied"
+				END AS appStatus
+			FROM Organizations o LEFT JOIN OrganizationApplications a ON a.OrganizationID = o.OrganizationID AND a.DriverUName = %s
+			WHERE Name LIKE %s
+			ORDER BY Name
+			LIMIT %s OFFSET %s
+		""", (username, like, rowsPerPage, offset))
+	else:
+		rowTotal = selectDb("""
+			SELECT COUNT(*) AS totalRows
+			FROM Organizations o LEFT JOIN OrganizationApplications a ON a.OrganizationID = o.OrganizationID AND a.DriverUName = %s
+			ORDER BY Name
+		""", (username, ))
+		orgs = selectDb("""
+			SELECT o.OrganizationID, Name, Status,
+				CASE
+					WHEN a.ApplicationStatus = "Pending" THEN 'Applied'
+					WHEN a.ApplicationStatus = "Accepted" THEN 'Accepted'
+					WHEN a.ApplicationStatus = "Rejected" THEN 'Rejected'
+					ELSE "NotApplied"
+				END AS appStatus
+			FROM Organizations o LEFT JOIN OrganizationApplications a ON a.OrganizationID = o.OrganizationID AND a.DriverUName = %s
+			ORDER BY Name
+			LIMIT %s OFFSET %s
+		""", (username, rowsPerPage, offset))
+	
+	numPages = math.ceil(rowTotal[0]["totalRows"] / rowsPerPage)
+	
+	return render_template("orgList.html", layout="activenav.html", orgs=orgs, q=q, page=page, pageNum=range(1, numPages + 1), pageRows=rowsPerPage, status="Applying")
 
-    session.pop("Organization", None)
-    flash("You left the organization.", "success")
-    return redirect(url_for("home"))
-
-@application.route("/organization/apply", methods=["POST"])
-def applyPost():
-	organization = request.form.get("organization")
+@application.route("/organization/apply/<int:OrgID>")
+def applyPost(OrgID):
 	user = paramQueryDb("""SELECT Username FROM Users WHERE UserID = %s""", (session['UserID'],))
-	org = paramQueryDb("""SELECT OrganizationID FROM Organizations WHERE Name = %s""", (organization,))
 	timeApplied = datetime.now()
 	updateDb("""INSERT INTO OrganizationApplications (OrganizationID, DriverUName, ApplicationStatus, DateApplied)
-				VALUES (%s, %s, %s, %s)""", (org["OrganizationID"], user['Username'], "Pending", timeApplied))
+				VALUES (%s, %s, %s, %s)""", (OrgID, user['Username'], "Pending", timeApplied))
 	flash(f"You have applied for enrollment in { organization } ", "enrolled")
 	return redirect(url_for("apply"))
 
-@application.route("/organization/apply/cancel")
-def cancelPost():
-	user = paramQueryDb("""SELECT u.Username, a.OrganizationID 
-						FROM Users u JOIN OrganizationApplications a ON u.Username = a.DriverUName 
-						WHERE UserID = %s""", (session['UserID'],))
-	updateDb("""DELETE FROM OrganizationApplications WHERE DriverUName = %s AND OrganizationID = %s""", (user["Username"], user["OrganizationID"]))
+@application.route("/organization/apply/cancel/<int:OrgID>")
+def cancelPost(OrgID):
+	user = paramQueryDb("""SELECT Username FROM Users WHERE UserID = %s""", (session['UserID'],))
+	updateDb("""DELETE FROM OrganizationApplications WHERE DriverUName = %s AND OrganizationID = %s""", (user["Username"], OrgID))
 	return redirect(url_for("apply"))
 
 @application.route("/organization/applications")
@@ -2582,8 +2671,8 @@ def acceptedApplications(UserID):
 	user = paramQueryDb("""SELECT Username FROM Users WHERE UserID = %s""", (session['UserID'],))
 	driver = paramQueryDb("""SELECT Username FROM Users WHERE UserID = %s""", (UserID,))
 	timeJoined= datetime.now()
-	updateDb("""UPDATE OrganizationApplications SET ApplicationStatus = %s, ReviewedByUName = %s, ReviewReason = %s WHERE DriverUName = %s""", ("Accepted", user["Username"], reason, driver["Username"]))
-	updateDb("""UPDATE Drivers SET OrganizationID = %s, DateJoined = %s WHERE DriverID = %s""", (session['OrgID'], timeJoined, UserID))
+	updateDb("""UPDATE OrganizationApplications SET ApplicationStatus = %s, ReviewedByUName = %s, ReviewReason = %s WHERE DriverUName = %s AND OrganizationID = %s""", ("Accepted", user["Username"], reason, driver["Username"], session["OrgID"]))
+	updateDb("""INSERT INTO DriverOrganizations (OrganizationID, UserID) VALUES (%s, %s)""", (session['OrgID'], UserID))
 	return redirect(url_for("applications"))
 
 @application.route("/organization/applications/<int:UserID>/reject", methods=["POST"])
@@ -2591,8 +2680,27 @@ def rejectedApplications(UserID):
 	reason = request.form.get("rejectReason")
 	user = paramQueryDb("""SELECT Username FROM Users WHERE UserID = %s""", (session['UserID'],))
 	driver = paramQueryDb("""SELECT Username FROM Users WHERE UserID = %s""", (UserID,))
-	updateDb("""UPDATE OrganizationApplications SET ApplicationStatus = %s, ReviewedByUName = %s, ReviewReason = %s WHERE DriverUName = %s""", ("Rejected", user["Username"], reason, driver["Username"]))
+	updateDb("""UPDATE OrganizationApplications SET ApplicationStatus = %s, ReviewedByUName = %s, ReviewReason = %s WHERE DriverUName = %s AND OrganizationID = %s""", ("Rejected", user["Username"], reason, driver["Username"], session["OrgID"]))
 	return redirect(url_for("applications"))
+
+@application.route("/organization/<int:OrgID>/leave", methods=["POST"])
+def organization_leave():
+    if "UserID" not in session:
+        flash("Please login first.", "auth")
+        return redirect(url_for("login"))
+
+    if session.get("role") != "Driver":
+        flash("Drivers only.", "auth")
+        return redirect(url_for("organization"))
+
+    updateDb(
+        "DELETE FROM DriverOrganizations WHERE OrganizationID=%s AND UserID=%s",
+        (OrgID, session["UserID"])
+    )
+
+    session.pop("Organization", None)
+    flash("You left the organization.", "success")
+    return redirect(url_for("home"))
 
 @application.route("/organization/point_value")
 def pointValueScreen():
@@ -2675,7 +2783,9 @@ def getPointValue():
 @application.route("/catalog")
 def catalog():
 	if 'UserID' in session:
-		return render_template("catalog.html", layout="activenav.html")
+		if session['role'] == "Admin" and session["Organization"] == None:
+			return render_template("catalog.html", layout="activenav.html")
+		return render_template("catalog.html", layout="orgnav.html")
 	return redirect(url_for("home"))
 
 @application.route("/catalog/rules")

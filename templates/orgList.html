@@ -42,8 +42,9 @@
       <thead>
         <tr>
           <th>Organization Name</th>
+          <th>
           {% if session.get('role') == "Admin" %}
-          <th></th>
+          <th>Status</th>
           <th></th>
           <th></th>
           <th></th>
@@ -54,8 +55,8 @@
         {% for o in orgs %}
         <tr>
           <td>{{ o.Name }}</td>
-          <td>{{ o.Status }}</td>
           {% if session.get('role') == "Admin" %}
+          <td>{{ o.Status }}</td>
           <td>
             {% if o.Status == "Active" %}
             <form method="POST" action="/organizations/{{ o.OrganizationID }}/deactivate"
@@ -93,11 +94,20 @@
             </form>
           </td>
           {% elif session.get('role') == "Driver" %}
-            {% if o.Applied == 1 %}
-            <td><a class="button is-small is-success" disabled>Applied</a></td>
-            <td><a class="button is-small is-danger" href="/organization/apply/{{ o.OrganizationID }}/cancel">Cancel</a></td>
-            {% elif o.Applied == 0 and not hasApplied %}
-            <td><a class="button is-small" href="/organization/apply/{{ o.OrganizationID }}">Apply</a></td>
+            {% if status != "Approved" %}
+              {% if o.appStatus != "Accepted" %}
+                {% if o.appStatus == "Applied" %}
+                <td><a class="button is-small is-success" disabled>Applied</a></td>
+                <td><a class="button is-small is-danger" href="/organization/apply/cancel/{{ o.OrganizationID }}">Cancel</a></td>
+                {% elif o.appStatus == "NotApplied" %}
+                <td><a class="button is-small" href="/organization/apply/{{ o.OrganizationID }}">Apply</a></td>
+                {% endif %}
+              {% else %}
+                <td><a class="button is-small is-success" disabled>Accepted</a></td>
+              {% endif %}
+            {% else %}
+            <td><a class="button is-small" {% if o.Status == "Inactive" %} disabled {% endif %} href="/organizations/{{ o.OrganizationID }}/view">View</a></td>
+            <td><a class="button is-small" {% if o.Status == "Inactive" %} disabled {% endif %} href="/organizations/{{ o.OrganizationID }}/leave">Leave</a></td>
             {% endif %}
           {% endif %}
         </tr>
