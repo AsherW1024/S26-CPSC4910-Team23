@@ -14,11 +14,11 @@
     <div class="topnav">
         <div class="nav-left">
             <a href="/"> Home </a>
-            {% if session.get('Organization') == None and session.get('role') == "Driver" %}
+            {% if session.get('role') == "Driver" %}
                 <a href="/organization/apply"> Apply </a>
-            {% elif session.get('role') != "Admin" %}
+                <a href="/{{ session.get('UserID') }}/organizations"> Organizations </a>
+            {% elif session.get('role') == "Sponsor" %}
                 <a href="/organization"> Organization </a>
-                <a href="/cart"> Cart </a>
             {% elif session.get('role') == "Admin" %}
                 <a href="/catalog"> Catalog </a>
                 <a href="/organizations"> Organizations </a>

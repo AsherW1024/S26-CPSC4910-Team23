@@ -66,6 +66,15 @@ body {
 	font-size: 1.25rem;
   }
 
+.topnav b{
+  float: left;
+  color: #0073e6;
+  text-align: center;
+  padding: 14px 16px;
+  text-decoration: none;
+  font-size: 1.25rem; /* scales with html[data-font] */
+}
+
 .topnav a:hover {
 	background-color: #ddd;
 	color: #522D80;
