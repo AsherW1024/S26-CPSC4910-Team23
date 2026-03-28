@@ -10,6 +10,7 @@
 	margin-top: 20px;
 	padding: 20px;
 	background-color: rgb(228, 228, 228);
+	border-radius: 20px;
 }
 .file-upload label{
 	font-weight: bold;

@@ -3831,6 +3831,40 @@ def bulkRegister():
 		return redirect(url_for("home"))
 	return render_template("bulk_upload.html", layout="activenav.html")
 
+@application.route("/users/bulk/sponsor", methods=["POST"])
+def sponsorBulkUpload():
+	if "UserID" not in session or session.get("role")!="Sponsor":
+		return redirect(url_for("home"))
+	
+	#ensure that the file we are looking for was sent in the request
+	if 'bulk-update-file' not in request.files:
+		print("file not found")
+		return redirect(url_for("bulkRegister"))
+
+	uploadFile = request.files['bulk-update-file']
+
+	if uploadFile.filename == "":
+		print("No file selected")
+		return redirect(url_for("bulkRegister"))
+	
+	#TODO add a check to ensure its actually a .txt file
+
+	#process the file line by line
+	for line in uploadFile:
+		lineString = line.decode("utf-8").strip()
+		lineParts = lineString.split("|")
+		#grab values from lineParts
+		userType = lineParts[0]
+		firstName = lineParts[2]
+		lastName = lineParts[3]
+		email = lineParts[4]
+		if (len(lineParts)>5):
+			points = lineParts[5]
+			reason = lineParts[6]
+			print(reason)
+
+	return redirect(url_for("bulkRegister"))
+
 """
 This lets us test locally. Should not execute in AWS
 """
