@@ -42,7 +42,6 @@
       <thead>
         <tr>
           <th>Organization Name</th>
-          <th>
           {% if session.get('role') == "Admin" %}
           <th>Status</th>
           <th></th>
@@ -75,24 +74,28 @@
             {% endif %}
           </td>
           <td><a class="button is-small" {% if o.Status == "Inactive" %} disabled {% endif %} href="/organizations/{{ o.OrganizationID }}/view">View</a></td>
-          <td><a class="button is-small is-info" {% if o.Status == "Inactive" %} disabled {% endif %} href="/organizations/{{ o.OrganizationID }}/enroll-driver">Enroll Driver</a></td>
-          <td>
-            <form method="POST" action="/organizations/{{ o.OrganizationID }}/edit"
-              style="display:inline;" onsubmit="return promptOrgRename({{ o.OrganizationID }});">
-              <input type="hidden" name="newName" id="newName_{{ o.OrganizationID }}">
-              <button class="button is-small is-info" {% if o.Status == "Inactive" %} disabled {% endif %} type="submit">
-                Edit
-              </button>
-            </form>
-          </td>
-          <td>
-            <form method="POST" action="/organizations/{{ o.OrganizationID }}/delete"
-              style="display:inline;" onsubmit="return confirmOrgDelete();">
-              <button class="button is-small is-danger" type="submit">
-                Delete
-              </button>
-            </form>
-          </td>
+          {% if status != "Approved" %}
+            <td><a class="button is-small is-info" {% if o.Status == "Inactive" %} disabled {% endif %} href="/organizations/{{ o.OrganizationID }}/enroll-driver">Enroll Driver</a></td>
+            <td>
+              <form method="POST" action="/organizations/{{ o.OrganizationID }}/edit"
+                style="display:inline;" onsubmit="return promptOrgRename({{ o.OrganizationID }});">
+                <input type="hidden" name="newName" id="newName_{{ o.OrganizationID }}">
+                <button class="button is-small is-info" {% if o.Status == "Inactive" %} disabled {% endif %} type="submit">
+                  Edit
+                </button>
+              </form>
+            </td>
+            <td>
+              <form method="POST" action="/organizations/{{ o.OrganizationID }}/delete"
+                style="display:inline;" onsubmit="return confirmOrgDelete();">
+                <button class="button is-small is-danger" type="submit">
+                  Delete
+                </button>
+              </form>
+            </td>
+          {% else %}
+            <td><a class="button is-small is-danger" {% if o.Status == "Inactive" %} disabled {% endif %} href="/organizations/{{ o.OrganizationID }}/leave">Remove</a></td>
+          {% endif %}
           {% elif session.get('role') == "Driver" %}
             {% if status != "Approved" %}
               {% if o.appStatus != "Accepted" %}

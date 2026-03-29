@@ -47,7 +47,7 @@
       <thead>
         <tr>
           {% if use == "website" %}
-          <th>UserType</th><th>Name</th><th>Email</th><th>Username</th><th>Edit</th><th>View As</th><th>Actions</th>
+          <th>UserType</th><th>Name</th><th>Email</th><th>Username</th><th>Organizations</th><th>Edit</th><th>View As</th><th>Actions</th>
           {% elif use == "organization" %}
           <th>UserType</th><th>Username</th><th>status</th><th>Points</th><th></th><th>Actions</th><th></th>
           {% elif use == "application" %}
@@ -85,6 +85,7 @@
           <td>{{ u.Username }}</td>
           {% endif %}
           {% if use == "website"%}
+          <td><a class="button is-info is-small" href="/{{ u.UserID }}/organizations">Organizations</a></td>
           <td><a class="button is-small" href="/{{ accountType }}/users/{{ u.UserID }}/edit">Edit</a></td>
           <td>
             {% if accountType == "admin" and u.UserType in ["Driver", "Sponsor"] %}

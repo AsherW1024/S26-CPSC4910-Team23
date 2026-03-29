@@ -2262,7 +2262,7 @@ def organizations():
 	
 	numPages = math.ceil(rowTotal[0]["totalRows"] / rowsPerPage)
 	
-	return render_template("orgList.html", layout="activenav.html", orgs=orgs, q=q, page=page, pageNum=range(1, numPages + 1), pageRows=rowsPerPage)
+	return render_template("orgList.html", layout="activenav.html", orgs=orgs, q=q, page=page, pageNum=range(1, numPages + 1), pageRows=rowsPerPage, status="orgs")
 
 @application.route("/organizations/<int:OrgID>/deactivate", methods=["POST"])
 def organizationDeactivate(OrgID):
