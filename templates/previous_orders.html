@@ -9,6 +9,27 @@
 {% block content %}
 <div class="content">
 	<h1>Previous Orders</h1>
+	<form method="GET" action="/orders" class="mb-4">
+		<div class="columns is-centered is-mobile">
+			<div class="column is-3">
+				<label class="label">Start Date</label>
+				<input class="input" type="date" name="start" value="{{ start or '' }}">
+			</div>
+			<div class="column is-3">
+				<label class="label">End Date</label>
+				<input class="input" type="date" name="end" value="{{ end or '' }}">
+			</div>
+			<div class="column is-2">
+				<label class="label">&nbsp;</label>
+				<button class="button is-info is-fullwidth" type="submit">Filter</button>
+			</div>
+			<div class="column is-2">
+				<label class="label">&nbsp;</label>
+				<a class="button is-light is-fullwidth" href="/orders">Clear</a>
+			</div>
+		</div>
+	</form>
+	
 	{% if not orders %}
 	<p>You have not yet completed any orders.</p>
 	{% else %}

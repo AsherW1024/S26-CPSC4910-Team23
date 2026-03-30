@@ -3861,6 +3861,8 @@ def previousOrders():
 		return redirect(url_for("home"))
 	userID = session.get("UserID")
 	orgID = session.get("OrgID")
+	start = request.args.get("start", "").strip()
+	end = request.args.get("end", "").strip()
 	getOrdersQuery = """
 		SELECT
 			orderID,
@@ -3874,12 +3876,29 @@ def previousOrders():
 		WHERE
 			userID=%s
 			AND orgID=%s
-		ORDER BY orderTime DESC
 	"""
-	previousOrders = selectDb(query=getOrdersQuery, params=(userID,orgID))
+	params = [userID, orgID]
+
+	if start:
+		getOrdersQuery += " AND DATE(orderTime) >= %s"
+		params.append(start)
+
+	if end:
+		getOrdersQuery += " AND DATE(orderTime) <= %s"
+		params.append(end)
+
+	getOrdersQuery += " ORDER BY orderTime DESC"
+
+	previousOrders = selectDb(query=getOrdersQuery, params=tuple(params))
 
 	if len(previousOrders)<1:
-		return render_template("previous_orders.html", layout="activenav.html", orders=[])
+		return render_template(
+			"previous_orders.html",
+			layout="activenav.html",
+			orders=[],
+			start=start,
+			end=end
+		)
 
 	for order in previousOrders:
 		#determine order status
@@ -3921,7 +3940,13 @@ def previousOrders():
 		orderThumbnail = getProductData(firstProductID).get("thumbnail")
 		order["thumbnail"] = orderThumbnail
 
-	return render_template("previous_orders.html", layout="activenav.html", orders=previousOrders)
+	return render_template(
+		"previous_orders.html",
+		layout="activenav.html",
+		orders=previousOrders,
+		start=start,
+		end=end
+	)
 
 @application.route("/bulkRegister")
 def bulkRegister():
