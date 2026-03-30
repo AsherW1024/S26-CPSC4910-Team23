@@ -182,6 +182,14 @@ def ensure_reporting_tables():
         except Exception as e:
             print("ensure_reporting_tables skipped:", e)
 
+def getDriverData():
+	rows = selectDb("SELECT * FROM Users WHERE UserType = 'Driver'")
+	return rows
+
+def getOrgData():
+	rows = selectDb("""SELECT * FROM Organizations""")
+	return rows
+
 def get_sales_by_product_rows(org_id=None):
     base_query = """
         SELECT
@@ -1583,6 +1591,139 @@ def report(ReportType):
         pageNum=range(1, numPages + 1),
         pageRows=rowsPerPage
     )
+
+@application.route("/reports/sales-by-driver")
+@permission_required("view_reports")
+def salesByDriverReport():
+	export_format = request.args.get("format", "").lower()
+
+	base_query = """
+        SELECT
+            o.userID,
+            COUNT(DISTINCT o.orderID) AS orderCount,
+            SUM(oi.amount) AS quantityBought,
+            SUM(oi.totalPrice) AS grossSales
+        FROM OrderItems oi
+        JOIN Orders o ON o.orderID = oi.orderID
+    """
+	params = []
+	where_clauses = []
+
+	if session.get("Organization") != None:
+		where_clauses.append("o.orgID = %s")
+		params.append(session["Organization"])
+
+	if where_clauses:
+		base_query += " WHERE " + " AND ".join(where_clauses)
+
+	base_query += """
+		GROUP BY o.userID
+		ORDER BY grossSales DESC, quantityBought DESC
+		"""
+
+	rows = selectDb(base_query, tuple(params)) or []
+
+	try:
+		driverData = getDriverData() or {}
+	except Exception:
+		driverData = {}
+
+
+	enriched_rows = []
+	for row in rows:
+		userID = row.get("userID")
+
+		enriched_rows.append({
+			"driverID": userID,
+			"driverName": next((driver["Username"] for driver in driverData if driver["UserID"] == userID), "None"),
+			"orderCount": row.get("orderCount") or 0,
+			"quantityBought": row.get("quantityBought") or 0,
+			"grossSales": float(row.get("grossSales") or 0)
+		})
+
+	rows = enriched_rows
+
+	summary = {
+		"userCount": len(rows),
+		"quantityBought": sum(int(r.get("quantityBought") or 0) for r in rows),
+		"grossSales": sum(float(r.get("grossSales") or 0) for r in rows)
+	}
+
+	if export_format == "csv":
+		return build_csv_response(
+			"sales_by_product_report.csv",
+			["driverID", "driverName", "orderCount", "quantityBought", "grossSales"],
+			rows
+		)
+
+	return render_template(
+		"salesByDriverReport.html",
+		layout="nav.html" if not session.get("UserID") else ("orgnav.html" if session.get("Organization") != None else "activenav.html"),
+		rows=rows,
+		summary=summary
+	)
+
+@application.route("/reports/sales-by-organization")
+@permission_required("view_reports")
+def salesByOrganizationReport():
+	export_format = request.args.get("format", "").lower()
+	
+	base_query = """
+        SELECT
+            o.orgID,
+            COUNT(DISTINCT o.orderID) AS orderCount,
+            SUM(oi.amount) AS quantityBought,
+            SUM(oi.totalPrice) AS grossSales
+        FROM OrderItems oi
+        JOIN Orders o ON o.orderID = oi.orderID
+    """
+	params = []
+
+	base_query += """
+		GROUP BY o.orgID
+		ORDER BY grossSales DESC, quantityBought DESC
+		"""
+
+	rows = selectDb(base_query, tuple(params)) or []
+
+	try:
+		orgData = getOrgData() or {}
+	except Exception:
+		orgData = {}
+
+	enriched_rows = []
+	for row in rows:
+		orgID = row.get("orgID")
+
+		enriched_rows.append({
+			"orgID": orgID,
+			"organizationName": next((org["Name"] for org in orgData if org["OrganizationID"] == orgID), "None"),
+			"orderCount": row.get("orderCount") or 0,
+			"quantityBought": row.get("quantityBought") or 0,
+			"grossSales": float(row.get("grossSales") or 0)
+		})
+
+	rows = enriched_rows
+
+	summary = {
+		"organizationCount": len(rows),
+		"quantityBought": sum(int(r.get("quantityBought") or 0) for r in rows),
+		"grossSales": sum(float(r.get("grossSales") or 0) for r in rows)
+	}
+
+	if export_format == "csv":
+		return build_csv_response(
+			"sales_by_product_report.csv",
+			["orgID", "organizationName", "orderCount", "quantityBought", "grossSales"],
+			rows
+		)
+
+	return render_template(
+		"salesByOrgReport.html",
+		layout="nav.html" if not session.get("UserID") else ("activenav.html"),
+		rows=rows,
+		summary=summary
+	)
 
 @application.route("/reports/sales-by-product")
 @permission_required("view_reports")
