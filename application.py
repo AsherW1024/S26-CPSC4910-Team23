@@ -2014,6 +2014,9 @@ def profile():
 
     profile = decrypt_fields(profile, ["PhoneNumber"])
 
+    profile["ShippingAddress"] = session.get("shipping_address", {})
+    profile["BillingAddress"] = session.get("billing_address", {})
+
     return render_template("profile.html", layout="activenav.html", profile=profile)
 
 @application.route("/profile/edit")
@@ -2139,7 +2142,36 @@ def settings():
 	if prefs[0]["PhoneNumber"] != None:
 		hasPhoneNum = True
 	return render_template("settings.html", layout = "activenav.html", themePref=prefs[0]["ThemePref"] ,fontPref=prefs[0]["FontPref"] ,
-							currentPref=prefs[0]["PrefCommMethod"], hasPhoneNum=hasPhoneNum, essentialNotifs=prefs[0]["EssentialNotifsOnly"], ) 
+							currentPref=prefs[0]["PrefCommMethod"], hasPhoneNum=hasPhoneNum, essentialNotifs=prefs[0]["EssentialNotifsOnly"],
+							shippingAddress=session.get("shipping_address", {}), billingAddress=session.get("billing_address", {})) 
+
+@application.route("/settings/addresses", methods=["POST"])
+def save_settings_addresses():
+    if "UserID" not in session:
+        return redirect(url_for("login"))
+
+    shipping_street = request.form.get("shippingStreet", "").strip()
+    shipping_city = request.form.get("shippingCity", "").strip()
+    shipping_state = request.form.get("shippingState", "").strip()
+
+    billing_street = request.form.get("billingStreet", "").strip()
+    billing_city = request.form.get("billingCity", "").strip()
+    billing_state = request.form.get("billingState", "").strip()
+
+    session["shipping_address"] = {
+        "street": shipping_street,
+        "city": shipping_city,
+        "state": shipping_state
+    }
+
+    session["billing_address"] = {
+        "street": billing_street,
+        "city": billing_city,
+        "state": billing_state
+    }
+
+    flash("Address settings updated.", "success")
+    return redirect(url_for("settings"))
 
 @application.route("/settings/appearance", methods=["POST"])
 def settingsAppearance():
