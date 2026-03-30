@@ -4221,9 +4221,9 @@ def processSponsorBulkFile(bulkFile, orgID):
 			if not email:
 				raise Exception("No user email provided")
 			if points and not reason:
-				raise Exception("Points were provided wihtout also providing a reason for the points")
+				raise Exception("Points were provided without also providing a reason for the points")
 			if not points and reason:
-				raise Exception("A reason was provided wihtout also providing a point value")
+				raise Exception("A reason was provided without also providing a point value")
 		
 			#logic for driver user
 			if userType=="D":
