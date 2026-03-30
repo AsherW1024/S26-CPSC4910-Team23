@@ -1,208 +1,214 @@
 {% extends layout %}
 
-{% block content %}
-<div class="container is-max-desktop mt-6">
-  <div class="box">
-    <h1 class="title">
-      {% if use == "enroll_driver" %}
-        Enroll Driver into {{ targetOrg.Name }}
-      {% else %}
-        User Profiles
-      {% endif %}
-    </h1>
-    {% if use == "enroll_driver" %}
-    <form method="GET" action="/organizations/{{ targetOrg.OrganizationID }}/enroll-driver" class="mb-4">
-    {% else %}
-    <form method="GET" action="/{{ accountType }}/users" class="mb-4">
-    {% endif %}
-      <div class="columns is-centered is-mobile">
-        <div class="column">
-          <label class="label">Search Bar</label>
-          <div class="field has-addons">
-            <div class="control is-expanded">
-              <input class="input" type="text" name="q" placeholder="Search name, email, username..." value="{{ q }}">
-            </div>
-            <div class="control">
-              <button class="button is-info" type="submit">Submit</button>
-            </div>
-          </div>
-        </div>
-        <div class="column is-narrow">
-          <div class="field">
-            <label class="label">Rows per Page</label>
-            <div class="select">
-              <select name="pageCount" onchange="this.form.submit()">
-                <option value=10 {% if pageRows==10 %}selected{% endif %}>10</option>
-                <option value=25 {% if pageRows==25 %}selected{% endif %}>25</option>
-                <option value=50 {% if pageRows==50 %}selected{% endif %}>50</option>
-                <option value=100 {% if pageRows==100 %}selected{% endif %}>100</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
-    </form>
+{% block page_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/reports.css">
+{% endblock %}
 
-    <table class="table is-striped is-fullwidth">
-      <thead>
-        <tr>
-          {% if use == "website" %}
-          <th>UserType</th><th>Name</th><th>Email</th><th>Username</th><th>Organizations</th><th>Edit</th><th>View As</th><th>Actions</th>
-          {% elif use == "organization" %}
-          <th>UserType</th><th>Username</th><th>status</th><th>Points</th><th></th><th>Actions</th><th></th>
-          {% elif use == "application" %}
-          <th>UserType</th><th>Name</th><th>Email</th><th>Date Applied</th><th></th><th>Actions</th><th></th>
-          {% elif use == "enroll_driver" %}
-          <th>Name</th><th>Email</th><th>Username</th><th></th>
-          {% endif %}
-        </tr>
-      </thead>
-      <tbody>
-        {% for u in users %}
-        <tr>
-          {% if use == "website" %}
-          <td>{{ u.UserType }}</td>
-          <td>{{ u.Name }}</td>
-          <td>{{ u.Email }}</td>
-          <td>{{ u.Username }}</td>
-          {% elif use == "organization" %}
-          <td>{{ u.UserType }}</td>
-          <td>{{ u.Username }}</td>
-          <td>{{ u.Username }}</td>
-            {% if u.UserType == "Driver" %}
-            <td>{{ u.TotalPoints }}</td>
-            {% else %}
-            <td></td>
-            {% endif %}
-          {% elif use == "application" %}
-          <td>{{ u.UserType }}</td>
-          <td>{{ u.Name }}</td>
-          <td>{{ u.Email }}</td>
-          <td>{{ u.DateApplied }}</td>
-          {% elif use == "enroll_driver" %}
-          <td>{{ u.Name }}</td>
-          <td>{{ u.Email }}</td>
-          <td>{{ u.Username }}</td>
-          {% endif %}
-          {% if use == "website"%}
-          <td><a class="button is-info is-small" href="/{{ u.UserID }}/organizations">Organizations</a></td>
-          <td><a class="button is-small" href="/{{ accountType }}/users/{{ u.UserID }}/edit">Edit</a></td>
-          <td>
-            {% if accountType == "admin" and u.UserType in ["Driver", "Sponsor"] %}
-            <form method="POST" action="/admin/users/{{ u.UserID }}/view-as" style="display:inline;">
-              <button class="button is-small is-info" type="submit">
-                View As
-              </button>
-            </form>
-            {% endif %}
-          </td>
-          {% elif use == "organization" %}
-            {% if u.UserType == "Driver" %}
-            <td><a class="button is-small" href="/{{ accountType }}/users/{{ u.UserID }}/points">Adjust Points</a></td>
-            {% else %}
-            <td></td>
-            {% endif %}
-          <td><a class="button is-small" href="/{{ accountType }}/users/{{ u.UserID }}/edit">Edit</a></td>
-          <td>
-            {% if canImpersonate and u.UserType == "Driver" %}
-            <form method="POST" action="/{{ accountType }}/users/{{ u.UserID }}/assume" style="display:inline;">
-              <button class="button is-small is-warning" type="submit">Assume Driver</button>
-            </form>
-            {% endif %}
-          </td>
-          {% elif use == "application" %}
-          <td>
-            <form method="POST" action="/{{ accountType }}/applications/{{ u.UserID }}/accept"
-                    style="display:inline;" onsubmit="return promptUserAccept({{ u.UserID }});">
-              <input type="hidden" name="acceptReason" id="acceptReason_{{ u.UserID }}">
-              <button class="button is-small is-success" type="submit">
-                Accept
-              </button>
-            </form>
-          </td>
-          {% elif use == "enroll_driver" %}
-          <td>
-            <form method="POST" action="/organizations/{{ targetOrg.OrganizationID }}/enroll-driver/{{ u.UserID }}" style="display:inline;">
-              <button class="button is-small is-success" type="submit">
-                Enroll
-              </button>
-            </form>
-          </td>
-          {% endif %}
-          <td>
+{% block content %}
+<div class="admin-page">
+  <div class="container is-max-desktop mt-6">
+    <div class="box">
+      <h1 class="title">
+        {% if use == "enroll_driver" %}
+          Enroll Driver into {{ targetOrg.Name }}
+        {% else %}
+          User Profiles
+        {% endif %}
+      </h1>
+      {% if use == "enroll_driver" %}
+      <form method="GET" action="/organizations/{{ targetOrg.OrganizationID }}/enroll-driver" class="mb-4">
+      {% else %}
+      <form method="GET" action="/{{ accountType }}/users" class="mb-4">
+      {% endif %}
+        <div class="columns is-centered is-mobile">
+          <div class="column">
+            <label class="label">Search Bar</label>
+            <div class="field has-addons">
+              <div class="control is-expanded">
+                <input class="input" type="text" name="q" placeholder="Search name, email, username..." value="{{ q }}">
+              </div>
+              <div class="control">
+                <button class="button is-info" type="submit">Submit</button>
+              </div>
+            </div>
+          </div>
+          <div class="column is-narrow">
+            <div class="field">
+              <label class="label">Rows per Page</label>
+              <div class="select">
+                <select name="pageCount" onchange="this.form.submit()">
+                  <option value=10 {% if pageRows==10 %}selected{% endif %}>10</option>
+                  <option value=25 {% if pageRows==25 %}selected{% endif %}>25</option>
+                  <option value=50 {% if pageRows==50 %}selected{% endif %}>50</option>
+                  <option value=100 {% if pageRows==100 %}selected{% endif %}>100</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <table class="table is-striped is-fullwidth">
+        <thead>
+          <tr>
             {% if use == "website" %}
-            <form method="POST" action="/{{ accountType }}/users/{{ u.UserID }}/delete"
-                  style="display:inline;" onsubmit="return confirmUserDelete();">
-              <button class="button is-small is-danger" type="submit">
-                Delete
-              </button>
-            </form>
+            <th>UserType</th><th>Name</th><th>Email</th><th>Username</th><th>Organizations</th><th>Edit</th><th>View As</th><th>Actions</th>
             {% elif use == "organization" %}
-            <form method="POST" action="/{{ accountType }}/users/{{ u.UserID }}/remove"
-                  style="display:inline;" onsubmit="return confirmUserRemove();">
-              <button class="button is-small is-danger" type="submit">
-                Remove
-              </button>
-            </form>
+            <th>UserType</th><th>Username</th><th>status</th><th>Points</th><th></th><th>Actions</th><th></th>
             {% elif use == "application" %}
-            <form method="POST" action="/{{ accountType }}/applications/{{ u.UserID }}/reject"
-                  style="display:inline;" onsubmit="return promptUserReject({{ u.UserID }});">
-              <input type="hidden" name="rejectReason" id="rejectReason_{{ u.UserID }}">
-              <button class="button is-small is-danger" type="submit">
-                Reject
-              </button>
-            </form>
+            <th>UserType</th><th>Name</th><th>Email</th><th>Date Applied</th><th></th><th>Actions</th><th></th>
             {% elif use == "enroll_driver" %}
+            <th>Name</th><th>Email</th><th>Username</th><th></th>
             {% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-        {% if users|length == 0 %}
-          <tr><td colspan="5">No users found.</td></tr>
-        {% endif %}
-      </tbody>
-    </table>
-    <nav class="pagination is-centered" role="navigation">
-      {% if page > 1 %}
-          <a href="?page={{ page - 1 }}" class="pagination-previous">Previous</a>
-      {% else %}
-          <a href="#" class="pagination-previous" disabled>Previous</a>
-      {% endif %}
-      {% if pageNum|length > 1 and page < pageNum|length %}
-          <a href="?page={{ page + 1 }}" class="pagination-next">Next page</a>
-      {% else %}
-          <a href="#" class="pagination-next" disabled>Next page</a>
-      {% endif %}
-      <ul class="pagination-list">
-      {% set notellipsis = [true] %}
-      {% for p in pageNum %}
-        {% set show = 
-          p == 1 or p % 10 == 0 or p == page or p == pageNum|length or (p >= page - 3 and p <= page + 3)
-        %}
-        {% if show %}
-          {% if p == page %}
-            <a
-            href=""
-            class="pagination-link is-current"
-            aria-label="Page {{ p }}"
-            aria-current="page"
-            >{{ p }}</a>
-            {% if notellipsis.pop() %} {% endif %}
-            {% if notellipsis.append(true) %} {% endif %}
-          {% else %}
-            <li><a href="?page={{ p }}&pageCount={{ pageRows }}" class="pagination-link">{{ p }}</a></li>
-            {% if notellipsis.pop() %} {% endif %}
-            {% if notellipsis.append(true) %} {% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr>
+            {% if use == "website" %}
+            <td>{{ u.UserType }}</td>
+            <td>{{ u.Name }}</td>
+            <td>{{ u.Email }}</td>
+            <td>{{ u.Username }}</td>
+            {% elif use == "organization" %}
+            <td>{{ u.UserType }}</td>
+            <td>{{ u.Username }}</td>
+            <td>{{ u.Username }}</td>
+              {% if u.UserType == "Driver" %}
+              <td>{{ u.TotalPoints }}</td>
+              {% else %}
+              <td></td>
+              {% endif %}
+            {% elif use == "application" %}
+            <td>{{ u.UserType }}</td>
+            <td>{{ u.Name }}</td>
+            <td>{{ u.Email }}</td>
+            <td>{{ u.DateApplied }}</td>
+            {% elif use == "enroll_driver" %}
+            <td>{{ u.Name }}</td>
+            <td>{{ u.Email }}</td>
+            <td>{{ u.Username }}</td>
+            {% endif %}
+            {% if use == "website"%}
+            <td><a class="button is-info is-small" href="/{{ u.UserID }}/organizations">Organizations</a></td>
+            <td><a class="button is-small" href="/{{ accountType }}/users/{{ u.UserID }}/edit">Edit</a></td>
+            <td>
+              {% if accountType == "admin" and u.UserType in ["Driver", "Sponsor"] %}
+              <form method="POST" action="/admin/users/{{ u.UserID }}/view-as" style="display:inline;">
+                <button class="button is-small is-info" type="submit">
+                  View As
+                </button>
+              </form>
+              {% endif %}
+            </td>
+            {% elif use == "organization" %}
+              {% if u.UserType == "Driver" %}
+              <td><a class="button is-small" href="/{{ accountType }}/users/{{ u.UserID }}/points">Adjust Points</a></td>
+              {% else %}
+              <td></td>
+              {% endif %}
+            <td><a class="button is-small" href="/{{ accountType }}/users/{{ u.UserID }}/edit">Edit</a></td>
+            <td>
+              {% if canImpersonate and u.UserType == "Driver" %}
+              <form method="POST" action="/{{ accountType }}/users/{{ u.UserID }}/assume" style="display:inline;">
+                <button class="button is-small is-warning" type="submit">Assume Driver</button>
+              </form>
+              {% endif %}
+            </td>
+            {% elif use == "application" %}
+            <td>
+              <form method="POST" action="/{{ accountType }}/applications/{{ u.UserID }}/accept"
+                      style="display:inline;" onsubmit="return promptUserAccept({{ u.UserID }});">
+                <input type="hidden" name="acceptReason" id="acceptReason_{{ u.UserID }}">
+                <button class="button is-small is-success" type="submit">
+                  Accept
+                </button>
+              </form>
+            </td>
+            {% elif use == "enroll_driver" %}
+            <td>
+              <form method="POST" action="/organizations/{{ targetOrg.OrganizationID }}/enroll-driver/{{ u.UserID }}" style="display:inline;">
+                <button class="button is-small is-success" type="submit">
+                  Enroll
+                </button>
+              </form>
+            </td>
+            {% endif %}
+            <td>
+              {% if use == "website" %}
+              <form method="POST" action="/{{ accountType }}/users/{{ u.UserID }}/delete"
+                    style="display:inline;" onsubmit="return confirmUserDelete();">
+                <button class="button is-small is-danger" type="submit">
+                  Delete
+                </button>
+              </form>
+              {% elif use == "organization" %}
+              <form method="POST" action="/{{ accountType }}/users/{{ u.UserID }}/remove"
+                    style="display:inline;" onsubmit="return confirmUserRemove();">
+                <button class="button is-small is-danger" type="submit">
+                  Remove
+                </button>
+              </form>
+              {% elif use == "application" %}
+              <form method="POST" action="/{{ accountType }}/applications/{{ u.UserID }}/reject"
+                    style="display:inline;" onsubmit="return promptUserReject({{ u.UserID }});">
+                <input type="hidden" name="rejectReason" id="rejectReason_{{ u.UserID }}">
+                <button class="button is-small is-danger" type="submit">
+                  Reject
+                </button>
+              </form>
+              {% elif use == "enroll_driver" %}
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+          {% if users|length == 0 %}
+            <tr><td colspan="5">No users found.</td></tr>
           {% endif %}
-        {% elif notellipsis[0] %}
-          <li><span class="pagination-ellipsis">&hellip;</span></li>
-          {% if notellipsis.pop() %} {% endif %}
-          {% if notellipsis.append(false) %} {% endif %}
+        </tbody>
+      </table>
+      <nav class="pagination is-centered" role="navigation">
+        {% if page > 1 %}
+            <a href="?page={{ page - 1 }}" class="pagination-previous">Previous</a>
+        {% else %}
+            <a href="#" class="pagination-previous" disabled>Previous</a>
         {% endif %}
-          
-      {% endfor %}
-      </ul>
-    </nav>
+        {% if pageNum|length > 1 and page < pageNum|length %}
+            <a href="?page={{ page + 1 }}" class="pagination-next">Next page</a>
+        {% else %}
+            <a href="#" class="pagination-next" disabled>Next page</a>
+        {% endif %}
+        <ul class="pagination-list">
+        {% set notellipsis = [true] %}
+        {% for p in pageNum %}
+          {% set show = 
+            p == 1 or p % 10 == 0 or p == page or p == pageNum|length or (p >= page - 3 and p <= page + 3)
+          %}
+          {% if show %}
+            {% if p == page %}
+              <a
+              href=""
+              class="pagination-link is-current"
+              aria-label="Page {{ p }}"
+              aria-current="page"
+              >{{ p }}</a>
+              {% if notellipsis.pop() %} {% endif %}
+              {% if notellipsis.append(true) %} {% endif %}
+            {% else %}
+              <li><a href="?page={{ p }}&pageCount={{ pageRows }}" class="pagination-link">{{ p }}</a></li>
+              {% if notellipsis.pop() %} {% endif %}
+              {% if notellipsis.append(true) %} {% endif %}
+            {% endif %}
+          {% elif notellipsis[0] %}
+            <li><span class="pagination-ellipsis">&hellip;</span></li>
+            {% if notellipsis.pop() %} {% endif %}
+            {% if notellipsis.append(false) %} {% endif %}
+          {% endif %}
+            
+        {% endfor %}
+        </ul>
+      </nav>
+    </div>
   </div>
 </div>
 <script src="/static/js/form.js"></script>

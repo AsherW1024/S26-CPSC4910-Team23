@@ -7,17 +7,19 @@
 {% endblock %}
 
 {% block content %}
-	<div id="content">
-		<h1>Point Value</h1>
-		<div id="current-info">
-			<p>Your current value per point for your organization is <p id="current-point-value">${{current_point_value}}</p></p>
+	<div class="point-value-page">
+		<div id="content">
+			<h1>Point Value</h1>
+			<div id="current-info">
+				<p>Your current value per point for your organization is <p id="current-point-value">${{current_point_value}}</p></p>
+			</div>
+			<button id="change-points-dropdown">Set A New Value ▼</button>
+			<div id="error-message" hidden></div>
+			<div id="point-value-control" class="invisible">
+				<p>1 point will be worth $<input id="point-value-input" type="number" step="0.01" value="{{current_point_value}}" inputmode="decimal"></input></p>
+				<button id="point-value-submit">Submit</button>
+			</div>
 		</div>
-		<button id="change-points-dropdown">Set A New Value ▼</button>
-		<div id="error-message" hidden></div>
-		<div id="point-value-control" class="invisible">
-			<p>1 point will be worth $<input id="point-value-input" type="number" step="0.01" value="{{current_point_value}}" inputmode="decimal"></input></p>
-			<button id="point-value-submit">Submit</button>
-		</div>
+		<script src="/static/js/point_value.js"></script>
 	</div>
-	<script src="/static/js/point_value.js"></script>
 {% endblock %}

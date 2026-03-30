@@ -1,4 +1,12 @@
 /* static/css/settings.css */
+.settings-page {
+  min-height: calc(100vh - 52px);
+  padding: 24px 20px 40px;
+  box-sizing: border-box;
+  background: var(--page-bg);
+  color: var(--page-text);
+}
+
 .settings-wrap {
   max-width: 720px;
   margin: 2rem auto;

@@ -1,6 +1,6 @@
 body {
-    background: #0f1115;
-    color: #f4f6fb;
+    background: var(--page-bg);
+    color: var(--page-text);
     min-height: 100vh;
 }
 
@@ -14,7 +14,7 @@ body {
 .container.is-max-desktop.mt-6 h2,
 .container.is-max-desktop.mt-6 h3,
 .container.is-max-desktop.mt-6 h5 {
-    color: #f4f6fb;
+    color: var(--page-text);
 }
 
 .container.is-max-desktop.mt-6 .box {

@@ -1152,19 +1152,19 @@ def adminEnrollDriverPage(OrganizationID):
 		rowTotal = selectDb("""
 			SELECT COUNT(*) AS totalRows
 			FROM Users u
-			JOIN DriverOrganizations d ON u.UserID = d.DriverID
+			JOIN Drivers d ON u.UserID = d.DriverID
 			WHERE u.UserType = "Driver"
-			  AND (d.OrganizationID IS NULL OR d.OrganizationID = 0)
-			  AND (u.Name LIKE %s OR u.Email LIKE %s OR u.Username LIKE %s)
+			AND (d.OrganizationID IS NULL OR d.OrganizationID = 0)
+			AND (u.Name LIKE %s OR u.Email LIKE %s OR u.Username LIKE %s)
 		""", (like, like, like))
 
 		drivers = selectDb("""
 			SELECT u.UserID, u.Name, u.Email, u.Username
 			FROM Users u
-			JOIN DriverOrganizations d ON u.UserID = d.DriverID
+			JOIN Drivers d ON u.UserID = d.DriverID
 			WHERE u.UserType = "Driver"
-			  AND (d.OrganizationID IS NULL OR d.OrganizationID = 0)
-			  AND (u.Name LIKE %s OR u.Email LIKE %s OR u.Username LIKE %s)
+			AND (d.OrganizationID IS NULL OR d.OrganizationID = 0)
+			AND (u.Name LIKE %s OR u.Email LIKE %s OR u.Username LIKE %s)
 			ORDER BY u.Name
 			LIMIT %s OFFSET %s
 		""", (like, like, like, rowsPerPage, offset))
@@ -1172,17 +1172,17 @@ def adminEnrollDriverPage(OrganizationID):
 		rowTotal = selectDb("""
 			SELECT COUNT(*) AS totalRows
 			FROM Users u
-			JOIN DriverOrganizations d ON u.UserID = d.DriverID
+			JOIN Drivers d ON u.UserID = d.DriverID
 			WHERE u.UserType = "Driver"
-			  AND (d.OrganizationID IS NULL OR d.OrganizationID = 0)
+			AND (d.OrganizationID IS NULL OR d.OrganizationID = 0)
 		""", ())
 
 		drivers = selectDb("""
 			SELECT u.UserID, u.Name, u.Email, u.Username
 			FROM Users u
-			JOIN DriverOrganizations d ON u.UserID = d.DriverID
+			JOIN Drivers d ON u.UserID = d.DriverID
 			WHERE u.UserType = "Driver"
-			  AND (d.OrganizationID IS NULL OR d.OrganizationID = 0)
+			AND (d.OrganizationID IS NULL OR d.OrganizationID = 0)
 			ORDER BY u.Name
 			LIMIT %s OFFSET %s
 		""", (rowsPerPage, offset))
@@ -2645,6 +2645,13 @@ def cancelPost(OrgID):
 
 @application.route("/organization/applications")
 def applications():
+	if "UserID" not in session or session.get("role") not in ["Sponsor", "Admin"]:
+		return redirect(url_for("home"))
+
+	if not session.get("OrgID"):
+		flash("Organization not found.", "validation")
+		return redirect(url_for("organization"))
+
 	q = request.args.get("q", "").strip()
 	like = f"%{q}%"
 
@@ -2655,33 +2662,47 @@ def applications():
 	if q:
 		rowTotal = selectDb("""
 			SELECT COUNT(*) AS totalRows
-			FROM OrganizationApplications a JOIN Users u ON a.DriverUName = u.Username JOIN Organizations o ON a.OrganizationID = o.OrganizationID
-			WHERE (u.Name LIKE %s OR u.Email LIKE %s OR u.Username LIKE %s) AND 
-					(u.UserType = "Driver") AND (o.Name = %s) AND a.ApplicationStatus = "Pending"
-			ORDER BY o.Name, u.Name
-			""", (like, like, like, session['Organization']))
+			FROM OrganizationApplications a
+			JOIN Users u ON a.DriverUName = u.Username
+			JOIN Organizations o ON a.OrganizationID = o.OrganizationID
+			WHERE (u.Name LIKE %s OR u.Email LIKE %s OR u.Username LIKE %s)
+			AND u.UserType = "Driver"
+			AND a.OrganizationID = %s
+			AND a.ApplicationStatus = "Pending"
+		""", (like, like, like, session["OrgID"]))
+
 		users = selectDb("""
 			SELECT u.UserID, u.Username, u.Name, u.Email, u.UserType, a.DateApplied, o.Name
-			FROM OrganizationApplications a JOIN Users u ON a.DriverUName = u.Username JOIN Organizations o ON a.OrganizationID = o.OrganizationID
-			WHERE (u.Name LIKE %s OR u.Email LIKE %s OR u.Username LIKE %s) AND 
-					(u.UserType = "Driver") AND (o.Name = %s) AND a.ApplicationStatus = "Pending"
-			ORDER BY o.Name, u.Name
+			FROM OrganizationApplications a
+			JOIN Users u ON a.DriverUName = u.Username
+			JOIN Organizations o ON a.OrganizationID = o.OrganizationID
+			WHERE (u.Name LIKE %s OR u.Email LIKE %s OR u.Username LIKE %s)
+			AND u.UserType = "Driver"
+			AND a.OrganizationID = %s
+			AND a.ApplicationStatus = "Pending"
+			ORDER BY a.DateApplied DESC, u.Name
 			LIMIT %s OFFSET %s
-			""", (like, like, like, session['Organization'], rowsPerPage, offset))
+		""", (like, like, like, session["OrgID"], rowsPerPage, offset))
 	else:
 		rowTotal = selectDb("""
 			SELECT COUNT(*) AS totalRows
-			FROM OrganizationApplications a JOIN Users u ON a.DriverUName = u.Username JOIN Organizations o ON a.OrganizationID = o.OrganizationID
-			WHERE (u.UserType = "Driver") AND (o.Name = %s) AND a.ApplicationStatus = "Pending"
-			ORDER BY o.Name, u.Name
-			""", (session['Organization'],))
+			FROM OrganizationApplications a
+			JOIN Users u ON a.DriverUName = u.Username
+			WHERE u.UserType = "Driver"
+			AND a.OrganizationID = %s
+			AND a.ApplicationStatus = "Pending"
+		""", (session["OrgID"],))
+
 		users = selectDb("""
-			SELECT u.UserID, u.Username, u.Name, u.Email, u.UserType, a.DateApplied, o.Name
-			FROM OrganizationApplications a JOIN Users u ON a.DriverUName = u.Username JOIN Organizations o ON a.OrganizationID = o.OrganizationID
-			WHERE (u.UserType = "Driver") AND (o.Name = %s) AND a.ApplicationStatus = "Pending"
-			ORDER BY o.Name, u.Name
+			SELECT u.UserID, u.Username, u.Name, u.Email, u.UserType, a.DateApplied
+			FROM OrganizationApplications a
+			JOIN Users u ON a.DriverUName = u.Username
+			WHERE u.UserType = "Driver"
+			AND a.OrganizationID = %s
+			AND a.ApplicationStatus = "Pending"
+			ORDER BY a.DateApplied DESC, u.Name
 			LIMIT %s OFFSET %s
-			""", (session['Organization'], rowsPerPage, offset))
+		""", (session["OrgID"], rowsPerPage, offset))
 
 	numPages = math.ceil(rowTotal[0]["totalRows"] / rowsPerPage)
 
@@ -2694,7 +2715,19 @@ def acceptedApplications(UserID):
 	driver = paramQueryDb("""SELECT Username FROM Users WHERE UserID = %s""", (UserID,))
 	timeJoined= datetime.now()
 	updateDb("""UPDATE OrganizationApplications SET ApplicationStatus = %s, ReviewedByUName = %s, ReviewReason = %s WHERE DriverUName = %s AND OrganizationID = %s""", ("Accepted", user["Username"], reason, driver["Username"], session["OrgID"]))
-	updateDb("""INSERT INTO DriverOrganizations (OrganizationID, UserID) VALUES (%s, %s)""", (session['OrgID'], UserID))
+	updateDb("""
+		UPDATE Drivers
+		SET OrganizationID = %s
+		WHERE DriverID = %s
+	""", (session["OrgID"], UserID))
+
+	try:
+		updateDb("""
+			INSERT INTO DriverOrganizations (OrganizationID, DriverID)
+			VALUES (%s, %s)
+		""", (session["OrgID"], UserID))
+	except Exception as e:
+		print("DriverOrganizations insert skipped:", e)
 	return redirect(url_for("applications"))
 
 @application.route("/organization/applications/<int:UserID>/reject", methods=["POST"])
