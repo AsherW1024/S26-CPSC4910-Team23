@@ -4212,8 +4212,8 @@ def processSponsorBulkFile(bulkFile, orgID):
 			if (len(lineParts)>5):
 				points = lineParts[5]
 				reason = lineParts[6]
-			if userType not in ["D","S"]:
-				raise Exception("Invalid user type character given in first argument")
+			if userType.upper() not in ["D","S"]:
+				raise Exception("Invalid user type character")
 			if not firstName:
 				raise Exception("No user first name provided")
 			if not lastName:
@@ -4222,8 +4222,8 @@ def processSponsorBulkFile(bulkFile, orgID):
 				raise Exception("No user email provided")
 			if points and not reason:
 				raise Exception("Points were provided without also providing a reason for the points")
-			if not points and reason:
-				raise Exception("A reason was provided without also providing a point value")
+			if points and userType.upper()=="S":
+				flash(f"Points were not added for sponsor account (line: {lineNum})", category="bulkError")
 		
 			#logic for driver user
 			if userType=="D":
