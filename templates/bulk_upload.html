@@ -15,12 +15,13 @@
 		<p>The type refers to the user type, driver or sponsor that the rest of the line is defining the data for</p>
 		<p>Use the character D to define or add points to a driver account and the character S for sponsor accounts</p>
 		{% elif session.get("role")=="Admin" %}
-		<p>Use the file upload below to upload a .txt file containg the user information you want to upload</p>
-		<p>It should be formatted like...</p>
-		<p>type|organization name|first name|last name|email address|points|reason for points</p>
-		<p>The type refers to the user type driver, sponsor, or organization that the rest of the line is defining the data for</p>
-		<p>Use the character D for driver, the character S for sponsor, or the character O for orgnaization</p>
-		<p>If the type is defined as O, please only include the type (O) and the organization. The rest of the line does not need to be defined</p>
+		<p>Use the file upload below to upload a .txt file containing the records you want to process.</p>
+		<p>Driver format:</p>
+		<p>D|organization name|first name|last name|email address|points|reason for points</p>
+		<p>Organization format:</p>
+		<p>O|organization name</p>
+		<p>If a driver email already exists and belongs to a driver account, bulk upload will update that driver's points and auto-accept them into the uploaded organization.</p>
+		<p>If a driver does not exist yet, bulk upload will create the driver, assign them to the uploaded organization, and mark the uploaded application as accepted automatically.</p>
 		{% endif %}
 	</div>
 	<div class="file-upload-div">
