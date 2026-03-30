@@ -4057,116 +4057,167 @@ def isFileType(filename:str, extension:str):
 	return filename.lower().endswith(extension.lower())
 
 def processSponsorBulkFile(bulkFile, orgID):
+	lineNum=0
 	for line in bulkFile:
-		lineString = line.decode("utf-8").strip()
-		lineParts = lineString.split("|")
-		#grab values from lineParts
-		userType = lineParts[0].upper()
-		firstName = lineParts[2]
-		lastName = lineParts[3]
-		email = lineParts[4]
-		if (len(lineParts)>5):
-			points = lineParts[5]
-			reason = lineParts[6]
-		if userType not in ["D","S"]:
-			raise Exception("Invalid user character given in first argument")
-		if not firstName:
-			raise Exception("No user first name provided")
-		if not lastName:
-			raise Exception("No user last name provided")
-		if not email:
-			raise Exception("No user email provided")
-		if points and not reason:
-			raise Exception("Points were provided wihtout also providing a reason for the points")
+		lineNum+=1
+		try:
+			lineString = line.decode("utf-8").strip()
+			lineParts = lineString.split("|")
+			#grab values from lineParts
+			userType = lineParts[0].upper()
+			firstName = lineParts[2]
+			lastName = lineParts[3]
+			email = lineParts[4]
+			if (len(lineParts)>5):
+				points = lineParts[5]
+				reason = lineParts[6]
+			if userType not in ["D","S"]:
+				raise Exception("Invalid user type character given in first argument")
+			if not firstName:
+				raise Exception("No user first name provided")
+			if not lastName:
+				raise Exception("No user last name provided")
+			if not email:
+				raise Exception("No user email provided")
+			if points and not reason:
+				raise Exception("Points were provided wihtout also providing a reason for the points")
+			if not points and reason:
+				raise Exception("A reason was provided wihtout also providing a point value")
 		
-		#logic for driver user
-		if userType=="D":
-			userType = "Driver"
-			#determine if we are updating driver data or defining a new driver
-			DriverExistInOrgQuery = """
-				SELECT DriverID, TotalPoints
-				FROM DriverOrganizations
-				LEFT JOIN Users on DriverID=UserID
-				WHERE OrganizationID=%s
-					AND Users.Email=%s
-			"""
-			queryResults = paramQueryDb(DriverExistInOrgQuery, params=(orgID, email))
-			driverID = queryResults.get("DriverID") if queryResults else None
-			previousPoints = queryResults.get("TotalPoints") if queryResults else None
-			if driverID and points:
-				#change driver points
-				updateDriverPointsQuery = """
-					UPDATE DriverOrganizations
-					SET
-						TotalPoints=%s
-					WHERE 
-						DriverID=%s
-						AND OrganizationID=%s
+			#logic for driver user
+			if userType=="D":
+				userType = "Driver"
+				#determine if we are updating driver data or defining a new driver
+				DriverExistInOrgQuery = """
+					SELECT DriverID, TotalPoints
+					FROM DriverOrganizations
+					LEFT JOIN Users on DriverID=UserID
+					WHERE OrganizationID=%s
+						AND Users.Email=%s
 				"""
-				updateDb(updateDriverPointsQuery, params=(points, driverID, orgID))
-				#get driver's username from usertable
-				getDriverUsernameQuery = """
-					SELECT Username
+				queryResults = paramQueryDb(DriverExistInOrgQuery, params=(orgID, email))
+				driverID = queryResults.get("DriverID") if queryResults else None
+				previousPoints = queryResults.get("TotalPoints") if queryResults else None
+				if driverID and points:
+					#change driver points
+					updateDriverPointsQuery = """
+						UPDATE DriverOrganizations
+						SET
+							TotalPoints=%s
+						WHERE 
+							DriverID=%s
+							AND OrganizationID=%s
+					"""
+					updateDb(updateDriverPointsQuery, params=(points, driverID, orgID))
+					#get driver's username from usertable
+					getDriverUsernameQuery = """
+						SELECT Username
+						FROM Users
+						WHERE UserID=%s
+					"""
+					driverUsername = paramQueryDb(getDriverUsernameQuery, params=(driverID)).get("Username")
+					#log the point change
+					adjustmentType = "Award" if not previousPoints or int(previousPoints)<=int(points) else "Deduct"
+					pointDiff = int(points)-int(previousPoints) if adjustmentType=="Award" else int(previousPoints)-int(points)
+					pointAdjustmentLogQuery = """
+						INSERT INTO PointAdjustments
+							(OrganizationID, DriverUName, AdjustedByUName, AdjustmentType, AdjustmentPoints, AdjustmentReason)
+						VALUES
+							(%s,%s,%s,%s,%s,%s)
+					"""
+					updateDb(pointAdjustmentLogQuery, params=(orgID, driverUsername, session.get("Username"), adjustmentType, pointDiff, reason))
+				elif not driverID:
+					#create user
+					username = firstName+lastName
+					createUserQuery = """
+						INSERT INTO Users
+							(Email, Username, Password_hash, UserType, Name)
+						VALUES
+							(%s,%s,%s,%s,%s)
+					"""
+					conn = getDbConnection()
+					cursor = conn.cursor()
+					cursor.execute(createUserQuery, args=(email, username, 
+						generate_password_hash("TempPass123!", method="pbkdf2:sha256"),
+						userType, firstName+" "+lastName))
+					conn.commit()
+					userID = cursor.lastrowid
+					print(userID)
+					#insert into Drivers
+					createDriverQuery = """
+						INSERT INTO Drivers
+							(DriverID)
+						VALUES
+							(%s)
+					"""
+					updateDb(createDriverQuery, params=(userID))
+					#insert into DriverOrganizations
+					insertDriverOrgQuery = """
+						INSERT INTO DriverOrganizations
+							(DriverID, OrganizationID, Status,
+							TotalPoints)
+						VALUES
+							(%s,%s,%s,%s)
+					"""
+					updateDb(insertDriverOrgQuery, params=(userID, orgID, "Active", points if points else 0))
+					#insert into PointAdjustments
+					insertPointAdjustmentsQuery = """
+						INSERT INTO PointAdjustments
+							(OrganizationID, DriverUName, AdjustedByUName, AdjustmentType, AdjustmentPoints, AdjustmentReason)
+						VALUES
+							(%s,%s,%s,%s,%s,%s,%s)
+					"""
+					updateDb(insertPointAdjustmentsQuery, params=(orgID, username, session.get("Username"), "Award", points if points else 0, reason))
+			#logic for sponsor user
+			else :
+				userType = "Sponsor"
+				#determine if we are updating sponsor data or defining a new sponsor
+				SponsorExistsInOrgQuery = """
+					SELECT SponsorID
 					FROM Users
-					WHERE UserID=%s
+					LEFT JOIN Sponsors on UserID=SponsorID
+					WHERE 
+						OrganizationID=%s
+						AND Email=%s
 				"""
-				driverUsername = paramQueryDb(getDriverUsernameQuery, params=(driverID)).get("Username")
-				#log the point change
-				adjustmentType = "Award" if not previousPoints or int(previousPoints)<=int(points) else "Deduct"
-				pointDiff = int(points)-int(previousPoints) if adjustmentType=="Award" else int(previousPoints)-int(points)
-				pointAdjustmentLogQuery = """
-					INSERT INTO PointAdjustments
-						(OrganizationID, DriverUName, AdjustedByUName, AdjustmentType, AdjustmentPoints, AdjustmentReason)
-					VALUES
-						(%s,%s,%s,%s,%s,%s)
-				"""
-				updateDb(pointAdjustmentLogQuery, params=(orgID, driverUsername, session.get("Username"), adjustmentType, pointDiff, reason))
-			elif not driverID:
-				#create user
-				username = firstName+lastName
-				createUserQuery = """
-					INSERT INTO Users
-						(Email, Username, Password_hash, UserType, Name)
-					VALUES
-						(%s,%s,%s,%s,%s)
-				"""
-				conn = getDbConnection()
-				cursor = conn.cursor()
-				cursor.execute(createUserQuery, args=(email, username, 
-					generate_password_hash("TempPass123!", method="pbkdf2:sha256"),
-					userType, firstName+" "+lastName))
-				conn.commit()
-				userID = cursor.lastrowid
-				print(userID)
-				#insert into Drivers
-				createDriverQuery = """
-					INSERT INTO Drivers
-						(DriverID)
-					VALUES
-						(%s)
-				"""
-				updateDb(createDriverQuery, params=(userID))
-				#insert into DriverOrganizations
-				insertDriverOrgQuery = """
-					INSERT INTO DriverOrganizations
-						(DriverID, OrganizationID, Status,
-						TotalPoints)
-					VALUES
-						(%s,%s,%s,%s)
-				"""
-				updateDb(insertDriverOrgQuery, params=(userID, orgID, "Active", points if points else 0))
-				#insert into PointAdjustments
-				insertPointAdjustmentsQuery = """
-					INSERT INTO PointAdjustments
-						(OrganizationID, DriverUName, AdjustedByUName, AdjustmentType, AdjustmentPoints, AdjustmentReason)
-					VALUES
-						(%s,%s,%s,%s,%s,%s,%s)
-				"""
-				updateDb(insertPointAdjustmentsQuery, params=(orgID, username, session.get("Username"), "Award", points if points else 0, reason))
-		#logic for sponsor user
-		else :
-			None
-
+				queryResults = paramQueryDb(SponsorExistsInOrgQuery, params=(orgID, email))
+				sponsorID = queryResults.get("SponsorID") if queryResults else None
+				if sponsorID:
+					#update sponsor name in Users table
+					updateSponsorDataQuery = """
+						UPDATE Users
+						SET Name=%s
+						WHERE UserID=%s
+					"""
+					updateDb(updateSponsorDataQuery, params=(firstName+' '+lastName, sponsorID))
+				elif not sponsorID:
+					#create sponsor
+					username = firstName+lastName
+					createUserQuery = """
+						INSERT INTO Users
+							(Email, Username, Password_hash, UserType, Name)
+						VALUES
+							(%s,%s,%s,%s,%s)
+					"""
+					conn = getDbConnection()
+					cursor = conn.cursor()
+					cursor.execute(createUserQuery, args=(email, username, 
+						generate_password_hash("TempPass123!", method="pbkdf2:sha256"),
+						userType, firstName+" "+lastName))
+					conn.commit()
+					userID = cursor.lastrowid
+					#insert into Drivers
+					createSponsorQuery = """
+						INSERT INTO Sponsors
+							(SponsorID, OrganizationID)
+						VALUES
+							(%s,%s)
+					"""
+					updateDb(createSponsorQuery, params=(userID, orgID))
+		except Exception as e:
+			errorMessage = f"{str(e)} (line: {lineNum})"
+			flash(errorMessage, "bulkError")
+			continue
 	return
 
 
@@ -4177,25 +4228,22 @@ def sponsorBulkUpload():
 	
 	#ensure that the file we are looking for was sent in the request
 	if 'bulk-update-file' not in request.files:
-		print("file not found")
+		flash("file not found")
 		return redirect(url_for("bulkRegister"))
 
 	uploadFile = request.files['bulk-update-file']
 
 	if uploadFile.filename == "":
-		print("No file selected")
+		flash("No file selected")
 		return redirect(url_for("bulkRegister"))
 	
 	#ensure user uploaded a .txt file
 	if not isFileType(uploadFile.filename, ".txt"):
-		print("wrong file type")
+		flash("wrong file type")
 		return redirect(url_for("bulkRegister"))
 
 	#process the file line by line
-	try:
-		processSponsorBulkFile(uploadFile, session.get("OrgID"))
-	except Exception as e:
-		print(e)
+	processSponsorBulkFile(uploadFile, session.get("OrgID"))
 
 	return redirect(url_for("bulkRegister"))
 

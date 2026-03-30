@@ -11,8 +11,9 @@
 		{% if session.get("role")=="Sponsor" %}
 		<p>Use the file upload below to upload a .txt file containg the user information you want to upload</p>
 		<p>It should be formatted like...</p>
-		<p>type|first name|last name|email address|points|reason for points</p>
-		<p>The type refers to the user type, driver or sponsor that the rest of the line is defining the data for</p>
+		<i>type||first name|last name|email address|points|reason for points</i>
+		<p>The type refers to the user type (driver or sponsor) that the rest of the line is defining the data for</p>
+		<p>There should be 2 "|" characters between the type and first name</p>
 		<p>Use the character D to define or add points to a driver account and the character S for sponsor accounts</p>
 		{% elif session.get("role")=="Admin" %}
 		<p>Use the file upload below to upload a .txt file containing the records you want to process.</p>
@@ -23,6 +24,11 @@
 		<p>If a driver email already exists and belongs to a driver account, bulk upload will update that driver's points and auto-accept them into the uploaded organization.</p>
 		<p>If a driver does not exist yet, bulk upload will create the driver, assign them to the uploaded organization, and mark the uploaded application as accepted automatically.</p>
 		{% endif %}
+	</div>
+	<div class="error-div">
+		{% for message in get_flashed_messages(category_filter=["bulkError"]) %}
+		<p class="error-message">{{message}}</p>
+		{% endfor %}
 	</div>
 	<div class="file-upload-div">
 		<form {% if session.get("role")=="Sponsor" %}action="/users/bulk/sponsor"{% elif session.get("role")=="Admin"%}action="/users/bulk/admin"{% endif %} method="post" class="file-upload" enctype="multipart/form-data">
