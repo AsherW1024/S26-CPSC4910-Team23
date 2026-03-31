@@ -40,11 +40,6 @@
 		<p>If a driver does not exist yet, bulk upload will create the driver, assign them to the uploaded organization, and mark the uploaded application as accepted automatically.</p>
 		{% endif %}
 	</div>
-	<div class="error-div">
-		{% for message in get_flashed_messages(category_filter=["bulkError"]) %}
-		<p class="error-message">{{message}}</p>
-		{% endfor %}
-	</div>
 	<div class="file-upload-div">
 		<form {% if session.get("role")=="Sponsor" %}action="/users/bulk/sponsor"{% elif session.get("role")=="Admin"%}action="/users/bulk/admin"{% endif %} method="post" class="file-upload" enctype="multipart/form-data">
 			<label for="bulk-update-file">Upload a .txt file with the correct format:</label>
