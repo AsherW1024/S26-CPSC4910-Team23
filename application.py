@@ -4117,6 +4117,20 @@ def previousOrders():
 	orgID = session.get("OrgID")
 	start = request.args.get("start", "").strip()
 	end = request.args.get("end", "").strip()
+	start_date = parse_iso_date(start) if start else None
+	end_date = parse_iso_date(end) if end else None
+	if start and not start_date:
+		flash("Start date must be a valid date.", "validation")
+		start = ""
+	if end and not end_date:
+		flash("End date must be a valid date.", "validation")
+		end = ""
+	if start_date and end_date and start_date > end_date:
+		flash("Start date cannot be after the end date.", "validation")
+		start = ""
+		end = ""
+		start_date = None
+		end_date = None
 	getOrdersQuery = """
 		SELECT
 			orderID,
@@ -4133,13 +4147,13 @@ def previousOrders():
 	"""
 	params = [userID, orgID]
 
-	if start:
+	if start_date:
 		getOrdersQuery += " AND DATE(orderTime) >= %s"
-		params.append(start)
+		params.append(start_date.isoformat())
 
-	if end:
+	if end_date:
 		getOrdersQuery += " AND DATE(orderTime) <= %s"
-		params.append(end)
+		params.append(end_date.isoformat())
 
 	getOrdersQuery += " ORDER BY orderTime DESC"
 
