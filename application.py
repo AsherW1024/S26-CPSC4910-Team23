@@ -505,6 +505,7 @@ def selectDb(query: str, params=None):
 			connection.close()
 
 ensure_reporting_tables()
+ensure_sprint8_tables()
 
 """
 Check if the user is an admin and logged in. 
