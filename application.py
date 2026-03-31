@@ -4431,7 +4431,10 @@ def processSponsorBulkFile(bulkFile, orgID):
 			lineString = line.decode("utf-8").strip()
 			lineParts = lineString.split("|")
 			#grab values from lineParts
+			if len(lineParts) not in [7,5]:
+				raise Exception("Formating issue. Incorrect number of arguments provided")
 			userType = lineParts[0].upper()
+			orgName = lineParts[1]
 			firstName = lineParts[2]
 			lastName = lineParts[3]
 			email = lineParts[4]
@@ -4440,6 +4443,8 @@ def processSponsorBulkFile(bulkFile, orgID):
 				reason = lineParts[6]
 			if userType.upper() not in ["D","S"]:
 				raise Exception("Invalid user type character")
+			if orgName:
+				raise Exception("Defining an organization for the user is not allowed")
 			if not firstName:
 				raise Exception("No user first name provided")
 			if not lastName:
