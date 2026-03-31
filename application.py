@@ -4254,6 +4254,90 @@ def create_point_adjustment_for_driver(driver_username, org_id, points, reason):
 		datetime.now()
 	))
 
+def get_driver_point_history(driver_id, org_id, limit=None):
+	user = paramQueryDb("SELECT Username FROM Users WHERE UserID=%s", (driver_id,))
+	username = user.get("Username") if user else None
+
+	transactions = []
+	if username:
+		point_adjustments = selectDb("""
+			SELECT
+				DateAdjusted AS event_time,
+				CASE WHEN AdjustmentType='Deduct' THEN -ABS(COALESCE(AdjustmentPoints, 0))
+					 ELSE ABS(COALESCE(AdjustmentPoints, 0)) END AS delta_points,
+				AdjustmentType AS transaction_type,
+				COALESCE(AdjustmentReason, '') AS description
+			FROM PointAdjustments
+			WHERE OrganizationID=%s AND DriverUName=%s
+		""", (org_id, username)) or []
+		for row in point_adjustments:
+			transactions.append({
+				"event_time": row.get("event_time"),
+				"delta_points": int(row.get("delta_points") or 0),
+				"transaction_type": row.get("transaction_type") or "Adjustment",
+				"description": row.get("description") or "",
+			})
+
+		pending_rows = selectDb("""
+			SELECT CreatedAt, TransactionType, PendingPoints, Description, Status
+			FROM PendingPointTransactions
+			WHERE OrganizationID=%s AND DriverUName=%s AND Status='Pending'
+			ORDER BY CreatedAt DESC
+		""", (org_id, username)) or []
+	else:
+		pending_rows = []
+
+	order_rows = selectDb("""
+		SELECT orderTime, pointTotal, orderID
+		FROM Orders
+		WHERE userID=%s AND orgID=%s
+	""", (driver_id, org_id)) or []
+
+	for row in order_rows:
+		transactions.append({
+			"event_time": row.get("orderTime"),
+			"delta_points": -abs(int(row.get("pointTotal") or 0)),
+			"transaction_type": "Redeemed",
+			"description": f"Order #{row.get('orderID')}",
+		})
+
+	transactions.sort(key=lambda item: item.get("event_time") or datetime.min, reverse=True)
+
+	balance_row = paramQueryDb("""
+		SELECT TotalPoints
+		FROM DriverOrganizations
+		WHERE DriverID=%s AND OrganizationID=%s
+	""", (driver_id, org_id)) or {}
+
+	running_balance = int(balance_row.get("TotalPoints") or 0)
+
+	for tx in transactions:
+		tx["balance_after"] = running_balance
+		running_balance -= int(tx.get("delta_points") or 0)
+		tx["display_date"] = tx["event_time"].strftime("%b %d, %Y") if tx.get("event_time") else ""
+		tx["display_time"] = tx["event_time"].strftime("%I:%M %p") if tx.get("event_time") else ""
+
+	pending = []
+	for row in pending_rows:
+		created = row.get("CreatedAt")
+		pending.append({
+			"display_date": created.strftime("%b %d, %Y") if created else "",
+			"display_time": created.strftime("%I:%M %p") if created else "",
+			"transaction_type": row.get("TransactionType") or "Pending",
+			"pending_points": int(row.get("PendingPoints") or 0),
+			"description": row.get("Description") or "",
+			"status": row.get("Status") or "Pending",
+		})
+
+	if limit:
+		transactions = transactions[:limit]
+
+	return {
+		"balance": int(balance_row.get("TotalPoints") or 0),
+		"transactions": transactions,
+		"pending": pending,
+	}
+
 def isFileType(filename:str, extension:str):
 	return filename.lower().endswith(extension.lower())
 
