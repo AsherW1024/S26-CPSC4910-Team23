@@ -2057,9 +2057,25 @@ def home():
 	if 'UserID' in session:
 		getOrganization()
 		if session.get("Organization") != None and session.get("role") != "Sponsor":
-			session["Organization"]	= None		
-		return render_template("home.html", layout = "activenav.html")
-	return render_template("home.html", layout = "nav.html")
+			session["Organization"] = None
+
+		driver_point_summary = None
+		if session.get("role") == "Driver" and session.get("OrgID"):
+			try:
+				driver_point_summary = get_driver_point_history(
+					session["UserID"],
+					session["OrgID"],
+					limit=5
+				)
+			except Exception as e:
+				print("driver_point_summary skipped:", e)
+
+		return render_template(
+			"home.html",
+			layout="activenav.html",
+			driver_point_summary=driver_point_summary
+		)
+	return render_template("home.html", layout="nav.html")
 
 """
 This is the about page. Right now it serves as the landing page. Later this will
