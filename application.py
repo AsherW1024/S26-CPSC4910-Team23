@@ -4585,6 +4585,208 @@ def processSponsorBulkFile(bulkFile, orgID):
 			continue
 	return
 
+def process_admin_bulk_lines(lines):
+	results = []
+	success_count = 0
+	error_count = 0
+
+	for line_num, raw_line in enumerate(lines, start=1):
+		line_string = raw_line.decode("utf-8").strip() if isinstance(raw_line, bytes) else str(raw_line).strip()
+
+		if not line_string:
+			continue
+
+		try:
+			line_parts = [part.strip() for part in line_string.split("|")]
+			validate_bulk_upload_line(line_parts)
+
+			record_type = line_parts[0].upper()
+
+			if record_type == "O":
+				org_name = line_parts[1]
+				org = paramQueryDb(
+					"SELECT OrganizationID FROM Organizations WHERE Name=%s",
+					(org_name,)
+				)
+				if not org:
+					updateDb(
+						"INSERT INTO Organizations (Name, TimeCreated) VALUES (%s, %s)",
+						(org_name, datetime.now())
+					)
+					results.append({"line": line_num, "status": "success", "message": f"Organization created: {org_name}"})
+				else:
+					results.append({"line": line_num, "status": "success", "message": f"Organization ready: {org_name}"})
+				success_count += 1
+				continue
+
+			org_name = line_parts[1]
+			first_name = line_parts[2]
+			last_name = line_parts[3]
+			email = line_parts[4]
+			points = int(line_parts[5]) if len(line_parts) > 5 and line_parts[5].strip() else 0
+			reason = line_parts[6] if len(line_parts) > 6 else "Bulk upload"
+
+			org = paramQueryDb(
+				"SELECT OrganizationID FROM Organizations WHERE Name=%s",
+				(org_name,)
+			)
+			if not org:
+				raise ValueError(f"Organization does not exist: {org_name}")
+
+			existing_user = paramQueryDb(
+				"SELECT UserID, Username, UserType FROM Users WHERE Email=%s",
+				(email,)
+			)
+
+			if existing_user and existing_user["UserType"] == "Admin":
+				raise ValueError("Admin users cannot be created or modified through bulk upload.")
+
+			if record_type == "S":
+				full_name = f"{first_name} {last_name}"
+
+				if existing_user:
+					if existing_user["UserType"] != "Sponsor":
+						raise ValueError("Existing email belongs to a non-sponsor user.")
+					updateDb(
+						"UPDATE Users SET Name=%s WHERE UserID=%s",
+						(full_name, existing_user["UserID"])
+					)
+					results.append({"line": line_num, "status": "success", "message": f"Sponsor updated: {email}"})
+				else:
+					username = make_bulk_username(first_name, last_name, email)
+					temp_password_hash = generate_password_hash("TempPass123!", method="pbkdf2:sha256")
+
+					updateDb("""
+						INSERT INTO Users (Email, Username, Password_hash, TimeCreated, UserType, Name)
+						VALUES (%s, %s, %s, %s, %s, %s)
+					""", (email, username, temp_password_hash, datetime.now(), "Sponsor", full_name))
+
+					new_user = paramQueryDb(
+						"SELECT UserID FROM Users WHERE Email=%s",
+						(email,)
+					)
+
+					updateDb("""
+						INSERT INTO Sponsors (SponsorID, OrganizationID)
+						VALUES (%s, %s)
+					""", (new_user["UserID"], org["OrganizationID"]))
+
+					results.append({"line": line_num, "status": "success", "message": f"Sponsor created: {email}"})
+
+				success_count += 1
+				continue
+
+			if record_type == "D":
+				full_name = f"{first_name} {last_name}"
+
+				if existing_user:
+					if existing_user["UserType"] != "Driver":
+						raise ValueError("Existing email belongs to a non-driver user.")
+
+					updateDb(
+						"UPDATE Users SET Name=%s WHERE UserID=%s",
+						(full_name, existing_user["UserID"])
+					)
+
+					existing_driver_org = paramQueryDb("""
+						SELECT DriverID
+						FROM DriverOrganizations
+						WHERE DriverID=%s AND OrganizationID=%s
+					""", (existing_user["UserID"], org["OrganizationID"]))
+
+					if not existing_driver_org:
+						updateDb("""
+							INSERT INTO DriverOrganizations (DriverID, OrganizationID, Status, TotalPoints)
+							VALUES (%s, %s, %s, %s)
+						""", (existing_user["UserID"], org["OrganizationID"], "Active", 0))
+
+					existing_app = paramQueryDb("""
+						SELECT ApplicationID
+						FROM OrganizationApplications
+						WHERE OrganizationID=%s AND DriverUName=%s
+					""", (org["OrganizationID"], existing_user["Username"]))
+
+					if existing_app:
+						updateDb("""
+							UPDATE OrganizationApplications
+							SET ApplicationStatus=%s, ReviewedByUName=%s, ReviewReason=%s
+							WHERE ApplicationID=%s
+						""", ("Accepted", "bulk_admin", "Auto-accepted by bulk upload", existing_app["ApplicationID"]))
+					else:
+						updateDb("""
+							INSERT INTO OrganizationApplications
+							(OrganizationID, DriverUName, DateApplied, ReviewedByUName, ApplicationStatus, ReviewReason)
+							VALUES (%s, %s, %s, %s, %s, %s)
+						""", (
+							org["OrganizationID"],
+							existing_user["Username"],
+							datetime.now(),
+							"bulk_admin",
+							"Accepted",
+							"Auto-accepted by bulk upload"
+						))
+
+					create_point_adjustment_for_driver(existing_user["Username"], org["OrganizationID"], points, reason)
+					results.append({"line": line_num, "status": "success", "message": f"Driver updated: {email}"})
+					success_count += 1
+					continue
+
+				username = make_bulk_username(first_name, last_name, email)
+				temp_password_hash = generate_password_hash("TempPass123!", method="pbkdf2:sha256")
+
+				updateDb("""
+					INSERT INTO Users (Email, Username, Password_hash, TimeCreated, UserType, Name)
+					VALUES (%s, %s, %s, %s, %s, %s)
+				""", (email, username, temp_password_hash, datetime.now(), "Driver", full_name))
+
+				new_user = paramQueryDb(
+					"SELECT UserID, Username FROM Users WHERE Email=%s",
+					(email,)
+				)
+
+				try:
+					updateDb(
+						"INSERT INTO Drivers (DriverID, OrganizationID) VALUES (%s, %s)",
+						(new_user["UserID"], org["OrganizationID"])
+					)
+				except Exception as e:
+					print("Drivers insert skipped:", e)
+
+				try:
+					updateDb("""
+						INSERT INTO DriverOrganizations (DriverID, OrganizationID, Status, TotalPoints)
+						VALUES (%s, %s, %s, %s)
+					""", (new_user["UserID"], org["OrganizationID"], "Active", 0))
+				except Exception as e:
+					print("DriverOrganizations insert skipped:", e)
+
+				updateDb("""
+					INSERT INTO OrganizationApplications
+					(OrganizationID, DriverUName, DateApplied, ReviewedByUName, ApplicationStatus, ReviewReason)
+					VALUES (%s, %s, %s, %s, %s, %s)
+				""", (
+					org["OrganizationID"],
+					new_user["Username"],
+					datetime.now(),
+					"bulk_admin",
+					"Accepted",
+					"Auto-accepted by bulk upload"
+				))
+
+				create_point_adjustment_for_driver(new_user["Username"], org["OrganizationID"], points, reason)
+				results.append({"line": line_num, "status": "success", "message": f"Driver created: {email}"})
+				success_count += 1
+				continue
+
+		except Exception as e:
+			results.append({"line": line_num, "status": "error", "message": str(e)})
+			error_count += 1
+
+	return {
+		"results": results,
+		"success_count": success_count,
+		"error_count": error_count,
+	}
 
 @application.route("/users/bulk/sponsor", methods=["POST"])
 def sponsorBulkUpload():
