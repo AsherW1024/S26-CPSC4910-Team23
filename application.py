@@ -4338,6 +4338,41 @@ def get_driver_point_history(driver_id, org_id, limit=None):
 		"pending": pending,
 	}
 
+@application.route("/driver/points")
+def driver_point_history():
+	if "UserID" not in session or session.get("role") != "Driver":
+		return redirect(url_for("home"))
+
+	org_id = session.get("OrgID")
+	if not org_id:
+		flash("Select an organization before viewing point history.", "validation")
+		return redirect(url_for("home"))
+
+	point_summary = get_driver_point_history(session["UserID"], org_id)
+
+	if request.args.get("format", "").lower() == "csv":
+		rows = []
+		for tx in point_summary["transactions"]:
+			rows.append({
+				"Date": tx.get("display_date"),
+				"Time": tx.get("display_time"),
+				"TransactionType": tx.get("transaction_type"),
+				"PointsChange": tx.get("delta_points"),
+				"BalanceAfter": tx.get("balance_after"),
+				"Description": tx.get("description"),
+			})
+		return build_csv_response(
+			"driver_point_history.csv",
+			["Date", "Time", "TransactionType", "PointsChange", "BalanceAfter", "Description"],
+			rows
+		)
+
+	return render_template(
+		"driver_point_history.html",
+		layout="activenav.html",
+		point_summary=point_summary
+	)
+
 def isFileType(filename:str, extension:str):
 	return filename.lower().endswith(extension.lower())
 
