@@ -182,6 +182,51 @@ def ensure_reporting_tables():
         except Exception as e:
             print("ensure_reporting_tables skipped:", e)
 
+def ensure_sprint8_tables():
+    ddl_statements = [
+        """
+        CREATE TABLE IF NOT EXISTS DriverAddresses (
+            AddressID INT AUTO_INCREMENT PRIMARY KEY,
+            DriverID INT NOT NULL,
+            AddressType VARCHAR(20) NOT NULL,
+            FullName VARCHAR(150) NOT NULL,
+            Street VARCHAR(255) NOT NULL,
+            City VARCHAR(100) NOT NULL,
+            StateRegion VARCHAR(100) NOT NULL,
+            PostalCode VARCHAR(20) NOT NULL,
+            Country VARCHAR(100) NOT NULL,
+            CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_driver_address_type (DriverID, AddressType)
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS PendingPointTransactions (
+            PendingTransactionID INT AUTO_INCREMENT PRIMARY KEY,
+            OrganizationID INT NOT NULL,
+            DriverUName VARCHAR(100) NOT NULL,
+            TransactionType VARCHAR(30) NOT NULL,
+            PendingPoints INT NOT NULL DEFAULT 0,
+            Description VARCHAR(255) NULL,
+            Status VARCHAR(20) NOT NULL DEFAULT 'Pending',
+            CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    ]
+    for ddl in ddl_statements:
+        try:
+            updateDb(ddl)
+        except Exception as e:
+            print("ensure_sprint8_tables skipped:", e)
+
+def parse_iso_date(raw_value):
+    if not raw_value:
+        return None
+    try:
+        return datetime.strptime(raw_value, "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
 def getDriverData():
 	rows = selectDb("SELECT * FROM Users WHERE UserType = 'Driver'")
 	return rows
