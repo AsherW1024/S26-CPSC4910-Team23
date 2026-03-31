@@ -504,6 +504,7 @@ def selectDb(query: str, params=None):
 		if connection:
 			connection.close()
 
+# Initialize reporting and Sprint 8 support tables on startup.
 ensure_reporting_tables()
 ensure_sprint8_tables()
 
