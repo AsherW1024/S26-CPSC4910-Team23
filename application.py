@@ -4829,177 +4829,20 @@ def adminBulkUpload():
 		flash("No file selected.", "validation")
 		return redirect(url_for("bulkRegister"))
 
-	success_count = 0
-	skipped_count = 0
+	if not isFileType(uploadFile.filename, ".txt"):
+		flash("Please upload a .txt file.", "validation")
+		return redirect(url_for("bulkRegister"))
 
-	for raw_line in uploadFile:
-		lineString = raw_line.decode("utf-8").strip()
+	result = process_admin_bulk_lines(uploadFile)
 
-		if not lineString:
-			continue
+	for entry in result["results"]:
+		category = "success" if entry["status"] == "success" else "bulkError"
+		flash(f"Line {entry['line']}: {entry['message']}", category)
 
-		lineParts = [part.strip() for part in lineString.split("|")]
-		record_type = lineParts[0].upper()
-
-		# O|Organization Name
-		if record_type == "O":
-			if len(lineParts) < 2:
-				skipped_count += 1
-				continue
-
-			org_name = lineParts[1]
-			org_exists = paramQueryDb(
-				"SELECT OrganizationID FROM Organizations WHERE Name=%s",
-				(org_name,)
-			)
-
-			if not org_exists:
-				updateDb(
-					"INSERT INTO Organizations (Name, TimeCreated) VALUES (%s, %s)",
-					(org_name, datetime.now())
-				)
-			success_count += 1
-			continue
-
-		# D|Organization Name|First|Last|Email|Points|Reason
-		if record_type == "D":
-			if len(lineParts) < 5:
-				skipped_count += 1
-				continue
-
-			org_name = lineParts[1]
-			first_name = lineParts[2]
-			last_name = lineParts[3]
-			email = lineParts[4]
-			points = int(lineParts[5]) if len(lineParts) > 5 and lineParts[5].isdigit() else 0
-			reason = lineParts[6] if len(lineParts) > 6 else "Bulk upload"
-
-			org = paramQueryDb(
-				"SELECT OrganizationID FROM Organizations WHERE Name=%s",
-				(org_name,)
-			)
-			if not org:
-				skipped_count += 1
-				continue
-
-			full_name = f"{first_name} {last_name}".strip()
-
-			existing_user = paramQueryDb("""
-				SELECT UserID, Username, UserType
-				FROM Users
-				WHERE Email=%s
-			""", (email,))
-
-			# CASE 1: driver already exists -> update points + auto-accept into org
-			if existing_user and existing_user["UserType"] == "Driver":
-				driver_user_id = existing_user["UserID"]
-				driver_username = existing_user["Username"]
-
-				# update org membership
-				try:
-					updateDb(
-						"UPDATE Drivers SET OrganizationID=%s WHERE DriverID=%s",
-						(org["OrganizationID"], driver_user_id)
-					)
-				except Exception as e:
-					print("Drivers update skipped:", e)
-
-				try:
-					updateDb(
-						"UPDATE DriverOrganizations SET OrganizationID=%s WHERE DriverID=%s",
-						(org["OrganizationID"], driver_user_id)
-					)
-				except Exception as e:
-					print("DriverOrganizations update skipped:", e)
-
-				existing_app = paramQueryDb("""
-					SELECT ApplicationID
-					FROM OrganizationApplications
-					WHERE OrganizationID=%s AND DriverUName=%s
-				""", (org["OrganizationID"], driver_username))
-
-				if existing_app:
-					updateDb("""
-						UPDATE OrganizationApplications
-						SET ApplicationStatus=%s,
-							ReviewedByUName=%s,
-							ReviewReason=%s
-						WHERE ApplicationID=%s
-					""", ("Accepted", "bulk_admin", "Auto-accepted by bulk upload", existing_app["ApplicationID"]))
-				else:
-					updateDb("""
-						INSERT INTO OrganizationApplications
-						(OrganizationID, DriverUName, DateApplied, ReviewedByUName, ApplicationStatus, ReviewReason)
-						VALUES (%s, %s, %s, %s, %s, %s)
-					""", (
-						org["OrganizationID"],
-						driver_username,
-						datetime.now(),
-						"bulk_admin",
-						"Accepted",
-						"Auto-accepted by bulk upload"
-					))
-
-				create_point_adjustment_for_driver(driver_username, org["OrganizationID"], points, reason)
-				success_count += 1
-				continue
-
-			# CASE 2: email already exists but is not a driver
-			if existing_user and existing_user["UserType"] != "Driver":
-				skipped_count += 1
-				continue
-
-			# CASE 3: create new driver, auto-accept, optional points
-			username = make_bulk_username(first_name, last_name, email)
-			temp_password_hash = generate_password_hash("TempPass123!", method="pbkdf2:sha256")
-
-			updateDb("""
-				INSERT INTO Users (Email, Username, Password_hash, TimeCreated, UserType, Name)
-				VALUES (%s, %s, %s, %s, %s, %s)
-			""", (email, username, temp_password_hash, datetime.now(), "Driver", full_name))
-
-			new_user = paramQueryDb(
-				"SELECT UserID, Username FROM Users WHERE Email=%s",
-				(email,)
-			)
-
-			try:
-				updateDb(
-					"INSERT INTO Drivers (DriverID, OrganizationID) VALUES (%s, %s)",
-					(new_user["UserID"], org["OrganizationID"])
-				)
-			except Exception as e:
-				print("Drivers insert skipped:", e)
-
-			try:
-				updateDb(
-					"INSERT INTO DriverOrganizations (DriverID, OrganizationID) VALUES (%s, %s)",
-					(new_user["UserID"], org["OrganizationID"])
-				)
-			except Exception as e:
-				print("DriverOrganizations insert skipped:", e)
-
-			updateDb("""
-				INSERT INTO OrganizationApplications
-				(OrganizationID, DriverUName, DateApplied, ReviewedByUName, ApplicationStatus, ReviewReason)
-				VALUES (%s, %s, %s, %s, %s, %s)
-			""", (
-				org["OrganizationID"],
-				new_user["Username"],
-				datetime.now(),
-				"bulk_admin",
-				"Accepted",
-				"Auto-accepted by bulk upload"
-			))
-
-			create_point_adjustment_for_driver(new_user["Username"], org["OrganizationID"], points, reason)
-			success_count += 1
-			continue
-
-		# optional sponsor handling can stay for later
-		skipped_count += 1
-
-	flash(f"Bulk upload finished. Success: {success_count}, Skipped: {skipped_count}.", "success")
+	flash(
+		f"Bulk upload finished. Success: {result['success_count']}, Errors: {result['error_count']}.",
+		"success"
+	)
 	return redirect(url_for("bulkRegister"))
 
 """
