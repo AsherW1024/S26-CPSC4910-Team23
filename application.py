@@ -4392,6 +4392,35 @@ def driver_point_history():
 def isFileType(filename:str, extension:str):
 	return filename.lower().endswith(extension.lower())
 
+def validate_bulk_upload_line(line_parts):
+	record_type = (line_parts[0] if line_parts else "").upper()
+
+	if record_type not in {"O", "S", "D"}:
+		raise ValueError("Only O, S, and D records are supported in admin bulk upload.")
+
+	if record_type == "O":
+		if len(line_parts) < 2 or not line_parts[1].strip():
+			raise ValueError("Organization rows must include an organization name.")
+		return
+
+	if len(line_parts) < 5:
+		raise ValueError("User rows must include organization, first name, last name, and email.")
+
+	if not line_parts[1].strip():
+		raise ValueError("Organization name is required.")
+
+	if not line_parts[2].strip() or not line_parts[3].strip():
+		raise ValueError("First and last name are required.")
+
+	if not line_parts[4].strip() or "@" not in line_parts[4]:
+		raise ValueError("A valid email address is required.")
+
+	if record_type == "S" and len(line_parts) > 5 and line_parts[5].strip():
+		raise ValueError("Sponsor rows cannot include points.")
+
+	if len(line_parts) > 5 and line_parts[5].strip() and not line_parts[5].strip().lstrip("-").isdigit():
+		raise ValueError("Points must be a whole number.")
+
 def processSponsorBulkFile(bulkFile, orgID):
 	lineNum=0
 	for line in bulkFile:
