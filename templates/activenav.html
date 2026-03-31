@@ -61,7 +61,6 @@
                     <a href="/reports/sales-by-product">Sales by Product</a>
                     <a href="/reports/refunds-impact">Refund/Cancellation Impact</a>
                     <a href="/reports/invoices">Invoice Report</a>
-                    <a href="{{ url_for('driver_point_history') }}">Point History</a>
                 </div>
             </div>
             {% endif %}
@@ -83,6 +82,9 @@
                         </a>
                         <a href="/orders">
                             <i class="fa fa-envelope fa-1x"></i> Orders
+                        </a>
+                        <a href="{{ url_for('driver_point_history') }}">
+                            <i class="fa fa-coins fa-1x"></i> Point History
                         </a>
                     {% elif session.get('role') == "Admin" %}
                         <a href="/admin/users">
