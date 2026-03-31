@@ -87,6 +87,9 @@ class Sprint8FeatureTests(unittest.TestCase):
         self.assertIn('TransactionType,PointsChange,BalanceAfter,Description', body)
         self.assertIn('Award,10,99,Weekly safe-driving bonus', body)
 
+    def test_validate_bulk_upload_line_rejects_bad_points(self):
+        with self.assertRaises(ValueError):
+            application.validate_bulk_upload_line(['D', 'Acme', 'Taylor', 'Driver', 'driver@example.com', 'abc'])
 
 if __name__ == '__main__':
     unittest.main()
