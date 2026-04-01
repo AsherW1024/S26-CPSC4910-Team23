@@ -4007,9 +4007,9 @@ def checkout():
 	except Exception as e:
 		print(e)
 		return redirect(url_for("cart"))
-	shipping_address = get_driver_addresses(userID).get("shipping", {})
+
 	#if user has enough points for the order, continue to checkout screen
-	return render_template("checkout.html", layout="activenav.html", shippingAddress=shipping_address)
+	return render_template("checkout.html", layout="orgnav.html")
 
 def getCartData(userID, orgID):
 	getCartItemsQuery = """
