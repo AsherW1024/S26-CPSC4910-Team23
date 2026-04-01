@@ -3947,7 +3947,7 @@ def getCartTotal(userID, orgID):
 			AND orgID=%s
 	"""
 	cartItems = selectDb(query=getCartItemsQuery, params=(userID, orgID))
-	if cartItems==[]:
+	if not cartItems:
 		raise Exception("User has no items in their cart")
 
 	#find the unit price for each product based on org rules
@@ -3970,12 +3970,12 @@ def getDriverPoints():
 	orgID = session.get("OrgID")
 	getDriverPointsQuery = """
 		SELECT TotalPoints
-		FROM Drivers
+		FROM DriverOrganizations
 		WHERE 
 			DriverID=%s
 			AND OrganizationID=%s
 	"""
-	return paramQueryDb(query=getDriverPointsQuery, params=(userID, orgID)).get("TotalPoints")
+	return paramQueryDb(query=getDriverPointsQuery, params=(userID, orgID)).get("TotalPoints",0)
 
 def adjustDriverPoints(driverID, orgID, newPointTotal):
 	adjustDriverPointsQuery = """
@@ -4059,7 +4059,7 @@ def orderConfirmation():
 	orderTotal = getCartTotal(userID, orgID)
 
 	#send user to confirmation screen to confirm before the pull the trigger on their order
-	return render_template("confirm_order.html", layout="activenav.html", cart=cartData, address=addressDict, total=orderTotal)
+	return render_template("confirm_order.html", layout="orgnav.html", cart=cartData, address=addressDict, total=orderTotal)
 
 @application.route("/orders", methods=["POST"])
 def makeOrder():
