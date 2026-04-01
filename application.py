@@ -3742,7 +3742,7 @@ def removeFromWishList():
 
 @application.route("/wishlist")
 def wishlist():
-	if "UserID" in session and session.get("role")=="Driver":
+	if "UserID" in session and session.get("role")=="Driver" and "OrgID" in session:
 		#get data needed for queries
 		userID = session.get("UserID")
 		orgName = session.get("Organization")
@@ -3796,7 +3796,7 @@ def wishlist():
 
 		wishlistData = adjustPrice(wishlistData)
 
-		return render_template("wishlist.html", layout="activenav.html", wishlistData=wishlistData)
+		return render_template("wishlist.html", layout="orgnav.html", wishlistData=wishlistData)
 	return redirect(url_for("home"))
 
 @application.route("/cart/add", methods=["POST"])
@@ -3927,7 +3927,7 @@ def cart():
 		for i, amount in enumerate(cartQuantities):
 			cartProductData[i]["quantity"] = amount
 
-		return render_template("cart.html", layout="activenav.html", cartProductData=cartProductData)
+		return render_template("cart.html", layout="orgnav.html", cartProductData=cartProductData)
 	return redirect(url_for("home"))
 
 @application.route("/product/<int:productID>")
