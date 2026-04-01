@@ -309,6 +309,10 @@ p{
 	height: auto;
 	padding: 1%
 }
+.cart-added{
+	background-color: rgb(157, 255, 157);
+}
+
 .container {
 	display: flex;
 	justify-content: center;

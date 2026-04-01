@@ -4852,6 +4852,29 @@ def adminBulkUpload():
 	)
 	return redirect(url_for("bulkRegister"))
 
+@application.route("/product/inCart/<int:productID>")
+def inCart(productID):
+	if session.get("role")!="Driver":
+		return jsonify(False)
+	
+	#check cart table
+	try:
+		inCartTableQuery = """
+			SELECT 1
+			FROM Cart
+			WHERE
+				userID=%s
+				AND orgID=%s
+				AND productID=%s
+		"""
+		queryResults = paramQueryDb(query=inCartTableQuery, params=(session.get("UserID"),session.get("OrgID"),productID))
+		if queryResults:
+			return jsonify(True)
+		return jsonify(False)
+	except Exception as e:
+		print(e)
+		return jsonify(False)
+
 """
 This lets us test locally. Should not execute in AWS
 """

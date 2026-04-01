@@ -306,9 +306,12 @@ async function addProductToCart(event) {
 			productID: productID
 		})
 	});
+	if (await response.ok) {
+		cartButton.classList.add("cart-added");
+	}
 }
 
-function showProductDetails(event) {
+async function showProductDetails(event) {
 	//no action if the remove or add button was pressed
 	if (event.target.classList.contains("remove-button")) {return}
 	if (event.target.classList.contains("add-button")) {return}
@@ -390,6 +393,11 @@ function showProductDetails(event) {
 	//add event listener for cart button
 	let cartButton = document.querySelector(".cart");
 	cartButton.addEventListener("click", addProductToCart);
+	const response = await fetch(`/product/inCart/${productDetails.id}`);
+	const inCart = await response.json();
+	if (inCart) {
+		cartButton.classList.add("cart-added")
+	}
 
 	//add each image
 	let imageDiv = document.getElementById("popup-images");
