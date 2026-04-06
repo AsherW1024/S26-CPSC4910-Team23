@@ -44,4 +44,10 @@
 	<p>To add a product to your cart, click the shopping cart button for a product on the catalog screen.</p>
 	{% endif %}
 </div>
+<!-- popup to give good feedback to the user that the order went through -->
+{% for message in get_flashed_messages(category_filter=["orderConfirmation"]) %}
+<script>
+	alert("{{message}}")
+</script>
+{% endfor %}
 {% endblock %}

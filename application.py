@@ -4120,6 +4120,10 @@ def makeOrder():
 		"""
 		updateDb(query=deleteCartItemsQuery, params=(userID,orgID))
 
+		session["Points"] = newDriverPointTotal
+
+		#for an alert confirming to the user that the purchase was successful
+		flash("Purchase successful. Order confirmed.", category="orderConfirmation")
 
 	except Exception as e:
 		print(e)
