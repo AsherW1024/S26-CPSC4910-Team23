@@ -11,4 +11,78 @@
 .admin-page .box {
     border-radius: 16px;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+    background: var(--surface-bg);
+    color: var(--surface-text);
+    border: 1px solid var(--surface-border);
+}
+
+.reports-page .title,
+.admin-page .title,
+.reports-page .label,
+.admin-page .label,
+.reports-page p,
+.admin-page p,
+.reports-page th,
+.admin-page th,
+.reports-page td,
+.admin-page td {
+    color: var(--surface-text);
+}
+
+.reports-page .input,
+.admin-page .input,
+.reports-page .textarea,
+.admin-page .textarea,
+.reports-page select,
+.admin-page select,
+.reports-page .select select,
+.admin-page .select select {
+    background: var(--input-bg);
+    color: var(--input-text);
+    border: 1px solid var(--input-border);
+}
+
+.reports-page .table,
+.admin-page .table {
+    background: transparent;
+    color: var(--surface-text);
+}
+
+.reports-page .table thead th,
+.admin-page .table thead th {
+    color: var(--surface-text);
+    border-color: var(--surface-border);
+}
+
+.reports-page .table td,
+.admin-page .table td,
+.reports-page .table th,
+.admin-page .table th {
+    border-color: var(--surface-border);
+}
+
+.reports-page .table.is-striped tbody tr:not(.is-selected):nth-child(even),
+.admin-page .table.is-striped tbody tr:not(.is-selected):nth-child(even) {
+    background: rgba(128, 128, 128, 0.08);
+}
+
+.reports-page .table tbody tr:hover,
+.admin-page .table tbody tr:hover {
+    background: var(--surface-hover);
+}
+
+.reports-page .pagination-link,
+.reports-page .pagination-previous,
+.reports-page .pagination-next,
+.admin-page .pagination-link,
+.admin-page .pagination-previous,
+.admin-page .pagination-next {
+    background: var(--input-bg);
+    color: var(--surface-text);
+    border-color: var(--input-border);
+}
+
+.reports-page .pagination-ellipsis,
+.admin-page .pagination-ellipsis {
+    color: var(--surface-text);
 }
