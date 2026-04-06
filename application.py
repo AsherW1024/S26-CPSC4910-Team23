@@ -89,26 +89,14 @@ def get_org_name_for_user(user_id):
     return row.get("OrganizationName") if row else None
 
 def log_password_event(event_type: str, actor_user_id=None, target_user_id=None):
-    actor_ip = get_request_ip()
     event_time = datetime.now()
-
-    org_name = None
-    for uid in (target_user_id, actor_user_id):
-        if uid and not org_name:
-            org_name = get_org_name_for_user(uid)
-
-    org_id = None
-    if org_name:
-        org = paramQueryDb("SELECT OrganizationID FROM Organizations WHERE Name=%s", (org_name,))
-        if org:
-            org_id = org.get("OrganizationID")
 
     try:
         updateDb("""
-            INSERT INTO PasswordChangeLog
-            (OrganizationID, ActorUserID, TargetUserID, EventType, EventTime, ActorIP)
+            INSERT INTO PasswordAdjustments
+            (AdjustedByUName, AdjustedUName, TypeOfChange, DateAdjusted)
             VALUES (%s, %s, %s, %s, %s, %s)
-        """, (org_id, actor_user_id, target_user_id, event_type, event_time, actor_ip))
+        """, (actor_user_id, target_user_id, event_type, event_time))
     except Exception as e:
         print("PasswordChangeLog insert skipped:", e)
 
@@ -655,11 +643,11 @@ def registerUser():
 				(email, username))
 			if not orgExists:
 				updateDb(
-					"""INSERT INTO Drivers (DriverID, OrganizationID)
+					"""INSERT INTO DriverOrganizations (DriverID, OrganizationID)
 					VALUES (%s, %s)""", (newUser['UserID'], None))
 			else:
 				updateDb(
-					"""INSERT INTO Drivers (DriverID, OrganizationID)
+					"""INSERT INTO DriverOrganizations (DriverID, OrganizationID)
 					VALUES (%s, %s)""", (newUser['UserID'], orgExists["OrganizationID"]))
 			flash("Driver account created please login", "created")
 	if "UserID" in session:
@@ -1207,7 +1195,7 @@ def adminEnrollDriverPage(OrganizationID):
 		rowTotal = selectDb("""
 			SELECT COUNT(*) AS totalRows
 			FROM Users u
-			JOIN Drivers d ON u.UserID = d.DriverID
+			JOIN DriverOrganizations d ON u.UserID = d.DriverID
 			WHERE u.UserType = "Driver"
 			AND (d.OrganizationID IS NULL OR d.OrganizationID = 0)
 			AND (u.Name LIKE %s OR u.Email LIKE %s OR u.Username LIKE %s)
@@ -1216,7 +1204,7 @@ def adminEnrollDriverPage(OrganizationID):
 		drivers = selectDb("""
 			SELECT u.UserID, u.Name, u.Email, u.Username
 			FROM Users u
-			JOIN Drivers d ON u.UserID = d.DriverID
+			JOIN DriverOrganizations d ON u.UserID = d.DriverID
 			WHERE u.UserType = "Driver"
 			AND (d.OrganizationID IS NULL OR d.OrganizationID = 0)
 			AND (u.Name LIKE %s OR u.Email LIKE %s OR u.Username LIKE %s)
@@ -1227,7 +1215,7 @@ def adminEnrollDriverPage(OrganizationID):
 		rowTotal = selectDb("""
 			SELECT COUNT(*) AS totalRows
 			FROM Users u
-			JOIN Drivers d ON u.UserID = d.DriverID
+			JOIN DriverOrganizations d ON u.UserID = d.DriverID
 			WHERE u.UserType = "Driver"
 			AND (d.OrganizationID IS NULL OR d.OrganizationID = 0)
 		""", ())
@@ -1235,7 +1223,7 @@ def adminEnrollDriverPage(OrganizationID):
 		drivers = selectDb("""
 			SELECT u.UserID, u.Name, u.Email, u.Username
 			FROM Users u
-			JOIN Drivers d ON u.UserID = d.DriverID
+			JOIN DriverOrganizations d ON u.UserID = d.DriverID
 			WHERE u.UserType = "Driver"
 			AND (d.OrganizationID IS NULL OR d.OrganizationID = 0)
 			ORDER BY u.Name
@@ -1269,7 +1257,7 @@ def get_driver_by_identifier(identifier):
     return paramQueryDb("""
         SELECT u.UserID, u.Name, u.Email, u.Username, d.OrganizationID
         FROM Users u
-        JOIN Drivers d ON d.DriverID = u.UserID
+        JOIN DriverOrganizations d ON d.DriverID = u.UserID
         WHERE u.UserType = 'Driver'
           AND (u.Username = %s OR u.Email = %s OR u.Name = %s)
         LIMIT 1
@@ -1304,7 +1292,7 @@ def enroll_driver_without_numeric_ids():
         return redirect(url_for("enroll_driver_without_numeric_ids"))
 
     updateDb("""
-        UPDATE Drivers
+        UPDATE DriverOrganizations
         SET OrganizationID = %s
         WHERE DriverID = %s
     """, (org["OrganizationID"], driver["UserID"]))
@@ -1345,7 +1333,7 @@ def adminEnrollDriverPost(OrganizationID, UserID):
 
 	# enroll the driver directly
 	updateDb("""
-		UPDATE Drivers
+		UPDATE DriverOrganizations
 		SET OrganizationID = %s
 		WHERE DriverID = %s
 	""", (OrganizationID, UserID))
@@ -2047,6 +2035,7 @@ def deleteUser(accountType, UserID):
 		updateDb("DELETE FROM Sponsors WHERE SponsorID = %s", (UserID,))
 	elif user["UserType"] == "Driver": 
 		updateDb("DELETE FROM Drivers WHERE DriverID = %s", (UserID,))
+		updateDb("DELETE FROM DriverOrganizations WHERE DriverID = %s", (UserID,))
 	updateDb("DELETE FROM Users WHERE UserID = %s", (UserID,))
 	
 	flash("User deleted successfully.", "success")
@@ -2544,7 +2533,7 @@ def organizationEdit(OrgID):
 
 @application.route("/organizations/<int:OrgID>/delete", methods=["POST"])
 def organizationDelete(OrgID):
-	updateDb("UPDATE Drivers SET OrganizationID = %s WHERE OrganizationID = %s", ("0", OrgID))
+	updateDb("UPDATE DriverOrganizations SET OrganizationID = %s WHERE OrganizationID = %s", ("0", OrgID))
 	updateDb("DELETE FROM Organizations WHERE OrganizationID = %s", (OrgID,))
 	
 	flash("Organization deleted successfully.", "success")
@@ -2770,7 +2759,7 @@ def removeOrgUser(UserID):
 	if user[0]["UserType"] == "Sponsor":
 		updateDb("""UPDATE Sponsors SET OrganizationID = %s WHERE SponsorID = %s""", (None, UserID,))
 	elif user[0]["UserType"] == "Driver":
-		updateDb("""UPDATE Drivers SET OrganizationID = %s WHERE DriverID = %s""", (None, UserID,))
+		updateDb("""UPDATE DriverOrganizations SET OrganizationID = %s WHERE DriverID = %s""", (None, UserID,))
 	return redirect(url_for("organizationUsers"))
 
 @application.route("/organization/apply")
@@ -2920,7 +2909,7 @@ def acceptedApplications(UserID):
 	timeJoined= datetime.now()
 	updateDb("""UPDATE OrganizationApplications SET ApplicationStatus = %s, ReviewedByUName = %s, ReviewReason = %s WHERE DriverUName = %s AND OrganizationID = %s""", ("Accepted", user["Username"], reason, driver["Username"], session["OrgID"]))
 	updateDb("""
-		UPDATE Drivers
+		UPDATE DriverOrganizations
 		SET OrganizationID = %s
 		WHERE DriverID = %s
 	""", (session["OrgID"], UserID))
@@ -4757,7 +4746,7 @@ def process_admin_bulk_lines(lines):
 
 				try:
 					updateDb(
-						"INSERT INTO Drivers (DriverID, OrganizationID) VALUES (%s, %s)",
+						"INSERT INTO DriverOrganizations (DriverID, OrganizationID) VALUES (%s, %s)",
 						(new_user["UserID"], org["OrganizationID"])
 					)
 				except Exception as e:
