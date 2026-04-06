@@ -2082,6 +2082,37 @@ def deleteUser(accountType, UserID):
 	return redirect(f"/{accountType}/users")
 
 
+def get_admin_dashboard_summary():
+    sponsors_row = paramQueryDb("""
+        SELECT COUNT(*) AS total
+        FROM Users
+        WHERE UserType = 'Sponsor'
+    """, ()) or {"total": 0}
+
+    drivers_row = paramQueryDb("""
+        SELECT COUNT(*) AS total
+        FROM Users
+        WHERE UserType = 'Driver'
+    """, ()) or {"total": 0}
+
+    pending_apps_row = paramQueryDb("""
+        SELECT COUNT(*) AS total
+        FROM OrganizationApplications
+        WHERE ApplicationStatus = 'Pending'
+    """, ()) or {"total": 0}
+
+    organizations_row = paramQueryDb("""
+        SELECT COUNT(*) AS total
+        FROM Organizations
+    """, ()) or {"total": 0}
+
+    return {
+        "sponsors": int(sponsors_row.get("total") or 0),
+        "drivers": int(drivers_row.get("total") or 0),
+        "pending_applications": int(pending_apps_row.get("total") or 0),
+        "organizations": int(organizations_row.get("total") or 0),
+    }
+
 #The different website pages
 @application.route("/")
 def home():
@@ -2091,6 +2122,8 @@ def home():
 			session["Organization"] = None
 
 		driver_point_summary = None
+		admin_dashboard_summary = None
+
 		if session.get("role") == "Driver" and session.get("OrgID"):
 			try:
 				driver_point_summary = get_driver_point_history(
@@ -2101,12 +2134,25 @@ def home():
 			except Exception as e:
 				print("driver_point_summary skipped:", e)
 
+		if session.get("role") == "Admin":
+			try:
+				admin_dashboard_summary = get_admin_dashboard_summary()
+			except Exception as e:
+				print("admin_dashboard_summary skipped:", e)
+
 		return render_template(
 			"home.html",
 			layout="activenav.html",
-			driver_point_summary=driver_point_summary
+			driver_point_summary=driver_point_summary,
+			admin_dashboard_summary=admin_dashboard_summary
 		)
-	return render_template("home.html", layout="nav.html")
+
+	return render_template(
+		"home.html",
+		layout="nav.html",
+		driver_point_summary=None,
+		admin_dashboard_summary=None
+	)
 
 """
 This is the about page. Right now it serves as the landing page. Later this will

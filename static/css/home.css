@@ -1,11 +1,16 @@
-.home-page {
+.home-page-wrapper {
 	min-height: calc(100vh - 52px);
+	background: var(--page-bg);
+	color: var(--page-text);
+	padding-bottom: 60px;
+}
+
+.home-page {
 	display: flex;
 	justify-content: center;
 	align-items: center;
-	padding: 40px 20px 60px;
+	padding: 40px 20px 30px;
 	box-sizing: border-box;
-	background: var(--page-bg);
 	color: var(--page-text);
 }
 
@@ -30,4 +35,104 @@
 .home-card h2 {
 	color: #0073e6;
 	font-size: 4vw;
+}
+
+.admin-dashboard-section {
+	width: 100%;
+	max-width: 1200px;
+	margin: 0 auto 60px;
+	padding: 0 20px 40px;
+	box-sizing: border-box;
+}
+
+.admin-dashboard-header {
+	text-align: center;
+	margin-bottom: 24px;
+}
+
+.admin-dashboard-header h2 {
+	color: #0073e6;
+	font-size: clamp(2rem, 4vw, 3rem);
+	margin: 0 0 10px 0;
+}
+
+.admin-dashboard-header p {
+	margin: 0;
+	font-size: 1.05rem;
+	color: var(--page-text);
+	opacity: 0.9;
+}
+
+.admin-dashboard-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: 20px;
+}
+
+.admin-dashboard-card {
+	display: block;
+	text-decoration: none;
+	background: var(--surface-bg);
+	color: var(--surface-text);
+	border: 1px solid var(--surface-border);
+	border-radius: 18px;
+	padding: 22px 20px;
+	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+	transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.admin-dashboard-card:hover {
+	transform: translateY(-3px);
+	box-shadow: 0 14px 30px rgba(0, 0, 0, 0.18);
+	background: rgba(128, 128, 128, 0.10);
+	color: var(--surface-text);
+}
+
+.dashboard-card-label {
+	font-size: 1rem;
+	font-weight: 700;
+	margin-bottom: 10px;
+	color: var(--surface-text);
+	opacity: 0.95;
+}
+
+.dashboard-card-value {
+	font-size: clamp(2rem, 5vw, 3.2rem);
+	font-weight: 800;
+	line-height: 1;
+	margin-bottom: 14px;
+	color: #0073e6;
+}
+
+.dashboard-card-link {
+	font-size: 0.95rem;
+	color: var(--surface-text);
+	opacity: 0.8;
+}
+
+@media (max-width: 768px) {
+	.admin-dashboard-section {
+		padding-left: 16px;
+		padding-right: 16px;
+	}
+
+	.admin-dashboard-card {
+		padding: 18px 16px;
+	}
+}
+
+.home-driver-summary {
+	width: 100%;
+	max-width: 1200px;
+	margin: 0 auto;
+	padding: 0 20px;
+	box-sizing: border-box;
+}
+
+.home-driver-summary .box {
+	background: var(--surface-bg);
+	color: var(--surface-text);
+	border: 1px solid var(--surface-border);
+	border-radius: 16px;
+	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
 }
