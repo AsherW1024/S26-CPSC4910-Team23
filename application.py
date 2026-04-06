@@ -158,6 +158,12 @@ def getOrgData():
 	return rows
 
 def get_sales_by_product_rows(org_id=None, start=None, end=None, rowsPerPage=None, offset=None):
+    count_query = """
+        SELECT
+            COUNT(DISTINCT oi.productID) AS totalRows
+        FROM OrderItems oi
+        JOIN Orders o ON o.orderID = oi.orderID
+    """
     base_query = """
         SELECT
             oi.productID,
@@ -183,6 +189,7 @@ def get_sales_by_product_rows(org_id=None, start=None, end=None, rowsPerPage=Non
         params.append(end + " 23:59:59")
 
     if where_clauses:
+        count_query += " WHERE " + " AND ".join(where_clauses)
         base_query += " WHERE " + " AND ".join(where_clauses)
 
     base_query += """
@@ -191,7 +198,11 @@ def get_sales_by_product_rows(org_id=None, start=None, end=None, rowsPerPage=Non
 		LIMIT %s OFFSET %s
     """
 	
+    rowTotal = selectDb(count_query, tuple(params)) or [{"totalRows": 0}]
     rows = selectDb(base_query, tuple(list(params) + [rowsPerPage, offset])) or []
+
+    total_rows = rowTotal[0]["totalRows"] if rowTotal else 0 
+    numPages = max(1, math.ceil(total_rows / rowsPerPage)) if rowsPerPage else 1
 
     enriched_rows = []
     for row in rows:
@@ -211,7 +222,7 @@ def get_sales_by_product_rows(org_id=None, start=None, end=None, rowsPerPage=Non
             "grossSales": float(row.get("grossSales") or 0)
         })
 
-    return enriched_rows
+    return enriched_rows, numPages
 
 def get_refund_cancellation_impact_rows(org_id=None):
     base_query = """
@@ -279,6 +290,12 @@ def get_refund_cancellation_impact_rows(org_id=None):
     return summary, detailed_rows
 
 def get_invoice_rows(fee_rate=0.01, start=None, end=None, rowsPerPage=None, offset=None):
+	count_query = """
+        SELECT
+            COUNT(DISTINCT o.orgID) AS totalRows
+        FROM Orders o
+        LEFT JOIN Organizations org ON org.OrganizationID = o.orgID
+    """
 	base_query = """
         SELECT
             o.orgID,
@@ -300,6 +317,7 @@ def get_invoice_rows(fee_rate=0.01, start=None, end=None, rowsPerPage=None, offs
 		params.append(end + " 23:59:59")
 
 	if where_clauses:
+		count_query += " WHERE " + " AND ".join(where_clauses)
 		base_query += " WHERE " + " AND ".join(where_clauses)
 
 	base_query += """
@@ -308,8 +326,11 @@ def get_invoice_rows(fee_rate=0.01, start=None, end=None, rowsPerPage=None, offs
 		LIMIT %s OFFSET %s
     """
 
-
+	rowTotal = selectDb(count_query, tuple(params)) or [{"totalRows": 0}]
 	rows = selectDb(base_query, tuple(list(params) + [rowsPerPage, offset])) or []
+
+	total_rows = rowTotal[0]["totalRows"] if rowTotal else 0
+	numPages = max(1, math.ceil(total_rows / rowsPerPage)) if rowsPerPage else 1
 
 	invoice_rows = []
 	for row in rows:
@@ -325,7 +346,7 @@ def get_invoice_rows(fee_rate=0.01, start=None, end=None, rowsPerPage=None, offs
 			"invoiceTotal": round(sales_total + fee_amount, 2),
 			"feeExplanation": f"{int(fee_rate * 100)}% fee applied to sales total"
 		})
-	return invoice_rows
+	return invoice_rows, numPages
 
 def get_about_info():
     rows = queryDb("SELECT TeamNum, VersionNum, ReleaseDate, ProductName, ProductDescription FROM Admins WHERE AdminID = 1")
@@ -1511,7 +1532,7 @@ def report(ReportType):
 			FROM OrganizationApplications a
 			JOIN Organizations o ON a.OrganizationID = o.OrganizationID
 			{where}
-			ORDER BY a.DateApplied DESC
+			ORDER BY a.ApplicationStatus Desc, a.DateApplied DESC
 		"""
 		csv_headers = ["DateApplied", "Name", "DriverUName", "ReviewedByUName", "ApplicationStatus", "ReviewReason"]
 
@@ -1581,11 +1602,22 @@ def report(ReportType):
 def salesByDriverReport():
 	start = request.args.get("start", "").strip()
 	end = request.args.get("end", "").strip()
+	driverFilter = request.args.get("driver", "").strip()
+	organizationFilter = request.args.get("organization", "").strip()
 	page = request.args.get("page", 1, type=int)
 	rowsPerPage = request.args.get("pageCount", 10, type=int)
 	offset = (page - 1) * rowsPerPage
 	export_format = request.args.get("format", "").lower()
 
+	count_query = """
+		SELECT
+			COUNT(DISTINCT o.userID) AS totalRows
+		FROM OrderItems oi
+		JOIN Orders o ON o.orderID = oi.orderID
+		JOIN Users u ON u.UserID = o.userID
+		JOIN DriverOrganizations d ON u.userID = d.DriverID
+		JOIN Organizations org ON d.OrganizationID = org.OrganizationID
+	"""
 	base_query = """
         SELECT
             o.userID,
@@ -1594,37 +1626,61 @@ def salesByDriverReport():
             SUM(oi.totalPrice) AS grossSales
         FROM OrderItems oi
         JOIN Orders o ON o.orderID = oi.orderID
+		JOIN Users u ON u.UserID = o.userID
+		JOIN DriverOrganizations d ON u.userID = d.DriverID
+		JOIN Organizations org ON d.OrganizationID = org.OrganizationID
     """
 	params = []
 	where_clauses = []
 
 	if session.get("Organization") != None:
 		where_clauses.append("o.orgID = %s")
-		params.append(session["Organization"])
+		params.append(session["OrgID"])
 
 	if start:
-		where_clauses.append("orderTime >= %s")
+		where_clauses.append("o.orderTime >= %s")
 		params.append(start + " 00:00:00")
 
 	if end:
-		where_clauses.append("orderTime <= %s")
+		where_clauses.append("o.orderTime <= %s")
 		params.append(end + " 23:59:59")
 
+	if driverFilter:
+		driver = f"%{driverFilter}%"
+		where_clauses.append("""
+			(
+				u.Email LIKE %s OR
+				u.Username LIKE %s OR
+				u.Name LIKE %s
+			)
+		""")
+		params.extend([driver, driver, driver])
+
+	if organizationFilter:
+		organization = f"%{organizationFilter}%"
+		where_clauses.append("org.Name LIKE %s")
+		params.append(organization)
+
 	if where_clauses:
+		count_query += " WHERE " + " AND ".join(where_clauses)
 		base_query += " WHERE " + " AND ".join(where_clauses)
 
 	base_query += """
 		GROUP BY o.userID
 		ORDER BY grossSales DESC, quantityBought DESC
+		LIMIT %s OFFSET %s
 		"""
 
-	rows = selectDb(base_query, tuple(params)) or []
+	rowTotal = selectDb(count_query, tuple(params)) or [{"totalRows": 0}]
+	rows = selectDb(base_query, tuple(list(params) + [rowsPerPage, offset])) or []
+
+	total_rows = rowTotal[0]["totalRows"] if rowTotal else 0
+	numPages = max(1, math.ceil(total_rows / rowsPerPage)) if rowsPerPage else 1
 
 	try:
 		driverData = getDriverData() or {}
 	except Exception:
 		driverData = {}
-
 
 	enriched_rows = []
 	for row in rows:
@@ -1657,7 +1713,12 @@ def salesByDriverReport():
 		"salesByDriverReport.html",
 		layout="nav.html" if not session.get("UserID") else ("orgnav.html" if session.get("Organization") != None else "activenav.html"),
 		rows=rows,
-		summary=summary
+		summary=summary,
+		driverFilter=driverFilter,
+		organizationFilter=organizationFilter,
+		page=page,
+        pageNum=range(1, numPages + 1),
+        pageRows=rowsPerPage
 	)
 
 @application.route("/reports/sales-by-organization")
@@ -1665,11 +1726,19 @@ def salesByDriverReport():
 def salesByOrganizationReport():
 	start = request.args.get("start", "").strip()
 	end = request.args.get("end", "").strip()
+	organizationFilter = request.args.get("organization", "").strip()
 	page = request.args.get("page", 1, type=int)
 	rowsPerPage = request.args.get("pageCount", 10, type=int)
 	offset = (page - 1) * rowsPerPage
 	export_format = request.args.get("format", "").lower()
 	
+	count_query = """
+		SELECT
+            COUNT(DISTINCT o.orgID) AS totalRows
+        FROM OrderItems oi
+        JOIN Orders o ON o.orderID = oi.orderID
+		JOIN Organizations org ON o.orgID = org.OrganizationID
+    """
 	base_query = """
         SELECT
             o.orgID,
@@ -1678,6 +1747,7 @@ def salesByOrganizationReport():
             SUM(oi.totalPrice) AS grossSales
         FROM OrderItems oi
         JOIN Orders o ON o.orderID = oi.orderID
+		JOIN Organizations org ON o.orgID = org.OrganizationID
     """
 	params = []
 	where_clauses = []
@@ -1690,6 +1760,11 @@ def salesByOrganizationReport():
 		where_clauses.append("orderTime <= %s")
 		params.append(end + " 23:59:59")
 
+	if organizationFilter:
+		organization = f"%{organizationFilter}%"
+		where_clauses.append("org.Name LIKE %s")
+		params.append(organization)
+
 	if where_clauses:
 		base_query += " WHERE " + " AND ".join(where_clauses)
 
@@ -1699,7 +1774,11 @@ def salesByOrganizationReport():
 		LIMIT %s OFFSET %s
 		"""
 
+	rowTotal = selectDb(count_query, tuple(params)) or [{"totalRows": 0}]
 	rows = selectDb(base_query, tuple(list(params) + [rowsPerPage, offset])) or []
+
+	total_rows = rowTotal[0]["totalRows"] if rowTotal else 0
+	numPages = max(1, math.ceil(total_rows / rowsPerPage)) if rowsPerPage else 1
 
 	try:
 		orgData = getOrgData() or {}
@@ -1737,7 +1816,11 @@ def salesByOrganizationReport():
 		"salesByOrgReport.html",
 		layout="nav.html" if not session.get("UserID") else ("activenav.html"),
 		rows=rows,
-		summary=summary
+		summary=summary,
+		organizationFilter=organizationFilter,
+		page=page,
+        pageNum=range(1, numPages + 1),
+        pageRows=rowsPerPage
 	)
 
 @application.route("/reports/sales-by-product")
@@ -1751,7 +1834,7 @@ def sales_by_product_report():
 	org_id = request.args.get("orgID", type=int)
 	export_format = request.args.get("format", "").lower()
 
-	rows = get_sales_by_product_rows(org_id=org_id, start=start, end=end, rowsPerPage=rowsPerPage, offset=offset)
+	rows, numPages = get_sales_by_product_rows(org_id=org_id, start=start, end=end, rowsPerPage=rowsPerPage, offset=offset)
 
 	summary = {
 		"productCount": len(rows),
@@ -1770,7 +1853,10 @@ def sales_by_product_report():
 		"sales_by_product_report.html",
 		layout="nav.html" if not session.get("UserID") else ("orgnav.html" if session.get("Organization") else "activenav.html"),
 		rows=rows,
-		summary=summary
+		summary=summary,
+		page=page,
+        pageNum=range(1, numPages + 1),
+        pageRows=rowsPerPage
 	)
 
 @application.route("/reports/refunds-impact")
@@ -1830,7 +1916,7 @@ def invoice_report():
 	fee_rate = request.args.get("feeRate", default=0.01, type=float)
 	export_format = request.args.get("format", "").lower()
 
-	rows = get_invoice_rows(fee_rate=fee_rate, start=start, end=end, rowsPerPage=rowsPerPage, offset=offset)
+	rows, numPages = get_invoice_rows(fee_rate=fee_rate, start=start, end=end, rowsPerPage=rowsPerPage, offset=offset)
 
 	if export_format == "csv":
 		return build_csv_response(
@@ -1843,7 +1929,10 @@ def invoice_report():
 		"invoice_report.html",
 		layout="nav.html" if not session.get("UserID") else ("orgnav.html" if session.get("Organization") else "activenav.html"),
 		rows=rows,
-		feeRate=fee_rate
+		feeRate=fee_rate,
+		page=page,
+        pageNum=range(1, numPages + 1),
+        pageRows=rowsPerPage
 	)
 
 @application.route("/reports/invoices/resend", methods=["POST"])
