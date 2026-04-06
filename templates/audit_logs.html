@@ -11,17 +11,43 @@
   <div class="container is-max-desktop mt-6">
     <div class="box">
       <h2 class="title is-2">Audit Log Search</h2>
-      <form method="GET" class="mb-4">
-        <div class="columns is-vcentered">
-          <div class="column">
-            <label class="label">Keyword</label>
-            <input class="input" type="text" name="q" value="{{ keyword }}" placeholder="driver name, username, sponsor...">
-          </div>
-      
-          <div class="column is-narrow">
-            <div class="field">
+        <form method="GET" class="mb-4">
+          <div class="columns is-multiline">
+            <div class="column is-4">
+              <label class="label">Keyword</label>
+              <input class="input" type="text" name="q" value="{{ keyword }}" placeholder="driver name, username, sponsor...">
+            </div>
+        
+            <div class="column is-3">
+              <label class="label">Sponsor</label>
+              <input class="input" type="text" name="sponsor" value="{{ sponsorFilter }}" placeholder="sponsor name, email, username...">
+            </div>
+        
+            <div class="column is-2">
+              <label class="label">Date From</label>
+              <input class="input" type="date" name="start" value="{{ startDate }}">
+            </div>
+        
+            <div class="column is-2">
+              <label class="label">Date To</label>
+              <input class="input" type="date" name="end" value="{{ endDate }}">
+            </div>
+        
+            <div class="column is-3">
+              <label class="label">Category</label>
+              <div class="select is-fullwidth">
+                <select name="category">
+                  <option value="" {% if not categoryFilter %}selected{% endif %}>All</option>
+                  <option value="PasswordAdjustments" {% if categoryFilter == "PasswordAdjustments" %}selected{% endif %}>Password Adjustments</option>
+                  <option value="Logins" {% if categoryFilter == "Logins" %}selected{% endif %}>Logins</option>
+                  <option value="PointAdjustments" {% if categoryFilter == "PointAdjustments" %}selected{% endif %}>Point Adjustments</option>
+                </select>
+              </div>
+            </div>
+        
+            <div class="column is-2">
               <label class="label">Rows per Page</label>
-              <div class="select">
+              <div class="select is-fullwidth">
                 <select name="pageCount" onchange="this.form.submit()">
                   <option value="20" {% if pageRows == 20 %}selected{% endif %}>20</option>
                   <option value="50" {% if pageRows == 50 %}selected{% endif %}>50</option>
@@ -29,19 +55,23 @@
                 </select>
               </div>
             </div>
+        
+            <div class="column is-narrow">
+              <label class="label">&nbsp;</label>
+              <button class="button is-light" type="submit">Search</button>
+            </div>
+        
+            <div class="column is-narrow">
+              <label class="label">&nbsp;</label>
+              <a class="button is-white" href="/admin/audit-logs">Clear</a>
+            </div>
+        
+            <div class="column is-narrow">
+              <label class="label">&nbsp;</label>
+              <button class="button is-info" type="submit" name="format" value="csv">Download CSV</button>
+            </div>
           </div>
-      
-          <div class="column is-narrow">
-            <label class="label">&nbsp;</label>
-            <button class="button is-light" type="submit">Search</button>
-          </div>
-      
-          <div class="column is-narrow">
-            <label class="label">&nbsp;</label>
-            <button class="button is-info" type="submit" name="format" value="csv">Download CSV</button>
-          </div>
-        </div>
-      </form>
+        </form>
 
       <div class="table-container">
         <table class="table is-fullwidth is-striped">

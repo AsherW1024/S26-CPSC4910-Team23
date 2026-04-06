@@ -1910,6 +1910,10 @@ def resend_invoice_email():
 @permission_required("view_audit_logs")
 def audit_logs():
     keyword = request.args.get("q", "").strip()
+    sponsor_filter = request.args.get("sponsor", "").strip()
+    start_date = request.args.get("start", "").strip()
+    end_date = request.args.get("end", "").strip()
+    category_filter = request.args.get("category", "").strip()
     export_format = request.args.get("format", "").lower()
 
     page = request.args.get("page", 1, type=int)
@@ -1921,9 +1925,9 @@ def audit_logs():
     offset = (page - 1) * rowsPerPage
 
     base_query = """
-        SELECT *
-        FROM (
-            SELECT
+		SELECT *
+		FROM (
+			SELECT
 				pa.DateAdjusted AS EventDate,
 				'PasswordAdjustments' AS SourceTable,
 				pa.TypeOfChange AS EventType,
@@ -1931,14 +1935,19 @@ def audit_logs():
 				actor.Email AS ActorEmail,
 				COALESCE(target.Name, pa.AdjustedUName) AS Target,
 				target.Email AS TargetEmail,
-				CONCAT('Password change event for ', pa.AdjustedUName) AS Details
-            FROM PasswordAdjustments pa
-            LEFT JOIN Users actor ON actor.Username = pa.AdjustedByUName
-            LEFT JOIN Users target ON target.Username = pa.AdjustedUName
+				CONCAT('Password change event for ', pa.AdjustedUName) AS Details,
+				COALESCE(s_actor.Name, s_target.Name, '') AS SponsorName,
+				COALESCE(s_actor.Email, s_target.Email, '') AS SponsorEmail,
+				COALESCE(s_actor.Username, s_target.Username, '') AS SponsorUsername
+			FROM PasswordAdjustments pa
+			LEFT JOIN Users actor ON actor.Username = pa.AdjustedByUName
+			LEFT JOIN Users target ON target.Username = pa.AdjustedUName
+			LEFT JOIN Users s_actor ON s_actor.UserType = 'Sponsor' AND s_actor.Username = pa.AdjustedByUName
+			LEFT JOIN Users s_target ON s_target.UserType = 'Sponsor' AND s_target.Username = pa.AdjustedUName
 
-            UNION ALL
+			UNION ALL
 
-            SELECT
+			SELECT
 				l.LoginDate AS EventDate,
 				'Logins' AS SourceTable,
 				CASE
@@ -1949,13 +1958,17 @@ def audit_logs():
 				u.Email AS ActorEmail,
 				'' AS Target,
 				'' AS TargetEmail,
-				CONCAT('Login user: ', l.LoginUser) AS Details
-            FROM Logins l
-            LEFT JOIN Users u ON (u.Email = l.LoginUser OR u.Username = l.LoginUser)
+				CONCAT('Login user: ', l.LoginUser) AS Details,
+				COALESCE(s_u.Name, '') AS SponsorName,
+				COALESCE(s_u.Email, '') AS SponsorEmail,
+				COALESCE(s_u.Username, '') AS SponsorUsername
+			FROM Logins l
+			LEFT JOIN Users u ON (u.Email = l.LoginUser OR u.Username = l.LoginUser)
+			LEFT JOIN Users s_u ON s_u.UserType = 'Sponsor' AND s_u.UserID = u.UserID
 
-            UNION ALL
+			UNION ALL
 
-            SELECT
+			SELECT
 				p.DateAdjusted AS EventDate,
 				'PointAdjustments' AS SourceTable,
 				p.AdjustmentType AS EventType,
@@ -1963,19 +1976,24 @@ def audit_logs():
 				actor.Email AS ActorEmail,
 				COALESCE(target.Name, p.DriverUName) AS Target,
 				target.Email AS TargetEmail,
-				CONCAT('Points: ', p.AdjustmentPoints, ' | Reason: ', COALESCE(p.AdjustmentReason, '')) AS Details
+				CONCAT('Points: ', p.AdjustmentPoints, ' | Reason: ', COALESCE(p.AdjustmentReason, '')) AS Details,
+				COALESCE(s_actor.Name, '') AS SponsorName,
+				COALESCE(s_actor.Email, '') AS SponsorEmail,
+				COALESCE(s_actor.Username, '') AS SponsorUsername
 			FROM PointAdjustments p
 			LEFT JOIN Users actor ON actor.Username = p.AdjustedByUName
 			LEFT JOIN Users target ON target.Username = p.DriverUName
-        ) audit_rows
-    """
+			LEFT JOIN Users s_actor ON s_actor.UserType = 'Sponsor' AND s_actor.Username = p.AdjustedByUName
+		) audit_rows
+	"""
 
     params = []
-	
+    where_clauses = []
+
     if keyword:
         like = f"%{keyword}%"
-        base_query += """
-	        WHERE
+        where_clauses.append("""
+			(
 				SourceTable LIKE %s OR
 				EventType LIKE %s OR
 				Actor LIKE %s OR
@@ -1983,8 +2001,35 @@ def audit_logs():
 				Target LIKE %s OR
 				TargetEmail LIKE %s OR
 				Details LIKE %s
-		"""
+			)
+		""")
         params.extend([like, like, like, like, like, like, like])
+
+    if sponsor_filter:
+        sponsor_like = f"%{sponsor_filter}%"
+        where_clauses.append("""
+			(
+				SponsorName LIKE %s OR
+				SponsorEmail LIKE %s OR
+				SponsorUsername LIKE %s
+			)
+		""")
+        params.extend([sponsor_like, sponsor_like, sponsor_like])
+
+    if start_date:
+        where_clauses.append("DATE(EventDate) >= %s")
+        params.append(start_date)
+
+    if end_date:
+        where_clauses.append("DATE(EventDate) <= %s")
+        params.append(end_date)
+
+    if category_filter:
+        where_clauses.append("SourceTable = %s")
+        params.append(category_filter)
+
+    if where_clauses:
+        base_query += " WHERE " + " AND ".join(where_clauses)
 
     count_query = f"""
 		SELECT COUNT(*) AS totalRows
@@ -2001,8 +2046,17 @@ def audit_logs():
         rows = selectDb(base_query, tuple(params)) or []
         return build_csv_response(
             "audit_logs.csv",
-            ["EventDate", "SourceTable", "EventType", "Actor", "ActorEmail", "Target", "TargetEmail", "Details"],
-            rows
+            [
+                "EventDate",
+                "SourceTable",
+				"EventType",
+				"Actor",
+				"ActorEmail",
+				"Target",
+				"TargetEmail",
+				"Details"
+			],
+			rows
 		)
 
     paged_query = base_query + " LIMIT %s OFFSET %s"
@@ -2016,15 +2070,20 @@ def audit_logs():
         )
 
     nav = "orgnav.html" if session.get("Organization") else "activenav.html"
+
     return render_template(
         "audit_logs.html",
-        layout=nav,
-        rows=rows,
-        keyword=keyword,
-        page=page,
-        pageNum=range(1, numPages + 1),
-        pageRows=rowsPerPage
-    )
+		layout=nav,
+		rows=rows,
+		keyword=keyword,
+		sponsorFilter=sponsor_filter,
+		startDate=start_date,
+		endDate=end_date,
+		categoryFilter=category_filter,
+		page=page,
+		pageNum=range(1, numPages + 1),
+		pageRows=rowsPerPage
+	)
 
 @application.route("/<accountType>/users/<int:UserID>/edit", methods=["POST"])
 def userEditPost(accountType, UserID):	
