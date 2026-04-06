@@ -4497,11 +4497,11 @@ def processSponsorBulkFile(bulkFile, orgID):
 					pointDiff = int(points)-int(previousPoints) if adjustmentType=="Award" else int(previousPoints)-int(points)
 					pointAdjustmentLogQuery = """
 						INSERT INTO PointAdjustments
-							(OrganizationID, DriverUName, AdjustedByUName, AdjustmentType, AdjustmentPoints, AdjustmentReason)
+							(OrganizationID, DriverUName, AdjustedByUName, AdjustmentType, AdjustmentPoints, AdjustmentReason, DateAdjusted)
 						VALUES
-							(%s,%s,%s,%s,%s,%s)
+							(%s,%s,%s,%s,%s,%s,%s)
 					"""
-					updateDb(pointAdjustmentLogQuery, params=(orgID, driverUsername, session.get("Username"), adjustmentType, pointDiff, reason))
+					updateDb(pointAdjustmentLogQuery, params=(orgID, driverUsername, session.get("Username"), adjustmentType, pointDiff, reason, datetime.now()))
 				elif not driverID:
 					#create user
 					username = firstName+lastName
@@ -4539,11 +4539,11 @@ def processSponsorBulkFile(bulkFile, orgID):
 					#insert into PointAdjustments
 					insertPointAdjustmentsQuery = """
 						INSERT INTO PointAdjustments
-							(OrganizationID, DriverUName, AdjustedByUName, AdjustmentType, AdjustmentPoints, AdjustmentReason)
+							(OrganizationID, DriverUName, AdjustedByUName, AdjustmentType, AdjustmentPoints, AdjustmentReason, DateAdjusted)
 						VALUES
-							(%s,%s,%s,%s,%s,%s,%s)
+							(%s,%s,%s,%s,%s,%s,%s,%s)
 					"""
-					updateDb(insertPointAdjustmentsQuery, params=(orgID, username, session.get("Username"), "Award", points if points else 0, reason))
+					updateDb(insertPointAdjustmentsQuery, params=(orgID, username, session.get("Username"), "Award", points if points else 0, reason, datetime.now()))
 			#logic for sponsor user
 			else :
 				userType = "Sponsor"
