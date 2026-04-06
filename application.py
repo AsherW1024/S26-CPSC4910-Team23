@@ -3979,7 +3979,7 @@ def getDriverPoints():
 
 def adjustDriverPoints(driverID, orgID, newPointTotal):
 	adjustDriverPointsQuery = """
-		UPDATE Drivers
+		UPDATE DriverOrganizations
 		SET TotalPoints=%s
 		WHERE
 			DriverID=%s
@@ -4063,7 +4063,7 @@ def orderConfirmation():
 
 @application.route("/orders", methods=["POST"])
 def makeOrder():
-	if "UserID" not in session:
+	if "UserID" not in session or "OrgID" not in session:
 		return redirect(url_for("home"))
 	
 	try:
