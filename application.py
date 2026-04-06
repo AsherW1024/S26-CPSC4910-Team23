@@ -140,72 +140,6 @@ def format_currency(value):
     except Exception:
         return "0.00"
 
-def ensure_reporting_tables():
-    ddl_statements = [
-        """
-        CREATE TABLE IF NOT EXISTS InvoiceEmailLog (
-            InvoiceEmailLogID INT AUTO_INCREMENT PRIMARY KEY,
-            OrgID INT NOT NULL,
-            InvoiceMonth VARCHAR(7) NOT NULL,
-            RecipientEmail VARCHAR(255) NULL,
-            ActionTaken VARCHAR(50) NOT NULL,
-            TriggeredByUserID INT NULL,
-            Notes TEXT NULL,
-            CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-        )
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS OrderStatusAudit (
-            OrderStatusAuditID INT AUTO_INCREMENT PRIMARY KEY,
-            OrderID INT NOT NULL,
-            StatusName VARCHAR(50) NOT NULL,
-            Notes TEXT NULL,
-            CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-        )
-        """
-    ]
-    for ddl in ddl_statements:
-        try:
-            updateDb(ddl)
-        except Exception as e:
-            print("ensure_reporting_tables skipped:", e)
-
-def ensure_sprint8_tables():
-    ddl_statements = [
-        """
-        CREATE TABLE IF NOT EXISTS DriverAddresses (
-            AddressID INT AUTO_INCREMENT PRIMARY KEY,
-            DriverID INT NOT NULL,
-            AddressType VARCHAR(20) NOT NULL,
-            FullName VARCHAR(150) NOT NULL,
-            Street VARCHAR(255) NOT NULL,
-            City VARCHAR(100) NOT NULL,
-            StateRegion VARCHAR(100) NOT NULL,
-            PostalCode VARCHAR(20) NOT NULL,
-            Country VARCHAR(100) NOT NULL,
-            CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            UNIQUE KEY uq_driver_address_type (DriverID, AddressType)
-        )
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS PendingPointTransactions (
-            PendingTransactionID INT AUTO_INCREMENT PRIMARY KEY,
-            OrganizationID INT NOT NULL,
-            DriverUName VARCHAR(100) NOT NULL,
-            TransactionType VARCHAR(30) NOT NULL,
-            PendingPoints INT NOT NULL DEFAULT 0,
-            Description VARCHAR(255) NULL,
-            Status VARCHAR(20) NOT NULL DEFAULT 'Pending',
-            CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-        )
-        """
-    ]
-    for ddl in ddl_statements:
-        try:
-            updateDb(ddl)
-        except Exception as e:
-            print("ensure_sprint8_tables skipped:", e)
 
 def parse_iso_date(raw_value):
     if not raw_value:
@@ -223,7 +157,7 @@ def getOrgData():
 	rows = selectDb("""SELECT * FROM Organizations""")
 	return rows
 
-def get_sales_by_product_rows(org_id=None):
+def get_sales_by_product_rows(org_id=None, start=None, end=None, rowsPerPage=None, offset=None):
     base_query = """
         SELECT
             oi.productID,
@@ -240,15 +174,24 @@ def get_sales_by_product_rows(org_id=None):
         where_clauses.append("o.orgID = %s")
         params.append(org_id)
 
+    if start:
+        where_clauses.append("orderTime >= %s")
+        params.append(start + " 00:00:00")
+
+    if end:
+        where_clauses.append("orderTime <= %s")
+        params.append(end + " 23:59:59")
+
     if where_clauses:
         base_query += " WHERE " + " AND ".join(where_clauses)
 
     base_query += """
         GROUP BY oi.productID
         ORDER BY grossSales DESC, quantitySold DESC
+		LIMIT %s OFFSET %s
     """
-
-    rows = selectDb(base_query, tuple(params)) or []
+	
+    rows = selectDb(base_query, tuple(list(params) + [rowsPerPage, offset])) or []
 
     enriched_rows = []
     for row in rows:
@@ -335,8 +278,8 @@ def get_refund_cancellation_impact_rows(org_id=None):
     summary["netSales"] = summary["grossSales"] - summary["refundTotal"] - summary["cancelledTotal"]
     return summary, detailed_rows
 
-def get_invoice_rows(fee_rate=0.01):
-    rows = selectDb("""
+def get_invoice_rows(fee_rate=0.01, start=None, end=None, rowsPerPage=None, offset=None):
+	base_query = """
         SELECT
             o.orgID,
             org.Name AS OrganizationName,
@@ -344,25 +287,45 @@ def get_invoice_rows(fee_rate=0.01):
             SUM(o.pointTotal) AS salesTotal
         FROM Orders o
         LEFT JOIN Organizations org ON org.OrganizationID = o.orgID
+    """
+	params = []
+	where_clauses = []
+
+	if start:
+		where_clauses.append("orderTime >= %s")
+		params.append(start + " 00:00:00")
+
+	if end:
+		where_clauses.append("orderTime <= %s")
+		params.append(end + " 23:59:59")
+
+	if where_clauses:
+		base_query += " WHERE " + " AND ".join(where_clauses)
+
+	base_query += """
         GROUP BY o.orgID, org.Name
         ORDER BY salesTotal DESC
-    """, ()) or []
+		LIMIT %s OFFSET %s
+    """
 
-    invoice_rows = []
-    for row in rows:
-        sales_total = float(row.get("salesTotal") or 0)
-        fee_amount = round(sales_total * fee_rate, 2)
-        invoice_rows.append({
-            "orgID": row.get("orgID"),
-            "organizationName": row.get("OrganizationName") or f"Organization {row.get('orgID')}",
-            "orderCount": row.get("orderCount") or 0,
-            "salesTotal": sales_total,
-            "feeRate": fee_rate,
-            "feeAmount": fee_amount,
-            "invoiceTotal": round(sales_total + fee_amount, 2),
-            "feeExplanation": f"{int(fee_rate * 100)}% fee applied to sales total"
-        })
-    return invoice_rows
+
+	rows = selectDb(base_query, tuple(list(params) + [rowsPerPage, offset])) or []
+
+	invoice_rows = []
+	for row in rows:
+		sales_total = float(row.get("salesTotal") or 0)
+		fee_amount = round(sales_total * fee_rate, 2)
+		invoice_rows.append({
+			"orgID": row.get("orgID"),
+			"organizationName": row.get("OrganizationName") or f"Organization {row.get('orgID')}",
+			"orderCount": row.get("orderCount") or 0,
+			"salesTotal": sales_total,
+			"feeRate": fee_rate,
+			"feeAmount": fee_amount,
+			"invoiceTotal": round(sales_total + fee_amount, 2),
+			"feeExplanation": f"{int(fee_rate * 100)}% fee applied to sales total"
+		})
+	return invoice_rows
 
 def get_about_info():
     rows = queryDb("SELECT TeamNum, VersionNum, ReleaseDate, ProductName, ProductDescription FROM Admins WHERE AdminID = 1")
@@ -491,10 +454,6 @@ def selectDb(query: str, params=None):
 	finally:
 		if connection:
 			connection.close()
-
-# Initialize reporting and Sprint 8 support tables on startup.
-ensure_reporting_tables()
-ensure_sprint8_tables()
 
 """
 Check if the user is an admin and logged in. 
@@ -639,16 +598,6 @@ def registerUser():
 				VALUES (%s, %s)""", (newUser['UserID'], orgExists["OrganizationID"]))
 			flash("Sponsor account created please login", "created")
 		else:	
-			newUser = paramQueryDb("SELECT UserID FROM Users WHERE Email=%s OR Username=%s", 
-				(email, username))
-			if not orgExists:
-				updateDb(
-					"""INSERT INTO DriverOrganizations (DriverID, OrganizationID)
-					VALUES (%s, %s)""", (newUser['UserID'], None))
-			else:
-				updateDb(
-					"""INSERT INTO DriverOrganizations (DriverID, OrganizationID)
-					VALUES (%s, %s)""", (newUser['UserID'], orgExists["OrganizationID"]))
 			flash("Driver account created please login", "created")
 	if "UserID" in session:
 		getOrganization()
@@ -1630,6 +1579,11 @@ def report(ReportType):
 @application.route("/reports/sales-by-driver")
 @permission_required("view_reports")
 def salesByDriverReport():
+	start = request.args.get("start", "").strip()
+	end = request.args.get("end", "").strip()
+	page = request.args.get("page", 1, type=int)
+	rowsPerPage = request.args.get("pageCount", 10, type=int)
+	offset = (page - 1) * rowsPerPage
 	export_format = request.args.get("format", "").lower()
 
 	base_query = """
@@ -1647,6 +1601,14 @@ def salesByDriverReport():
 	if session.get("Organization") != None:
 		where_clauses.append("o.orgID = %s")
 		params.append(session["Organization"])
+
+	if start:
+		where_clauses.append("orderTime >= %s")
+		params.append(start + " 00:00:00")
+
+	if end:
+		where_clauses.append("orderTime <= %s")
+		params.append(end + " 23:59:59")
 
 	if where_clauses:
 		base_query += " WHERE " + " AND ".join(where_clauses)
@@ -1701,6 +1663,11 @@ def salesByDriverReport():
 @application.route("/reports/sales-by-organization")
 @permission_required("view_reports")
 def salesByOrganizationReport():
+	start = request.args.get("start", "").strip()
+	end = request.args.get("end", "").strip()
+	page = request.args.get("page", 1, type=int)
+	rowsPerPage = request.args.get("pageCount", 10, type=int)
+	offset = (page - 1) * rowsPerPage
 	export_format = request.args.get("format", "").lower()
 	
 	base_query = """
@@ -1713,13 +1680,26 @@ def salesByOrganizationReport():
         JOIN Orders o ON o.orderID = oi.orderID
     """
 	params = []
+	where_clauses = []
+
+	if start:
+		where_clauses.append("orderTime >= %s")
+		params.append(start + " 00:00:00")
+
+	if end:
+		where_clauses.append("orderTime <= %s")
+		params.append(end + " 23:59:59")
+
+	if where_clauses:
+		base_query += " WHERE " + " AND ".join(where_clauses)
 
 	base_query += """
 		GROUP BY o.orgID
 		ORDER BY grossSales DESC, quantityBought DESC
+		LIMIT %s OFFSET %s
 		"""
 
-	rows = selectDb(base_query, tuple(params)) or []
+	rows = selectDb(base_query, tuple(list(params) + [rowsPerPage, offset])) or []
 
 	try:
 		orgData = getOrgData() or {}
@@ -1763,30 +1743,35 @@ def salesByOrganizationReport():
 @application.route("/reports/sales-by-product")
 @permission_required("view_reports")
 def sales_by_product_report():
-    org_id = request.args.get("orgID", type=int)
-    export_format = request.args.get("format", "").lower()
+	start = request.args.get("start", "").strip()
+	end = request.args.get("end", "").strip()
+	page = request.args.get("page", 1, type=int)
+	rowsPerPage = request.args.get("pageCount", 10, type=int)
+	offset = (page - 1) * rowsPerPage
+	org_id = request.args.get("orgID", type=int)
+	export_format = request.args.get("format", "").lower()
 
-    rows = get_sales_by_product_rows(org_id=org_id)
+	rows = get_sales_by_product_rows(org_id=org_id, start=start, end=end, rowsPerPage=rowsPerPage, offset=offset)
 
-    summary = {
-        "productCount": len(rows),
-        "quantitySold": sum(int(r.get("quantitySold") or 0) for r in rows),
-        "grossSales": sum(float(r.get("grossSales") or 0) for r in rows)
-    }
+	summary = {
+		"productCount": len(rows),
+		"quantitySold": sum(int(r.get("quantitySold") or 0) for r in rows),
+		"grossSales": sum(float(r.get("grossSales") or 0) for r in rows)
+	}
 
-    if export_format == "csv":
-        return build_csv_response(
-            "sales_by_product_report.csv",
-            ["productID", "productName", "category", "brand", "orderCount", "quantitySold", "grossSales"],
-            rows
-        )
+	if export_format == "csv":
+		return build_csv_response(
+			"sales_by_product_report.csv",
+			["productID", "productName", "category", "brand", "orderCount", "quantitySold", "grossSales"],
+			rows
+		)
 
-    return render_template(
-        "sales_by_product_report.html",
-        layout="nav.html" if not session.get("UserID") else ("orgnav.html" if session.get("Organization") else "activenav.html"),
-        rows=rows,
-        summary=summary
-    )
+	return render_template(
+		"sales_by_product_report.html",
+		layout="nav.html" if not session.get("UserID") else ("orgnav.html" if session.get("Organization") else "activenav.html"),
+		rows=rows,
+		summary=summary
+	)
 
 @application.route("/reports/refunds-impact")
 @permission_required("view_reports")
@@ -1837,24 +1822,29 @@ def admin_update_order_status(order_id):
 @application.route("/reports/invoices")
 @permission_required("view_reports")
 def invoice_report():
-    fee_rate = request.args.get("feeRate", default=0.01, type=float)
-    export_format = request.args.get("format", "").lower()
+	start = request.args.get("start", "").strip()
+	end = request.args.get("end", "").strip()
+	page = request.args.get("page", 1, type=int)
+	rowsPerPage = request.args.get("pageCount", 10, type=int)
+	offset = (page - 1) * rowsPerPage
+	fee_rate = request.args.get("feeRate", default=0.01, type=float)
+	export_format = request.args.get("format", "").lower()
 
-    rows = get_invoice_rows(fee_rate=fee_rate)
+	rows = get_invoice_rows(fee_rate=fee_rate, start=start, end=end, rowsPerPage=rowsPerPage, offset=offset)
 
-    if export_format == "csv":
-        return build_csv_response(
-            "invoice_report.csv",
-            ["orgID", "organizationName", "orderCount", "salesTotal", "feeRate", "feeAmount", "invoiceTotal", "feeExplanation"],
-            rows
-        )
+	if export_format == "csv":
+		return build_csv_response(
+			"invoice_report.csv",
+			["orgID", "organizationName", "orderCount", "salesTotal", "feeRate", "feeAmount", "invoiceTotal", "feeExplanation"],
+			rows
+		)
 
-    return render_template(
-        "invoice_report.html",
-        layout="nav.html" if not session.get("UserID") else ("orgnav.html" if session.get("Organization") else "activenav.html"),
-        rows=rows,
-        feeRate=fee_rate
-    )
+	return render_template(
+		"invoice_report.html",
+		layout="nav.html" if not session.get("UserID") else ("orgnav.html" if session.get("Organization") else "activenav.html"),
+		rows=rows,
+		feeRate=fee_rate
+	)
 
 @application.route("/reports/invoices/resend", methods=["POST"])
 @permission_required("view_reports")

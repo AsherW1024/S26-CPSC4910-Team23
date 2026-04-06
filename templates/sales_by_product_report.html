@@ -8,7 +8,6 @@
     <div class="box">
       <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
         <h1 class="title is-3">Sales by Product Report</h1>
-        <a class="button is-info" href="/reports/sales-by-product?format=csv">Download CSV</a>
       </div>
 
       <div class="columns">
@@ -28,6 +27,48 @@
           </div>
         </div>
       </div>
+
+      <form method="GET" class="mb-4">
+        <div class="columns is-multiline">
+          <div class="column is-3">
+            <label class="label">Start Date</label>
+            <input class="input" type="date" name="start" value="{{ start }}">
+          </div>
+
+          <div class="column is-3">
+            <label class="label">End Date</label>
+            <input class="input" type="date" name="end" value="{{ end }}">
+          </div>
+
+          {% if ReportType == "points" %}
+          <div class="column is-3">
+            <label class="label">Driver Filter</label>
+            <input class="input" type="text" name="driver" placeholder="Name, email, or username" value="{{ driverFilter }}">
+          </div>
+          {% endif %}
+
+          <div class="column is-2">
+            <label class="label">Rows per Page</label>
+            <div class="select is-fullwidth">
+              <select name="pageCount" onchange="this.form.submit()">
+                <option value="10" {% if pageRows==10 %}selected{% endif %}>10</option>
+                <option value="25" {% if pageRows==25 %}selected{% endif %}>25</option>
+                <option value="50" {% if pageRows==50 %}selected{% endif %}>50</option>
+                <option value="100" {% if pageRows==100 %}selected{% endif %}>100</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="column is-2">
+            <label class="label">&nbsp;</label>
+            <button class="button is-light is-fullwidth" type="submit">Filter</button>
+          </div>
+        </div> 
+
+        <div class="mt-2">
+          <a class="button is-info" href="/reports/sales-by-product?format=csv">Download CSV</a>
+        </div>
+      </form>
 
       <div class="table-container">
         <table class="table is-fullwidth is-striped is-hoverable">
