@@ -1912,16 +1912,26 @@ def audit_logs():
     keyword = request.args.get("q", "").strip()
     export_format = request.args.get("format", "").lower()
 
+    page = request.args.get("page", 1, type=int)
+    rowsPerPage = request.args.get("pageCount", 20, type=int)
+
+    if rowsPerPage not in [20, 50, 100]:
+        rowsPerPage = 20
+
+    offset = (page - 1) * rowsPerPage
+
     base_query = """
         SELECT *
         FROM (
             SELECT
-                pa.DateAdjusted AS EventDate,
-                'PasswordAdjustments' AS SourceTable,
-                pa.TypeOfChange AS EventType,
-                COALESCE(actor.Name, pa.AdjustedByUName) AS Actor,
-                COALESCE(target.Name, pa.AdjustedUName) AS Target,
-                CONCAT('Password change event for ', pa.AdjustedUName) AS Details
+				pa.DateAdjusted AS EventDate,
+				'PasswordAdjustments' AS SourceTable,
+				pa.TypeOfChange AS EventType,
+				COALESCE(actor.Name, pa.AdjustedByUName) AS Actor,
+				actor.Email AS ActorEmail,
+				COALESCE(target.Name, pa.AdjustedUName) AS Target,
+				target.Email AS TargetEmail,
+				CONCAT('Password change event for ', pa.AdjustedUName) AS Details
             FROM PasswordAdjustments pa
             LEFT JOIN Users actor ON actor.Username = pa.AdjustedByUName
             LEFT JOIN Users target ON target.Username = pa.AdjustedUName
@@ -1929,47 +1939,74 @@ def audit_logs():
             UNION ALL
 
             SELECT
-                l.LoginDate AS EventDate,
-                'Logins' AS SourceTable,
-                CASE
-                    WHEN l.LoginResult = 1 THEN 'Successful Login'
-                    ELSE 'Failed Login'
-                END AS EventType,
-                COALESCE(u.Name, l.LoginUser) AS Actor,
-                '' AS Target,
-                CONCAT('Login user: ', l.LoginUser) AS Details
+				l.LoginDate AS EventDate,
+				'Logins' AS SourceTable,
+				CASE
+					WHEN l.LoginResult = 1 THEN 'Successful Login'
+					ELSE 'Failed Login'
+				END AS EventType,
+				COALESCE(u.Name, l.LoginUser) AS Actor,
+				u.Email AS ActorEmail,
+				'' AS Target,
+				'' AS TargetEmail,
+				CONCAT('Login user: ', l.LoginUser) AS Details
             FROM Logins l
             LEFT JOIN Users u ON (u.Email = l.LoginUser OR u.Username = l.LoginUser)
 
             UNION ALL
 
             SELECT
-                p.DateAdjusted AS EventDate,
-                'PointAdjustments' AS SourceTable,
-                p.AdjustmentType AS EventType,
-                p.AdjustedByUName AS Actor,
-                p.DriverUName AS Target,
-                CONCAT('Points: ', p.AdjustmentPoints, ' | Reason: ', COALESCE(p.AdjustmentReason, '')) AS Details
-            FROM PointAdjustments p
+				p.DateAdjusted AS EventDate,
+				'PointAdjustments' AS SourceTable,
+				p.AdjustmentType AS EventType,
+				COALESCE(actor.Name, p.AdjustedByUName) AS Actor,
+				actor.Email AS ActorEmail,
+				COALESCE(target.Name, p.DriverUName) AS Target,
+				target.Email AS TargetEmail,
+				CONCAT('Points: ', p.AdjustmentPoints, ' | Reason: ', COALESCE(p.AdjustmentReason, '')) AS Details
+			FROM PointAdjustments p
+			LEFT JOIN Users actor ON actor.Username = p.AdjustedByUName
+			LEFT JOIN Users target ON target.Username = p.DriverUName
         ) audit_rows
     """
 
     params = []
+	
     if keyword:
         like = f"%{keyword}%"
         base_query += """
-            WHERE
-                SourceTable LIKE %s OR
-                EventType LIKE %s OR
-                Actor LIKE %s OR
-                Target LIKE %s OR
-                Details LIKE %s
-        """
-        params.extend([like, like, like, like, like])
+	        WHERE
+				SourceTable LIKE %s OR
+				EventType LIKE %s OR
+				Actor LIKE %s OR
+				ActorEmail LIKE %s OR
+				Target LIKE %s OR
+				TargetEmail LIKE %s OR
+				Details LIKE %s
+		"""
+        params.extend([like, like, like, like, like, like, like])
+
+    count_query = f"""
+		SELECT COUNT(*) AS totalRows
+		FROM ({base_query}) counted_audit_rows
+	"""
+
+    rowTotal = selectDb(count_query, tuple(params)) or [{"totalRows": 0}]
+    totalRows = rowTotal[0]["totalRows"] if rowTotal else 0
+    numPages = max(1, math.ceil(totalRows / rowsPerPage))
 
     base_query += " ORDER BY EventDate DESC"
 
-    rows = selectDb(base_query, tuple(params)) or []
+    if export_format == "csv":
+        rows = selectDb(base_query, tuple(params)) or []
+        return build_csv_response(
+            "audit_logs.csv",
+            ["EventDate", "SourceTable", "EventType", "Actor", "ActorEmail", "Target", "TargetEmail", "Details"],
+            rows
+		)
+
+    paged_query = base_query + " LIMIT %s OFFSET %s"
+    rows = selectDb(paged_query, tuple(list(params) + [rowsPerPage, offset])) or []
 
     if export_format == "csv":
         return build_csv_response(
@@ -1983,7 +2020,10 @@ def audit_logs():
         "audit_logs.html",
         layout=nav,
         rows=rows,
-        keyword=keyword
+        keyword=keyword,
+        page=page,
+        pageNum=range(1, numPages + 1),
+        pageRows=rowsPerPage
     )
 
 @application.route("/<accountType>/users/<int:UserID>/edit", methods=["POST"])

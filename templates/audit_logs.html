@@ -17,10 +17,25 @@
             <label class="label">Keyword</label>
             <input class="input" type="text" name="q" value="{{ keyword }}" placeholder="driver name, username, sponsor...">
           </div>
+      
+          <div class="column is-narrow">
+            <div class="field">
+              <label class="label">Rows per Page</label>
+              <div class="select">
+                <select name="pageCount" onchange="this.form.submit()">
+                  <option value="20" {% if pageRows == 20 %}selected{% endif %}>20</option>
+                  <option value="50" {% if pageRows == 50 %}selected{% endif %}>50</option>
+                  <option value="100" {% if pageRows == 100 %}selected{% endif %}>100</option>
+                </select>
+              </div>
+            </div>
+          </div>
+      
           <div class="column is-narrow">
             <label class="label">&nbsp;</label>
             <button class="button is-light" type="submit">Search</button>
           </div>
+      
           <div class="column is-narrow">
             <label class="label">&nbsp;</label>
             <button class="button is-info" type="submit" name="format" value="csv">Download CSV</button>
@@ -28,34 +43,64 @@
         </div>
       </form>
 
-      <table class="table is-fullwidth is-striped">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Source</th>
-            <th>Event</th>
-            <th>Actor</th>
-            <th>Target</th>
-            <th>Details</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for r in rows %}
-          <tr>
-            <td>{{ r.EventDate }}</td>
-            <td>{{ r.SourceTable }}</td>
-            <td>{{ r.EventType }}</td>
-            <td>{{ r.Actor }}</td>
-            <td>{{ r.Target }}</td>
-            <td>{{ r.Details }}</td>
-          </tr>
-          {% else %}
-          <tr>
-            <td colspan="6">No audit rows found.</td>
-          </tr>
+      <div class="table-container">
+        <table class="table is-fullwidth is-striped">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Source</th>
+              <th>Event</th>
+              <th>Actor</th>
+              <th>Actor Email</th>
+              <th>Target</th>
+              <th>Target Email</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in rows %}
+            <tr>
+              <td>{{ r.EventDate }}</td>
+              <td>{{ r.SourceTable }}</td>
+              <td>{{ r.EventType }}</td>
+              <td>{{ r.Actor }}</td>
+              <td>{{ r.ActorEmail }}</td>
+              <td>{{ r.Target }}</td>
+              <td>{{ r.TargetEmail }}</td>
+              <td>{{ r.Details }}</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="8">No audit rows found.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <nav class="pagination is-centered" role="navigation">
+        {% if page > 1 %}
+          <a href="?page={{ page - 1 }}&pageCount={{ pageRows }}&q={{ keyword }}" class="pagination-previous">Previous</a>
+        {% else %}
+          <a href="#" class="pagination-previous" disabled>Previous</a>
+        {% endif %}
+      
+        {% if pageNum|length > 1 and page < pageNum|length %}
+          <a href="?page={{ page + 1 }}&pageCount={{ pageRows }}&q={{ keyword }}" class="pagination-next">Next page</a>
+        {% else %}
+          <a href="#" class="pagination-next" disabled>Next page</a>
+        {% endif %}
+      
+        <ul class="pagination-list">
+          {% for p in pageNum %}
+            {% if p == page %}
+              <li><a href="#" class="pagination-link is-current" aria-current="page">{{ p }}</a></li>
+            {% else %}
+              <li><a href="?page={{ p }}&pageCount={{ pageRows }}&q={{ keyword }}" class="pagination-link">{{ p }}</a></li>
+            {% endif %}
           {% endfor %}
-        </tbody>
-      </table>
+        </ul>
+      </nav>
     </div>
   </div>
 </div>

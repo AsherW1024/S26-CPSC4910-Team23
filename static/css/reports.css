@@ -86,3 +86,14 @@
 .admin-page .pagination-ellipsis {
     color: var(--surface-text);
 }
+
+.reports-page .table-container,
+.admin-page .table-container {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.reports-page .table,
+.admin-page .table {
+    min-width: 1100px;
+}
