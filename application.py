@@ -4344,21 +4344,28 @@ def getCartData(userID, orgID):
 			AND orgID=%s
 	"""
 	rows = selectDb(query=getCartItemsQuery, params=(userID, orgID))
-	#collect just the product ids into a list
+
 	cartProductIds = []
-	#collect quantities of products into a list
 	cartQuantities = []
 	for row in rows:
 		cartProductIds.append(row.get("productID"))
 		cartQuantities.append(row.get("amount"))
 
 	cartProductData = []
-	for productId in cartProductIds:
-		cartProductData.append(getProductData(productId))
+	validQuantities = []
+
+	for i, productId in enumerate(cartProductIds):
+		product = getProductData(productId)
+		if product:
+			cartProductData.append(product)
+			validQuantities.append(cartQuantities[i])
+
+	if not cartProductData:
+		return []
 
 	cartProductData = adjustPrice(cartProductData)
 
-	for i, amount in enumerate(cartQuantities):
+	for i, amount in enumerate(validQuantities):
 		cartProductData[i]["quantity"] = amount
 
 	return cartProductData
