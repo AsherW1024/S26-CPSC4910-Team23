@@ -8,7 +8,7 @@
 
 {% block content %}
 <div class="container is-max-desktop mt-6">
-  <h1 class="title">Deduct Points</h1>
+  <h1 class="title">Adjust Points</h1>
 
   <div class="box">
     <p><strong>Driver:</strong> {{ driver.DriverName }} ({{ driver.Username }})</p>
@@ -16,6 +16,18 @@
     <p><strong>Organization:</strong> {{ driver.OrgName }}</p>
     <p><strong>Current Points:</strong> {{ driver.TotalPoints }}</p>
   </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <ul class=flashes>
+      {% for category, message in messages %}
+        {% if category in ["validation"] %}
+            <div class="{{ category }}">{{ message }}</div>
+        {% endif %}
+      {% endfor %}
+      </ul>
+    {% endif %}
+  {% endwith %}
 
   <form method="POST" action="/organization/users/{{ driver.UserID }}/points">
     <div class="field">

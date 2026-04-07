@@ -1,0 +1,56 @@
+{% extends layout %}
+{% block title %}Bulk User Upload{% endblock %}
+{% block page_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/bulk_upload.css">
+{% endblock %}
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="container" style="margin-top: 1rem;">
+      {% for category, message in messages %}
+        <div class="notification
+          {% if category == 'success' %}is-success
+          {% elif category == 'bulkError' or category == 'validation' %}is-danger
+          {% else %}is-info{% endif %}">
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+{% block content %}
+<div class="content">
+	<h1>Bulk User Upload</h1>
+	<div class="page-info-div">
+		{% if session.get("role")=="Sponsor" %}
+		<p>Use the file upload below to upload a .txt file containg the user information you want to upload</p>
+		<p>It should be formatted like...</p>
+		<i>type||first name|last name|email address|points|reason for points</i>
+		<p>The type refers to the user type (driver or sponsor) that the rest of the line is defining the data for</p>
+		<p>There should be 2 "|" characters between the type and first name</p>
+		<p>Use the character D to define or add points to a driver account and the character S for sponsor accounts</p>
+		{% elif session.get("role")=="Admin" %}
+		<p>Use the file upload below to upload a .txt file containing the records you want to process.</p>
+		<p>Driver format:</p>
+		<p>D|organization name|first name|last name|email address|points|reason for points</p>
+		<p>Organization format:</p>
+		<p>O|organization name</p>
+		<p>If a driver email already exists and belongs to a driver account, bulk upload will update that driver's points and auto-accept them into the uploaded organization.</p>
+		<p>If a driver does not exist yet, bulk upload will create the driver, assign them to the uploaded organization, and mark the uploaded application as accepted automatically.</p>
+		{% endif %}
+	</div>
+	<div class="error-div">
+		{% for message in get_flashed_messages(category_filter=["bulkError"]) %}
+		<p class="error-message">{{message}}</p>
+		{% endfor %}
+	</div>
+	<div class="file-upload-div">
+		<form {% if session.get("role")=="Sponsor" %}action="/users/bulk/sponsor"{% elif session.get("role")=="Admin"%}action="/users/bulk/admin"{% endif %} method="post" class="file-upload" enctype="multipart/form-data">
+			<label for="bulk-update-file">Upload a .txt file with the correct format:</label>
+			<input type="file" name="bulk-update-file" accept=".txt" required>
+			<button type="submit">Bulk Update</button>
+		</form>
+	</div>
+</div>
+{% endblock %}

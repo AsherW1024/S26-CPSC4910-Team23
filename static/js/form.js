@@ -29,6 +29,14 @@ function confirmOrgLeave() {
     return confirm("Are you sure you want to leave this organization?");
 }
 
+function confirmOrgActivate() {
+    return confirm("Are you sure you want to activate this organization?");
+}
+
+function confirmOrgDeactivate() {
+    return confirm("Are you sure you want to deactivate this organization?");
+}
+
 function promptOrgRename(OrgID) {
     const message = prompt("Enter a new name for this organization:");
 

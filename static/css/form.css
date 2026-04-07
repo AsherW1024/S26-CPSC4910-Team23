@@ -1,3 +1,29 @@
+body {
+    background: var(--page-bg);
+    color: var(--page-text);
+    min-height: 100vh;
+}
+
+.container.is-max-desktop.mt-6 {
+    max-width: 720px;
+    margin-top: 2.5rem;
+}
+
+.container.is-max-desktop.mt-6 .title,
+.container.is-max-desktop.mt-6 .label,
+.container.is-max-desktop.mt-6 h2,
+.container.is-max-desktop.mt-6 h3,
+.container.is-max-desktop.mt-6 h5 {
+    color: var(--page-text);
+}
+
+.container.is-max-desktop.mt-6 .box {
+    border-radius: 14px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.20);
+    background: #ffffff;
+    color: #111;
+}
+
 .error {
     display: block;
     visibility: hidden;

@@ -1,0 +1,100 @@
+{% extends layout %}
+
+{% block title %}Checkout{% endblock %}
+
+{% block page_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/form.css">
+<link rel="stylesheet" type="text/css" href="/static/css/checkout.css">
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+	<div class="box">
+		<form method="POST" action="/orders/confirm">
+			<div class="field">
+				<label class="label">Street Address</label>
+				<div class="control">
+					<input class="input" type="text" name="address" placeholder="Address" value="{{ shippingAddress.get('street', '') if shippingAddress else '' }}" required>
+					<span class="error">
+						Please enter a valid address
+					</span>
+				</div>
+			</div>
+
+			<div class="field">
+				<label class="label">City</label>
+				<div class="control">
+					<input class="input" type="text" name="city" placeholder="City Name" value="{{ shippingAddress.get('city', '') if shippingAddress else '' }}" required>
+					<span class="error">
+						Please enter a valid city
+					</span>
+				</div>
+			</div>
+
+			<div class="field">
+				<label class="label">State</label>
+				<div class="control">
+					<select name="state" class="input" required>
+						<option value="" {% if not shippingAddress or not shippingAddress.get('state') %}selected{% endif %} disabled>Select a state</option>
+						<option value="AL" {% if shippingAddress and shippingAddress.get('state') == 'AL' %}selected{% endif %}>Alabama</option>
+						<option value="AK" {% if shippingAddress and shippingAddress.get('state') == 'AK' %}selected{% endif %}>Alaska</option>
+						<option value="AZ" {% if shippingAddress and shippingAddress.get('state') == 'AZ' %}selected{% endif %}>Arizona</option>
+						<option value="AR" {% if shippingAddress and shippingAddress.get('state') == 'AR' %}selected{% endif %}>Arkansas</option>
+						<option value="CA" {% if shippingAddress and shippingAddress.get('state') == 'CA' %}selected{% endif %}>California</option>
+						<option value="CO" {% if shippingAddress and shippingAddress.get('state') == 'CO' %}selected{% endif %}>Colorado</option>
+						<option value="CT" {% if shippingAddress and shippingAddress.get('state') == 'CT' %}selected{% endif %}>Connecticut</option>
+						<option value="DE" {% if shippingAddress and shippingAddress.get('state') == 'DE' %}selected{% endif %}>Delaware</option>
+						<option value="FL" {% if shippingAddress and shippingAddress.get('state') == 'FL' %}selected{% endif %}>Florida</option>
+						<option value="GA" {% if shippingAddress and shippingAddress.get('state') == 'GA' %}selected{% endif %}>Georgia</option>
+						<option value="HI" {% if shippingAddress and shippingAddress.get('state') == 'HI' %}selected{% endif %}>Hawaii</option>
+						<option value="ID" {% if shippingAddress and shippingAddress.get('state') == 'ID' %}selected{% endif %}>Idaho</option>
+						<option value="IL" {% if shippingAddress and shippingAddress.get('state') == 'IL' %}selected{% endif %}>Illinois</option>
+						<option value="IN" {% if shippingAddress and shippingAddress.get('state') == 'IN' %}selected{% endif %}>Indiana</option>
+						<option value="IA" {% if shippingAddress and shippingAddress.get('state') == 'IA' %}selected{% endif %}>Iowa</option>
+						<option value="KS" {% if shippingAddress and shippingAddress.get('state') == 'KS' %}selected{% endif %}>Kansas</option>
+						<option value="KY" {% if shippingAddress and shippingAddress.get('state') == 'KY' %}selected{% endif %}>Kentucky</option>
+						<option value="LA" {% if shippingAddress and shippingAddress.get('state') == 'LA' %}selected{% endif %}>Louisiana</option>
+						<option value="ME" {% if shippingAddress and shippingAddress.get('state') == 'ME' %}selected{% endif %}>Maine</option>
+						<option value="MD" {% if shippingAddress and shippingAddress.get('state') == 'MD' %}selected{% endif %}>Maryland</option>
+						<option value="MA" {% if shippingAddress and shippingAddress.get('state') == 'MA' %}selected{% endif %}>Massachusetts</option>
+						<option value="MI" {% if shippingAddress and shippingAddress.get('state') == 'MI' %}selected{% endif %}>Michigan</option>
+						<option value="MN" {% if shippingAddress and shippingAddress.get('state') == 'MN' %}selected{% endif %}>Minnesota</option>
+						<option value="MS" {% if shippingAddress and shippingAddress.get('state') == 'MS' %}selected{% endif %}>Mississippi</option>
+						<option value="MO" {% if shippingAddress and shippingAddress.get('state') == 'MO' %}selected{% endif %}>Missouri</option>
+						<option value="MT" {% if shippingAddress and shippingAddress.get('state') == 'MT' %}selected{% endif %}>Montana</option>
+						<option value="NE" {% if shippingAddress and shippingAddress.get('state') == 'NE' %}selected{% endif %}>Nebraska</option>
+						<option value="NV" {% if shippingAddress and shippingAddress.get('state') == 'NV' %}selected{% endif %}>Nevada</option>
+						<option value="NH" {% if shippingAddress and shippingAddress.get('state') == 'NH' %}selected{% endif %}>New Hampshire</option>
+						<option value="NJ" {% if shippingAddress and shippingAddress.get('state') == 'NJ' %}selected{% endif %}>New Jersey</option>
+						<option value="NM" {% if shippingAddress and shippingAddress.get('state') == 'NM' %}selected{% endif %}>New Mexico</option>
+						<option value="NY" {% if shippingAddress and shippingAddress.get('state') == 'NY' %}selected{% endif %}>New York</option>
+						<option value="NC" {% if shippingAddress and shippingAddress.get('state') == 'NC' %}selected{% endif %}>North Carolina</option>
+						<option value="ND" {% if shippingAddress and shippingAddress.get('state') == 'ND' %}selected{% endif %}>North Dakota</option>
+						<option value="OH" {% if shippingAddress and shippingAddress.get('state') == 'OH' %}selected{% endif %}>Ohio</option>
+						<option value="OK" {% if shippingAddress and shippingAddress.get('state') == 'OK' %}selected{% endif %}>Oklahoma</option>
+						<option value="OR" {% if shippingAddress and shippingAddress.get('state') == 'OR' %}selected{% endif %}>Oregon</option>
+						<option value="PA" {% if shippingAddress and shippingAddress.get('state') == 'PA' %}selected{% endif %}>Pennsylvania</option>
+						<option value="RI" {% if shippingAddress and shippingAddress.get('state') == 'RI' %}selected{% endif %}>Rhode Island</option>
+						<option value="SC" {% if shippingAddress and shippingAddress.get('state') == 'SC' %}selected{% endif %}>South Carolina</option>
+						<option value="SD" {% if shippingAddress and shippingAddress.get('state') == 'SD' %}selected{% endif %}>South Dakota</option>
+						<option value="TN" {% if shippingAddress and shippingAddress.get('state') == 'TN' %}selected{% endif %}>Tennessee</option>
+						<option value="TX" {% if shippingAddress and shippingAddress.get('state') == 'TX' %}selected{% endif %}>Texas</option>
+						<option value="UT" {% if shippingAddress and shippingAddress.get('state') == 'UT' %}selected{% endif %}>Utah</option>
+						<option value="VT" {% if shippingAddress and shippingAddress.get('state') == 'VT' %}selected{% endif %}>Vermont</option>
+						<option value="VA" {% if shippingAddress and shippingAddress.get('state') == 'VA' %}selected{% endif %}>Virginia</option>
+						<option value="WA" {% if shippingAddress and shippingAddress.get('state') == 'WA' %}selected{% endif %}>Washington</option>
+						<option value="WV" {% if shippingAddress and shippingAddress.get('state') == 'WV' %}selected{% endif %}>West Virginia</option>
+						<option value="WI" {% if shippingAddress and shippingAddress.get('state') == 'WI' %}selected{% endif %}>Wisconsin</option>
+						<option value="WY" {% if shippingAddress and shippingAddress.get('state') == 'WY' %}selected{% endif %}>Wyoming</option>
+					</select>
+					<span class="error">
+						Please enter a valid state
+					</span>
+				</div>
+			</div>
+
+			<button class="button is-block is-info is-large is-fullwidth">Place Order</button>
+		</form>
+	</div>
+</div>
+{% endblock %}

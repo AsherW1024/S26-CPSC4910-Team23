@@ -14,9 +14,10 @@
     <div class="topnav">
         <div class="nav-left">
             <a href="/"> Home </a>
-            {% if session.get('Organization') == None and session.get('role') == "Driver" %}
+            {% if session.get('role') == "Driver" %}
                 <a href="/organization/apply"> Apply </a>
-            {% elif session.get('role') != "Admin" %}
+                <a href="/{{ session.get('UserID') }}/organizations"> Organizations </a>
+            {% elif session.get('role') == "Sponsor" %}
                 <a href="/organization"> Organization </a>
             {% elif session.get('role') == "Admin" %}
                 <a href="/catalog"> Catalog </a>
@@ -25,6 +26,7 @@
         </div>
         <div class="nav-right">
             {% if session.get('role') == "Admin" %}
+            <a href="/createOrg"> Create Organization </a>
             <div class="dropdown">
                 <button class="dropbtn" type="button">Create Account</button>
                 <div class="dropdown-content">
@@ -48,42 +50,74 @@
             <div class="dropdown">
                 <button class="dropbtn" type="button">Reports</button>
                 <div class="dropdown-content">
+                    <a href="/admin/audit-logs">Audit Log Search</a>
+                    <a href="/bulkRegister">Bulk User Upload</a>
+                    <a href="/organizations/enroll-driver">Enroll Driver</a>
                     <a href="/reports/applications">Application Report</a>
                     <a href="/reports/logins">Login Report</a>
                     <a href="/reports/passwords">Password Report</a>
                     <a href="/reports/points">Points Report</a>
+                    <a href="/reports/sales-by-driver">Sales by Driver</a>
+                    <a href="/reports/sales-by-organization">Sales by Organization</a>
+                    <a href="/reports/sales-by-product">Sales by Product</a>
+                    <a href="/reports/refunds-impact">Refund/Cancellation Impact</a>
+                    <a href="/reports/invoices">Invoice Report</a>
                 </div>
             </div>
             {% endif %}
             <div class="dropdown">
-                <button class="icon-user dropbtn" type="button">
-                    <i class="fa fa-user fa-1x"></i>
+                <button class="icon-bars dropbtn" type="button">
+                    <i class="fa fa-bars fa-1x"></i>
                 </button>
                 <div class="dropdown-content">
-                    <a href="/profile">Profile</a>
-                    <a href="/settings">Settings</a>
+                    <a href="/profile">
+                        <i class="fa fa-user fa-1x"></i> Profile
+                    </a>
+                    <a href="/settings">
+                        <i class="fa fa-gear fa-1x"></i> Settings
+                    </a>
                 
                     {% if session.get('role') == "Driver" %}
-                        <a href="/wishlist">Wishlist</a>
+                        <a href="/wishlist">
+                            <i class="fa fa-heart fa-1x"></i> Wishlist
+                        </a>
+                        <a href="/orders">
+                            <i class="fa fa-envelope fa-1x"></i> Orders
+                        </a>
+                        <a href="{{ url_for('driver_point_history') }}">
+                            <i class="fa fa-coins fa-1x"></i> Point History
+                        </a>
                     {% elif session.get('role') == "Admin" %}
-                        <a href="/admin/users">Edit Users</a>
+                        <a href="/admin/users">
+                            <i class="fa fa-pen-to-square fa-1x"></i> Edit Users
+                        </a>
                     {% elif session.get('role') == "Sponsor" %}
-                        <a href="/sponsor/users">Edit Users</a>
+                        <a href="/sponsor/users">
+                            <i class="fa fa-pen-to-square fa-1x"></i> Edit Users
+                        </a>
                     {% endif %}
                     {% if session.get("admin_real_UserID") %}
                     <form method="POST" action="/admin/stop-view-as" style="margin:0;">
                         <button class="button is-white is-fullwidth" type="submit">
-                            Stop Viewing As
+                            <i class="fa fa-user-slash fa-1x"></i> Stop Viewing As
                         </button>
                     </form>
                     {% endif %}
-                    <a href="/about"> About us </a>
-                    <a href="/logout">Logout</a>
+                    {% if session.get('role') != "Admin"%}
+                        <a href="/bugReport">
+                            <i class="fa fa-bug fa-1x"></i> Report a Bug 
+                        </a>
+                    {% endif %}
+                    <a href="/about"> 
+                        <i class="fa fa-circle-info fa-1x"></i> About us 
+                    </a>
+                    <a href="/logout">
+                        <i class="fa fa-arrow-right-from-bracket fa-1x"></i> Logout
+                    </a>
                 </div>
             </div>
         </div>
     </div>
-    <br> <br>
     
     {% block content %}{% endblock %}
 </body>

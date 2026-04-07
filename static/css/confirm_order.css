@@ -1,0 +1,11 @@
+.confirm-button {
+	background-color: rgb(136, 234, 136);
+	font-size: 50px;
+	border-radius: 40px;
+	border: none;
+	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+	padding: 15px;
+}
+.confirm-button-wrapper {
+	display: grid;
+}

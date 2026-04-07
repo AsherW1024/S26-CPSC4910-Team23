@@ -1,27 +1,52 @@
-{% extends "page.html" %}
+{% extends layout %}
 
 {% block title %}Home Page{% endblock %}
 
 {% block page_css %}
-<link rel="stylesheet" type="text/css" href="/static/css/about.css">
+<link rel="stylesheet" type="text/css" href="/static/css/home.css">
 {% endblock %}
 
 {% block content %}
-<h1>Home Page</h1>
-{% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-        <ul class=flashes>
-        {% for category, message in messages %}
-            {% if category in ["driver", "admin", "sponsor"] %}
-                <h2 class="{{ category }}">{{ message }}</h2>
+<div class="home-page">
+    <div class="home-card">
+        <h1>Home Page</h1>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class=flashes>
+                {% for category, message in messages %}
+                    {% if category in ["driver", "admin", "sponsor"] %}
+                        <h2 class="{{ category }}">{{ message }}</h2>
+                    {% endif %}
+                {% endfor %}
+                </ul>
             {% endif %}
-        {% endfor %}
-        </ul>
-    {% endif %}
-{% endwith %}
-<p>We welcome you to our good driving team!</p>
-<br>
-<p>We help sponsors incentivize good driving through rewards.</p>
-<br>
-<p>We hope you enjoy our system!</p>
+        {% endwith %}
+
+        <p>We welcome you to our good driving team!</p>
+        <p>We help sponsors incentivize good driving through rewards.</p>
+        <p>We hope you enjoy our system!</p>
+    </div>
+</div>
+
+{% if session.get("role") == "Driver" and driver_point_summary %}
+<div class="box" style="margin-top: 1.5rem;">
+	<h2 class="title is-5">Points Activity</h2>
+	<p><strong>Current Balance:</strong> {{ driver_point_summary.balance }}</p>
+
+	{% if driver_point_summary.transactions %}
+	<ul>
+		{% for tx in driver_point_summary.transactions %}
+		<li>
+			{{ tx.display_date }} — {{ tx.transaction_type }} — {{ tx.delta_points }}
+		</li>
+		{% endfor %}
+	</ul>
+	{% else %}
+	<p>No recent point activity.</p>
+	{% endif %}
+
+	<a class="button is-link is-small" href="{{ url_for('driver_point_history') }}">View Full Point History</a>
+</div>
+{% endif %}
 {% endblock %}

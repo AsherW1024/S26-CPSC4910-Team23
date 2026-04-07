@@ -1,0 +1,79 @@
+{% extends layout %}
+
+{% block title %}Checkout{% endblock %}
+
+{% block page_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/cart.css">
+<link rel="stylesheet" type="text/css" href="/static/css/confirm_order.css">
+{% endblock %}
+
+{% block content %}
+
+<div class="content">
+	<h1 class="title">Confirm Order Details</h1>
+
+	<div id=order-total-container class="table-container">
+		<table class="cart-table">
+			<h2>Total</h2>
+			<tbody>
+				<tr class="product-row">
+					<td class="cell"><div class="cell-content"><p>{{total}} Points</p></div></td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+
+	<div class="table-container">
+		<table id="cart-items-container" class="cart-table">
+			<h2>Order Items</h2>
+			<thead>
+				<tr>
+					<th>Image</th>
+					<th>Name</th>
+					<th>Points</th>
+					<th>Amount</th>
+				</tr>
+			</thead>
+			<tbody>
+			{% for product in cart%}
+				<tr data-product-id="{{product.id}}" class="product-row">
+					<td class="cell"><div class="cell-content"><img src="{{product.thumbnail}}"></div></td>
+					<td class="cell"><div class="cell-content"><p>{{product.title}}</p></div></td>
+					<td class="cell"><div class="cell-content"><p>{{product.price*product.quantity}} Points</p></div></td>
+					<td class="cell"><div class="cell-content"><p>{{product.quantity}}</p></div></td>
+				</tr>
+			{% endfor %}
+			</tbody>
+		</table>
+	</div>
+
+	<div id=order-address-container class="table-container">
+		<table class="cart-table">
+			<h2>Address</h2>
+			<thead>
+				<tr>
+					<th>Street Address</th>
+					<th>City</th>
+					<th>State</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr class="product-row">
+					<td class="cell"><div class="cell-content"><p>{{address.get("address")}}</p></div></td>
+					<td class="cell"><div class="cell-content"><p>{{address.get("city")}}</p></div></td>
+					<td class="cell"><div class="cell-content"><p>{{address.get("state")}}</p></div></td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+
+	<div class="confirm-button-wrapper">
+		<form action=/orders method="post">
+			<input name="address" value="{{address.get('address')}}"" hidden>
+			<input name="city" value="{{address.get('city')}}" hidden>
+			<input name="state" value="{{address.get('state')}}" hidden>
+			<button type="submit" class="confirm-button">Confirm</button>
+		</form>
+	</div>
+
+{% endblock %}

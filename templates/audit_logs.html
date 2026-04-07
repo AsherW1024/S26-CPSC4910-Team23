@@ -1,0 +1,62 @@
+{% extends layout %}
+
+{% block title %}Audit Logs{% endblock %}
+
+{% block page_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/reports.css">
+{% endblock %}
+
+{% block content %}
+<div class="reports-page">
+  <div class="container is-max-desktop mt-6">
+    <div class="box">
+      <h2 class="title is-2">Audit Log Search</h2>
+      <form method="GET" class="mb-4">
+        <div class="columns is-vcentered">
+          <div class="column">
+            <label class="label">Keyword</label>
+            <input class="input" type="text" name="q" value="{{ keyword }}" placeholder="driver name, username, sponsor...">
+          </div>
+          <div class="column is-narrow">
+            <label class="label">&nbsp;</label>
+            <button class="button is-light" type="submit">Search</button>
+          </div>
+          <div class="column is-narrow">
+            <label class="label">&nbsp;</label>
+            <button class="button is-info" type="submit" name="format" value="csv">Download CSV</button>
+          </div>
+        </div>
+      </form>
+
+      <table class="table is-fullwidth is-striped">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Source</th>
+            <th>Event</th>
+            <th>Actor</th>
+            <th>Target</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+          <tr>
+            <td>{{ r.EventDate }}</td>
+            <td>{{ r.SourceTable }}</td>
+            <td>{{ r.EventType }}</td>
+            <td>{{ r.Actor }}</td>
+            <td>{{ r.Target }}</td>
+            <td>{{ r.Details }}</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="6">No audit rows found.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

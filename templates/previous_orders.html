@@ -1,0 +1,68 @@
+{% extends layout %}
+
+{% block title %}Orders{% endblock %}
+
+{% block page_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/previous_orders.css">
+{% endblock %}
+
+{% block content %}
+<div class="content">
+	<h1>Previous Orders</h1>
+	<form method="GET" action="/orders" class="mb-4">
+		<div class="columns is-centered is-mobile">
+			<div class="column is-3">
+				<label class="label">Start Date</label>
+				<input class="input" type="date" name="start" value="{{ start or '' }}">
+			</div>
+			<div class="column is-3">
+				<label class="label">End Date</label>
+				<input class="input" type="date" name="end" value="{{ end or '' }}">
+			</div>
+			<div class="column is-2">
+				<label class="label">&nbsp;</label>
+				<button class="button is-info is-fullwidth" type="submit">Filter</button>
+			</div>
+			<div class="column is-2">
+				<label class="label">&nbsp;</label>
+				<a class="button is-light is-fullwidth" href="/orders">Clear</a>
+			</div>
+		</div>
+	</form>
+	
+	{% if not orders %}
+	<p>You have not yet completed any orders.</p>
+	{% else %}
+	<div class="table-container">
+		<table class="orders-table">
+			<thead>
+				<tr>
+					<th>Image</th>
+					<th>Number of Items</th>
+					<th>Total</th>
+					<th>Date Ordered</th>
+					<th>Time Ordered</th>
+					<th>Delivery Address</th>
+					<th>Status</th>
+					<th>Arrival Date</th>
+				</tr>
+			</thead>
+			<tbody>
+				{%for order in orders%}
+				<tr data-order-id="{{order.get('productID')}}" class="order-row">
+					<td class="cell"><div class="cell-content"><img src="{{order.get('thumbnail')}}"></div></td>
+					<td class="cell"><div class="cell-content"><p>{{order.get("itemQuantity")}}</p></div></td>
+					<td class="cell"><div class="cell-content"><p>{{order.get('pointTotal')}} Points</p></div></td>
+					<td class="cell"><div class="cell-content"><p>{{order.get('orderDate')}}</p></div></td>
+					<td class="cell"><div class="cell-content"><p>{{order.get('orderTime')}}</p></div></td>
+					<td class="cell"><div class="cell-content"><p>{{order.get('deliveryAddress')}} {{order.get('deliveryCity')}}, {{order.get('deliveryState')}}</p></div></td>
+					<td class="cell"><div class="cell-content"><p>{{order.get('status')}}</p></div></td>
+					<td class="cell"><div class="cell-content"><p>{{order.get('estimatedArrival')}}</p></div></td>
+				</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	</div>
+</div>
+{% endif %}
+{%endblock%}

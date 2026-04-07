@@ -1,0 +1,76 @@
+{% extends layout %}
+
+{% block title %}Point History{% endblock %}
+
+{% block content %}
+<section class="section">
+	<div class="container">
+		<h1 class="title">Point History</h1>
+		<p><strong>Current Balance:</strong> {{ point_summary.balance }}</p>
+
+		<div class="mb-4">
+			<a class="button is-link" href="{{ url_for('driver_point_history', format='csv') }}">Export CSV</a>
+		</div>
+
+		<h2 class="subtitle">Transactions</h2>
+		<table class="table is-fullwidth is-striped">
+			<thead>
+				<tr>
+					<th>Date</th>
+					<th>Time</th>
+					<th>Type</th>
+					<th>Points</th>
+					<th>Balance After</th>
+					<th>Description</th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for tx in point_summary.transactions %}
+				<tr>
+					<td>{{ tx.display_date }}</td>
+					<td>{{ tx.display_time }}</td>
+					<td>{{ tx.transaction_type }}</td>
+					<td>{{ tx.delta_points }}</td>
+					<td>{{ tx.balance_after }}</td>
+					<td>{{ tx.description }}</td>
+				</tr>
+				{% else %}
+				<tr>
+					<td colspan="6">No point history found.</td>
+				</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+
+        <h2 class="subtitle">Pending Points</h2>
+		<table class="table is-fullwidth is-striped">
+			<thead>
+				<tr>
+					<th>Date</th>
+					<th>Time</th>
+					<th>Type</th>
+					<th>Pending Points</th>
+					<th>Description</th>
+					<th>Status</th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for item in point_summary.pending %}
+				<tr>
+					<td>{{ item.display_date }}</td>
+					<td>{{ item.display_time }}</td>
+					<td>{{ item.transaction_type }}</td>
+					<td>{{ item.pending_points }}</td>
+					<td>{{ item.description }}</td>
+					<td>{{ item.status }}</td>
+				</tr>
+				{% else %}
+				<tr>
+					<td colspan="6">No pending point activity.</td>
+				</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	</div>
+</section>
+{% endblock %}

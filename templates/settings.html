@@ -7,33 +7,115 @@
 {% endblock %}
 
 {% block content %}
-<div class="settings-wrap">
-  <h1>Settings</h1>
-  <p class="muted">Customize how the site looks for your device.</p>
+<div class="settings-page">
+  <div class="settings-wrap">
+    <h1>Settings</h1>
+    <p class="muted">Customize how the site looks for your device.</p>
 
-  <div class="settings-card">
-    <div class="settings-row">
-      <label for="themeSelect">Theme</label>
-      <select id="themeSelect">
-        <option value="system">System</option>
-        <option value="light">Light</option>
-        <option value="dark">Dark</option>
-      </select>
-      <div class="hint">“System” follows your device setting.</div>
-    </div>
+    <div class="settings-card">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            {% if category == "success" %}
+              <div class="{{ category }}">{{ message }}</div>
+            {% endif %}
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+      <form method="POST" action="/settings/appearance">
+        <div class="settings-row">
+          <label for="themeSelect">Theme</label>
+          <select id="themeSelect" name="themePref">
+            <option value="system" {% if themePref=="system" %} selected {% endif %}>System</option>
+            <option value="light" {% if themePref=="light" %} selected {% endif %}>Light</option>
+            <option value="dark" {% if themePref=="dark" %} selected {% endif %}>Dark</option>
+          </select>
+          <div class="hint">“System” follows your device setting.</div>
+        </div>
+      
+        <div class="settings-row">
+          <label for="fontSelect">Font size</label>
+          <select id="fontSelect" name="fontPref">
+            <option value="sm" {% if fontPref=="sm" %} selected {% endif %}>Small</option>
+            <option value="md" {% if fontPref=="md" %} selected {% endif %}>Default</option>
+            <option value="lg" {% if fontPref=="lg" %} selected {% endif %}>Large</option>
+            <option value="xl" {% if fontPref=="xl" %} selected {% endif %}>Extra Large</option>
+          </select>
+          <div class="hint">Applies across all pages.</div>
+        </div>
+      
+        <div class="settings-row">
+          <button class="button is-info" type="submit">Save Appearance</button>
+        </div>
+      </form>
 
-    <div class="settings-row">
-      <label for="fontSelect">Font size</label>
-      <select id="fontSelect">
-        <option value="sm">Small</option>
-        <option value="md">Default</option>
-        <option value="lg">Large</option>
-        <option value="xl">Extra Large</option>
-      </select>
-      <div class="hint">Applies across all pages.</div>
+      <div class="settings-row">
+        <label for="commMethod"> Communication Preference </label>
+          <form method="POST" action="/settings/communicationPreference" style="display:contents;">
+            <select id="commMethod" name="commPref" onchange="this.form.submit()">
+              <option value="Email" {% if currentPref=="Email" %} selected {% endif %}>Email</option>
+              {% if hasPhoneNum == True %}
+                <option value="PhoneNumber" {% if currentPref=="PhoneNumber" %} selected {% endif %}>Phone Number</option>
+              {% else %}
+                <option disabled>No phone number please enter one in your profile.</option>
+              {% endif %}
+            </select>
+          </form>
+      </div>
+      <div class="settings-row">
+        <label for="notifcheck"> Essential Notifications Only </label>
+        <form method="POST" action="/settings/essentialNotifications" style="display:inline;">
+          <input id="notifcheck" type="checkbox" {% if essentialNotifs==1 %} checked {% endif %} name="essentialNotif" onchange="this.form.submit()">  
+        </form>
+      </div>
+
+      <hr>
+
+      <form method="POST" action="/settings/addresses">
+        <div class="settings-row">
+          <label for="shippingStreet">Shipping Street</label>
+          <input id="shippingStreet" type="text" name="shippingStreet"
+                value="{{ shippingAddress.street if shippingAddress else '' }}">
+        </div>
+
+        <div class="settings-row">
+          <label for="shippingCity">Shipping City</label>
+          <input id="shippingCity" type="text" name="shippingCity"
+                value="{{ shippingAddress.city if shippingAddress else '' }}">
+        </div>
+
+        <div class="settings-row">
+          <label for="shippingState">Shipping State</label>
+          <input id="shippingState" type="text" name="shippingState"
+                value="{{ shippingAddress.state if shippingAddress else '' }}">
+        </div>
+
+        <div class="settings-row">
+          <label for="billingStreet">Billing Street</label>
+          <input id="billingStreet" type="text" name="billingStreet"
+                value="{{ billingAddress.street if billingAddress else '' }}">
+        </div>
+
+        <div class="settings-row">
+          <label for="billingCity">Billing City</label>
+          <input id="billingCity" type="text" name="billingCity"
+                value="{{ billingAddress.city if billingAddress else '' }}">
+        </div>
+
+        <div class="settings-row">
+          <label for="billingState">Billing State</label>
+          <input id="billingState" type="text" name="billingState"
+                value="{{ billingAddress.state if billingAddress else '' }}">
+        </div>
+
+        <div class="settings-row">
+          <button class="button is-info" type="submit">Save Addresses</button>
+        </div>
+
+      </form>
     </div>
   </div>
 </div>
-
+<script src="/static/js/ui_prefs.js"></script>
 <script src="/static/js/settings.js" defer></script>
 {% endblock %}

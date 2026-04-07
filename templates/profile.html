@@ -7,17 +7,34 @@
 {% endblock %}
 
 {% block content %}
-<h1>Profile</h1>
-<a href="/profile/edit">
-	<button class="button">Edit Profile</button>
-</a>
-<p>{{ profile.Name }}</p>
-<br>
-<p>{{ profile.Username }}</p>
-<br>
-<p>{{ profile.Email }}</p>
-<br>
-<p>{{ profile.PhoneNumber }}</p>
-<br>
-<p>end of profile</p>
+<div class="profile-page">
+    <div class="profile-card">
+        <h1>Profile</h1>
+
+        <div class="profile-actions">
+            <a href="/profile/edit" class="button is-light">Edit Profile</a>
+        </div>
+
+        <p><strong>Name:</strong> {{ profile.Name }}</p>
+        <p><strong>Username:</strong> {{ profile.Username }}</p>
+        <p><strong>Email:</strong> {{ profile.Email }}</p>
+        <p><strong>Phone:</strong> {{ profile.PhoneNumber }}</p>
+
+        <p>
+        <strong>Shipping Address:</strong>
+        {{ profile.ShippingAddress.street if profile.ShippingAddress else '' }}
+        {% if profile.ShippingAddress and (profile.ShippingAddress.city or profile.ShippingAddress.state) %}
+            , {{ profile.ShippingAddress.city }}, {{ profile.ShippingAddress.state }}
+        {% endif %}
+        </p>
+
+        <p>
+        <strong>Billing Address:</strong>
+        {{ profile.BillingAddress.street if profile.BillingAddress else '' }}
+        {% if profile.BillingAddress and (profile.BillingAddress.city or profile.BillingAddress.state) %}
+            , {{ profile.BillingAddress.city }}, {{ profile.BillingAddress.state }}
+        {% endif %}
+        </p>
+    </div>
+</div>
 {% endblock %}

@@ -1,3 +1,11 @@
+.point-value-page {
+	min-height: calc(100vh - 52px);
+	background: var(--page-bg);
+	color: var(--page-text);
+	padding: 24px 20px 40px;
+	box-sizing: border-box;
+}
+
 h1 {
 	color: #0073e6;
 	font-size: 6vw;

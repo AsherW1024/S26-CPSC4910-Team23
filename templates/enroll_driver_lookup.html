@@ -1,0 +1,40 @@
+{% extends layout %}
+
+{% block title %}Enroll Driver{% endblock %}
+
+{% block content %}
+<div class="section">
+  <div class="container is-max-desktop">
+    <div class="box">
+      <h1 class="title is-3">Enroll Driver Without Numeric IDs</h1>
+
+      <form method="POST">
+        <div class="field">
+          <label class="label">Organization</label>
+          <div class="control">
+            <div class="select is-fullwidth">
+              <select name="organizationName" required>
+                <option value="">Choose organization</option>
+                {% for org in organizations %}
+                <option value="{{ org.Name }}">{{ org.Name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="label">Driver identifier</label>
+          <div class="control">
+            <input class="input" type="text" name="driverIdentifier" placeholder="username, email, or exact name" required>
+          </div>
+        </div>
+
+        <div class="field">
+          <button class="button is-primary" type="submit">Enroll Driver</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -322,7 +322,7 @@ function showProductDetails(event) {
 	let productDetailsHtml = `
 		<div id="popup-content-bg">
 			<div id="popup-content-div">
-				<button class="cart" data-product-id="${productDetails.id}"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Ic_shopping_cart_48px.svg/640px-Ic_shopping_cart_48px.svg.png"></button>
+				<button class="cart" data-product-id="${productDetails.id}"><img src="/static/images/cart.png"></button>
 				<button id="popup-close">X</button>
 				<div id="popup-images"></div>
 				<h2 class="product-name">${productDetails.title}</H3>
@@ -356,14 +356,17 @@ function showProductDetails(event) {
 				</div>
 				<div id="popup-dimensions">
 					<h3 class="popup-label">Dimensions:</h3>
+					<hr>
 					<div class="side-by-side">
 						<h4 class="popup-sub-label">Depth:</h4>
 						<p class="popup-sub-data">${productDetails.dimensions["depth"]} in</p>
 					</div>
+					<hr>
 					<div class="side-by-side">
 						<h4 class="popup-sub-label">Height:</h4>
 						<p class="popup-sub-data">${productDetails.dimensions["height"]} in</p>
 					</div>
+					<hr>
 					<div class="side-by-side">
 						<h4 class="popup-sub-label">Width:</h4>
 						<p class="popup-sub-data">${productDetails.dimensions["width"]} in</p>
@@ -403,7 +406,7 @@ function showProductDetails(event) {
 		let reviewName = document.createElement("h4");
 		reviewName.innerText = review.reviewerName;
 		let reviewScore = document.createElement("p");
-		reviewScore.innerText = `${review.rating}/5`;
+		reviewScore.innerText = `${review.rating}/5 ★`;
 		let reviewComment = document.createElement("p");
 		reviewComment.innerText = review.comment;
 

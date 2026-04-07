@@ -1,4 +1,4 @@
-{% extends "page.html" %}
+{% extends layout %}
 
 {% block title %}About us{% endblock %}
 
@@ -7,19 +7,23 @@
 {% endblock %}
 
 {% block content %}
-	<h1>About</h1>
-	{% if accountType == 'Admin' %}
-	<a href="/about/edit">
-		<button class="button">Edit Page</button>
-	</a>
-	{% endif %}
-	<p>This application is being developed by {{Team}}</p>
-	<br>
-	<p>This is Version {{Version}}</p>
-	<br>
-	<p>The release Date is {{Release}}</p>
-	<br>
-	<p>Our product's name is {{Name}}</p>
-	<br>
-	<p>Our product is {{Description}}</p>
+<div class="about-page">
+    <div class="about-card">
+        <h1>About</h1>
+
+        {% if accountType == 'Admin' %}
+        <div class="about-actions">
+            <a href="/about/edit" class="button is-light">Edit Page</a>
+            <a href="/about/export?format=json" class="button is-light">Export JSON</a>
+            <a href="/about/export?format=csv" class="button is-light">Export CSV</a>
+        </div>
+        {% endif %}
+
+        <p>This application is being developed by {{ Team }}</p>
+        <p>This is Version {{ Version }}</p>
+        <p>The release date is {{ Release }}</p>
+        <p>Our product's name is {{ Name }}</p>
+        <p>Our product is {{ Description }}</p>
+    </div>
+</div>
 {% endblock %}
