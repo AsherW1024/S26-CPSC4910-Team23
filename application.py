@@ -4310,26 +4310,18 @@ def validate_redemption_request(userID, orgID):
 
 @application.route("/cart/checkout")
 def checkout():
-	if "UserID" not in session:
+	if "UserID" not in session or "OrgID" not in session:
 		return redirect(url_for("home"))
-	try:
-		userID = session.get("UserID")
-		orgID = session.get("OrgID")
 
-		cartTotal = getCartTotal(userID, orgID)
+	userID = session.get("UserID")
+	orgID = session.get("OrgID")
 
-		driverPointTotal = getDriverPoints()
-
-		#don't let user get past cart screen unless they have enough points
-		if driverPointTotal < cartTotal:
-			raise Exception("Driver does not have enough points to complete the order")
-
-	#go back to cart screen if an error occurs
-	except Exception as e:
-		print(e)
+	validation = validate_redemption_request(userID, orgID)
+	if not validation["ok"]:
+		log_redemption_denial(userID, orgID, validation["message"], validation.get("total", 0))
+		flash(validation["message"], "validation")
 		return redirect(url_for("cart"))
 
-	#if user has enough points for the order, continue to checkout screen
 	return render_template("checkout.html", layout="orgnav.html")
 
 def getCartData(userID, orgID):
