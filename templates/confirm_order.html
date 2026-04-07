@@ -11,7 +11,8 @@
 
 <div class="content">
 	<h1 class="title">Confirm Order Details</h1>
-
+	<p><strong>Current Available Points:</strong> {{ driverPoints }}</p>
+	
 	<div id=order-total-container class="table-container">
 		<table class="cart-table">
 			<h2>Total</h2>
@@ -32,15 +33,17 @@
 					<th>Name</th>
 					<th>Points</th>
 					<th>Amount</th>
+					<th>Availability</th>
 				</tr>
 			</thead>
 			<tbody>
 			{% for product in cart%}
 				<tr data-product-id="{{product.id}}" class="product-row">
-					<td class="cell"><div class="cell-content"><img src="{{product.thumbnail}}"></div></td>
+					<td class="cell"><div class="cell-content"><img src="{{product.thumbnail}}" alt="{{ product.title }} product image"></div></td>
 					<td class="cell"><div class="cell-content"><p>{{product.title}}</p></div></td>
-					<td class="cell"><div class="cell-content"><p>{{product.price*product.quantity}} Points</p></div></td>
+					<td class="cell"><div class="cell-content"><p>{{product.price * product.quantity}} Points</p></div></td>
 					<td class="cell"><div class="cell-content"><p>{{product.quantity}}</p></div></td>
+					<td class="cell"><div class="cell-content"><p>{{ product.availability_label }}</p></div></td>
 				</tr>
 			{% endfor %}
 			</tbody>
@@ -68,10 +71,11 @@
 	</div>
 
 	<div class="confirm-button-wrapper">
-		<form action=/orders method="post">
-			<input name="address" value="{{address.get('address')}}"" hidden>
-			<input name="city" value="{{address.get('city')}}" hidden>
-			<input name="state" value="{{address.get('state')}}" hidden>
+		<form action="/orders" method="post">
+			<input name="address" value="{{ address.get('address') }}" hidden>
+			<input name="city" value="{{ address.get('city') }}" hidden>
+			<input name="state" value="{{ address.get('state') }}" hidden>
+			<input name="expected_total" value="{{ total }}" hidden>
 			<button type="submit" class="confirm-button">Confirm</button>
 		</form>
 	</div>
