@@ -4201,6 +4201,113 @@ def adjustDriverPoints(driverID, orgID, newPointTotal):
 	"""
 	updateDb(query=adjustDriverPointsQuery, params=(newPointTotal, driverID, orgID))
 
+def get_driver_org_membership(driverID, orgID):
+	return paramQueryDb(
+		"""
+		SELECT DriverID, OrganizationID, TotalPoints
+		FROM DriverOrganizations
+		WHERE DriverID=%s AND OrganizationID=%s
+		""",
+		(driverID, orgID)
+	)
+
+
+def log_redemption_denial(userID, orgID, reason, points_attempted=0):
+	try:
+		user = paramQueryDb("SELECT Username FROM Users WHERE UserID=%s", (userID,))
+		username = user.get("Username") if user else f"user-{userID}"
+		membership = get_driver_org_membership(userID, orgID) or {}
+		current_points = int(membership.get("TotalPoints") or 0)
+
+		updateDb(
+			"""
+			INSERT INTO PointAdjustments
+			(OrganizationID, AdjustedByUName, DriverUName, AdjustmentType, DriverTotalPoints, AdjustmentPoints, AdjustmentReason, DateAdjusted)
+			VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+			""",
+			(orgID, username, username, "Denied", current_points, int(points_attempted or 0), reason, datetime.now())
+		)
+	except Exception as e:
+		print("Redemption denial log skipped:", e)
+
+
+def validate_redemption_request(userID, orgID):
+	membership = get_driver_org_membership(userID, orgID)
+	if not membership:
+		return {
+			"ok": False,
+			"message": "Redemption blocked because your sponsor affiliation for this organization is missing.",
+			"cart": [],
+			"total": 0,
+			"driver_points": 0
+		}
+
+	cartData = getCartData(userID, orgID)
+	if not cartData:
+		return {
+			"ok": False,
+			"message": "Your cart is empty.",
+			"cart": [],
+			"total": 0,
+			"driver_points": int(membership.get("TotalPoints") or 0)
+		}
+
+	validated_cart = []
+	current_total = 0
+
+	for item in cartData:
+		productID = item.get("id")
+		quantity = int(item.get("quantity") or 0)
+
+		live_product = getProductData(productID)
+		if not live_product:
+			return {
+				"ok": False,
+				"message": "A product in your cart could not be loaded right now. Please return to the catalog and try again.",
+				"cart": [],
+				"total": 0,
+				"driver_points": int(membership.get("TotalPoints") or 0)
+			}
+
+		live_product = adjustPrice([live_product])[0]
+		live_price = int(live_product.get("price") or 0)
+		available_stock = int(live_product.get("stock") or 0)
+
+		if available_stock < quantity:
+			return {
+				"ok": False,
+				"message": f"{item.get('title')} is no longer available in the quantity you selected. Please return to the catalog or update your cart.",
+				"cart": [],
+				"total": 0,
+				"driver_points": int(membership.get("TotalPoints") or 0)
+			}
+
+		item["price"] = live_price
+		item["stock"] = available_stock
+		item["availability_label"] = "In Stock" if available_stock > 0 else "Out of Stock"
+
+		validated_cart.append(item)
+		current_total += live_price * quantity
+
+	driver_points = int(membership.get("TotalPoints") or 0)
+
+	if current_total > driver_points:
+		return {
+			"ok": False,
+			"message": "You do not have enough points to complete this redemption.",
+			"cart": validated_cart,
+			"total": current_total,
+			"driver_points": driver_points
+		}
+
+	return {
+		"ok": True,
+		"message": "",
+		"cart": validated_cart,
+		"total": current_total,
+		"driver_points": driver_points
+	}
+
 @application.route("/cart/checkout")
 def checkout():
 	if "UserID" not in session:
