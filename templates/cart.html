@@ -9,6 +9,19 @@
 {% block content %}
 <div class="content">
 	<h1 class="title">Cart</h1>
+		{% with messages = get_flashed_messages(with_categories=true) %}
+		{% if messages %}
+			<div class="mb-4">
+				{% for category, message in messages %}
+					{% if category == "validation" %}
+						<article class="message is-danger">
+							<div class="message-body">{{ message }}</div>
+						</article>
+					{% endif %}
+				{% endfor %}
+			</div>
+		{% endif %}
+	{% endwith %}
 	{% if cartProductData %}
 	<div class="table-container">
 		<table class="cart-table">
@@ -24,11 +37,11 @@
 			<tbody>
 				{% for product in cartProductData %}
 				<tr data-product-id="{{product.id}}" class="product-row">
-					<td class="cell"><div class="cell-content"><img src="{{product.thumbnail}}"></div></td>
+					<td class="cell"><div class="cell-content"><img src="{{product.thumbnail}}" alt="{{ product.title }} product image"></div></td>
 					<td class="cell"><div class="cell-content"><p>{{product.title}}</p></div></td>
 					<td class="cell"><div class="cell-content"><p class="product-price">{{product.price * product.quantity}} Points</p></div></td>
-					<td class="cell"><div class="amount-control"><button class="decrement-button">-</button><p class="amount-value">{{product.quantity}}</p><button class="increment-button">+</button></div></td>
-					<td class="cell"><div class="cell-content"><button class="remove-cart-item">Remove</button></div></td>
+					<td class="cell"><div class="amount-control"><button type="button" class="decrement-button" aria-label="Decrease quantity for {{ product.title }}">-</button><p class="amount-value">{{product.quantity}}</p><button type="button" class="increment-button" aria-label="Increase quantity for {{ product.title }}">+</button></div></td>
+					<td class="cell"><div class="cell-content"><button type="button" class="remove-cart-item" aria-label="Remove {{ product.title }} from cart">Remove</button></div></td>
 				</tr>
 				{% endfor %}
 			</tbody>
