@@ -3056,10 +3056,14 @@ def apply():
 @application.route("/organization/apply/<int:OrgID>")
 def applyPost(OrgID):
 	user = paramQueryDb("""SELECT Username FROM Users WHERE UserID = %s""", (session['UserID'],))
+	org = paramQueryDb("""SELECT Name FROM Organizations WHERE OrganizationID = %s""", (OrgID,))
 	timeApplied = datetime.now()
+
 	updateDb("""INSERT INTO OrganizationApplications (OrganizationID, DriverUName, ApplicationStatus, DateApplied)
 				VALUES (%s, %s, %s, %s)""", (OrgID, user['Username'], "Pending", timeApplied))
-	flash(f"You have applied for enrollment in { organization } ", "enrolled")
+
+	org_name = org["Name"] if org else "the organization"
+	flash(f"You have applied for enrollment in {org_name}.", "enrolled")
 	return redirect(url_for("apply"))
 
 @application.route("/organization/apply/cancel/<int:OrgID>")
