@@ -2400,7 +2400,13 @@ def registerAboutEdits():
 @application.route("/bugReport")
 def bugReport():
 	prevPage = request.referrer
-	return render_template("bugReport.html", layout="activenav.html", prevPage=prevPage)
+	layout = "orgnav.html" if session.get("OrgID") else "activenav.html"
+	return render_template("bugReport.html", layout=layout, prevPage=prevPage)
+
+
+@application.route("/support")
+def support():
+	return redirect(url_for("bugReport"))
 
 @application.route("/bugReport", methods=["POST"])
 def postBugReport():
