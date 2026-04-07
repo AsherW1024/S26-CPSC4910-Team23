@@ -1,5 +1,10 @@
 productDivs = document.querySelectorAll(".product");
 removeButtons = document.querySelectorAll(".remove-from-wishlist-button");
+addAllToCartButton = document.querySelector(".all-to-cart-button");
+
+function addWishlistItemsToCart () {
+	window.location.href = "/wishlist/cart/add-all"
+}
 
 //close detailed product view
 function closePopup() {
@@ -157,3 +162,5 @@ for (const productDiv of productDivs) {
 	productDiv.addEventListener("mouseenter", showRemoveButton);
 	productDiv.addEventListener("mouseleave", hideRemoveButton);
 }
+
+addAllToCartButton.addEventListener("click", addWishlistItemsToCart);

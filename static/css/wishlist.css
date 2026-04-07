@@ -161,3 +161,10 @@
 	right: 0;
 	top: 0;
 }
+.all-to-cart-button {
+	font-size: 60px;
+	padding: 30px;
+	border-radius: 60px;
+	background-color: rgb(221, 185, 255);
+	margin: 20px;
+}

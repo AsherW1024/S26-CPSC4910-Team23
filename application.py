@@ -4879,6 +4879,64 @@ def inCart(productID):
 		print(e)
 		return jsonify(False)
 
+def getWishlistedProductIDs(userID, orgID):
+	getWishlistQuery = """
+		SELECT productID
+		FROM Wishlist
+		WHERE 
+			userID=%s
+			AND orgID=%s
+	"""
+	try:
+		queryResults = selectDb(query=getWishlistQuery, params=(userID, orgID))
+		
+		#get rid of dictionary, collapse to list of ids
+		wishlistProductIDs = []
+		for row in queryResults:
+			wishlistProductIDs.append(row.get("productID"))
+		return wishlistProductIDs
+	except Exception as e:
+		print(e)
+		return []
+
+def clearWishlist(userID, orgID):
+	clearWishlistQuery = """
+		DELETE FROM Wishlist
+		WHERE
+			userID=%s
+			AND orgID=%s
+	"""
+	try:
+		updateDb(query=clearWishlistQuery, params=(userID, orgID))
+	except Exception as e:
+		print(e)
+
+def addProductsToCart(userID, orgID, productIdList):
+	addToCartQuery = """
+		INSERT INTO Cart
+		(userID, orgID, productID, amount)
+		VALUES (%s, %s, %s, %s)
+	"""
+	for productID in productIdList:
+		try:
+			updateDb(query=addToCartQuery, params=(userID, orgID, productID, 1))
+		except Exception as e:
+			print(e)
+
+@application.route("/wishlist/cart/add-all")
+def addWishlistToCart():
+	if "UserID" not in session or "OrgID" not in session:
+		return redirect(url_for("home"))
+	
+	userID = session.get("UserID")
+	orgID = session.get("OrgID")
+
+	wishlistProductIDs = getWishlistedProductIDs(userID=userID, orgID=orgID)
+	addProductsToCart(userID=userID, orgID=orgID, productIdList=wishlistProductIDs)
+	clearWishlist(userID=userID, orgID=orgID)
+
+	return redirect(url_for("cart"))
+
 """
 This lets us test locally. Should not execute in AWS
 """
