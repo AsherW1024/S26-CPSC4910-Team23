@@ -3173,7 +3173,7 @@ def rejectedApplications(UserID):
 	return redirect(url_for("applications"))
 
 @application.route("/organization/<int:OrgID>/leave", methods=["POST"])
-def organization_leave():
+def organization_leave(OrgID):
     if "UserID" not in session:
         flash("Please login first.", "auth")
         return redirect(url_for("login"))
