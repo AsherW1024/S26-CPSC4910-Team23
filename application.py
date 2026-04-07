@@ -3178,9 +3178,9 @@ def organization_leave(OrgID):
         return redirect(url_for("organization"))
 
     updateDb(
-        "DELETE FROM DriverOrganizations WHERE OrganizationID=%s AND UserID=%s",
-        (OrgID, session["UserID"])
-    )
+		"DELETE FROM DriverOrganizations WHERE OrganizationID=%s AND DriverID=%s",
+		(OrgID, session["UserID"])
+	)
 
     session.pop("Organization", None)
     flash("You left the organization.", "success")
