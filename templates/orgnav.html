@@ -74,8 +74,10 @@
                 </div>
             </div>
             {% elif session.get('role') == "Driver" %}
+                <a href="/orders">Order History</a>
+                <a href="/support">Contact Support</a>
                 <form id="leaveform" method="POST" action="/organization/leave"
-                  style="display:inline;" onsubmit="return confirmOrgLeave();">
+                style="display:inline;" onsubmit="return confirmOrgLeave();">
                     <a onclick="document.getElementById('leaveform').submit()">Leave Organization</a>
                 </form>
             {% endif %}
@@ -90,7 +92,7 @@
                     <a href="/settings">
                         <i class="fa fa-gear fa-1x"></i> Settings
                     </a>
-                    {% if session.get('role') == "Driver" %}
+                    {% if session.get('role')=="Driver" and "OrgID" in session %}
                         <a href="/wishlist">
                             <i class="fa fa-heart fa-1x"></i> Wishlist
                         </a>
@@ -110,8 +112,8 @@
                         </button>
                     </form>
                     {% endif %}
-                    <a href="/bugReport">
-                        <i class="fa fa-bug fa-1x"></i> Report a Bug 
+                    <a href="/support">
+                        <i class="fa fa-bug fa-1x"></i> Contact Support
                     </a>
                     <a href="/about"> 
                         <i class="fa fa-circle-info fa-1x"></i> About us 

@@ -1,14 +1,25 @@
-.content{
+.orders-page{
 	justify-items: center;
 	padding: 20px;
+	background: var(--page-bg);
+	color: var(--page-text);
+	min-height: calc(100vh - 52px);
+	box-sizing: border-box;
+}
+
+.orders-page h1,
+.orders-page p,
+.orders-page .label {
+	color: var(--page-text);
 }
 
 .table-container {
     width: 95%;
-    background-color: rgba(230, 230, 230, 0.884);
+    background: rgba(128, 128, 128, 0.08);
     border-radius: 20px;
     padding: 2%;
     margin-bottom: 20px;
+    border: 1px solid rgba(128, 128, 128, 0.35);
 }
 
 .orders-table {
@@ -20,10 +31,11 @@
     text-align: center !important;
     font-size: 18px;
     padding: 15px 10px;
+    color: var(--page-text);
 }
 
 .order-row {
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    border-bottom: 1px solid rgba(128, 128, 128, 0.25);
 }
 
 .order-row:last-child {
@@ -34,6 +46,7 @@
     vertical-align: middle !important;
     justify-items: center;
     padding: 15px 10px;
+    color: var(--page-text);
 }
 
 .cell-content {
@@ -47,6 +60,7 @@
 .cell-content p {
     margin: 0;
     text-align: center;
+    color: var(--page-text);
 }
 
 .cell img {
@@ -57,5 +71,5 @@
 }
 
 .order-row:hover {
-    background-color: rgba(0, 0, 0, 0.05);
+    background-color: rgba(128, 128, 128, 0.10);
 }

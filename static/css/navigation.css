@@ -9,6 +9,19 @@ html, body {
 	--page-text: #333333;
 	--nav-bg: #333333;
 	--nav-link: #0073e6;
+
+	--surface-bg: #ffffff;
+	--surface-text: #111111;
+	--surface-border: rgba(0, 0, 0, 0.12);
+	--surface-hover: rgba(0, 0, 0, 0.04);
+
+	--input-bg: #ffffff;
+	--input-text: #111111;
+	--input-border: #cfcfcf;
+
+	--dropdown-bg: #f1f1f1;
+	--dropdown-text: #111111;
+	--dropdown-hover-bg: #dddddd;
 }
 
 html[data-theme="light"] {
@@ -16,6 +29,19 @@ html[data-theme="light"] {
 	--page-text: #333333;
 	--nav-bg: #333333;
 	--nav-link: #0073e6;
+
+	--surface-bg: #ffffff;
+	--surface-text: #111111;
+	--surface-border: rgba(0, 0, 0, 0.12);
+	--surface-hover: rgba(0, 0, 0, 0.04);
+
+	--input-bg: #ffffff;
+	--input-text: #111111;
+	--input-border: #cfcfcf;
+
+	--dropdown-bg: #f1f1f1;
+	--dropdown-text: #111111;
+	--dropdown-hover-bg: #dddddd;
 }
 
 html[data-theme="dark"] {
@@ -23,6 +49,19 @@ html[data-theme="dark"] {
 	--page-text: #f4f6fb;
 	--nav-bg: #333333;
 	--nav-link: #0073e6;
+
+	--surface-bg: #1a1f29;
+	--surface-text: #f4f6fb;
+	--surface-border: rgba(255, 255, 255, 0.10);
+	--surface-hover: rgba(255, 255, 255, 0.05);
+
+	--input-bg: #141922;
+	--input-text: #f4f6fb;
+	--input-border: rgba(255, 255, 255, 0.14);
+
+	--dropdown-bg: #1a1f29;
+	--dropdown-text: #f4f6fb;
+	--dropdown-hover-bg: #252c38;
 }
 
 html[data-theme="system"] {
@@ -30,15 +69,41 @@ html[data-theme="system"] {
 	--page-text: #333333;
 	--nav-bg: #333333;
 	--nav-link: #0073e6;
+
+	--surface-bg: #ffffff;
+	--surface-text: #111111;
+	--surface-border: rgba(0, 0, 0, 0.12);
+	--surface-hover: rgba(0, 0, 0, 0.04);
+
+	--input-bg: #ffffff;
+	--input-text: #111111;
+	--input-border: #cfcfcf;
+
+	--dropdown-bg: #f1f1f1;
+	--dropdown-text: #111111;
+	--dropdown-hover-bg: #dddddd;
 }
 
 @media (prefers-color-scheme: dark) {
 	html[data-theme="system"] {
-		--page-bg: #0f1115;
-		--page-text: #f4f6fb;
-		--nav-bg: #333333;
-		--nav-link: #0073e6;
-	}
+    --page-bg: #0f1115;
+    --page-text: #f4f6fb;
+    --nav-bg: #333333;
+    --nav-link: #0073e6;
+  
+    --surface-bg: #1a1f29;
+    --surface-text: #f4f6fb;
+    --surface-border: rgba(255, 255, 255, 0.10);
+    --surface-hover: rgba(255, 255, 255, 0.05);
+  
+    --input-bg: #141922;
+    --input-text: #f4f6fb;
+    --input-border: rgba(255, 255, 255, 0.14);
+  
+    --dropdown-bg: #1a1f29;
+    --dropdown-text: #f4f6fb;
+    --dropdown-hover-bg: #252c38;
+  }
 }
 
 body {
@@ -96,50 +161,60 @@ body {
 	padding: 16px;
 	font-size: 1rem;
 	border: none;
-  }
+	cursor: pointer;
+}
 
 .dropdown {
 	position: relative;
-  	display: inline-block;
+	display: inline-block;
 	z-index: 10002;
 }
 
 .dropdown-content {
-  display: none;
-  position: absolute;
-  background-color: #f1f1f1;
-  min-width: unset;
-  width: max-content;
-  max-width: 320px;
-  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-  z-index: 10003;
-  right: 0;
-  top: 100%;
-  flex-direction: column;
-  border-radius: 6px;
-  padding: 6px 0;
-  overflow: visible;
-  white-space: nowrap;
+	display: none;
+	position: absolute;
+	right: 0;
+	top: 100%;
+	min-width: 220px;
+	width: max-content;
+	max-width: 320px;
+
+	background-color: var(--dropdown-bg);
+	border: 1px solid var(--surface-border);
+	border-radius: 6px;
+	box-shadow: 0px 8px 16px rgba(0,0,0,0.2);
+
+	z-index: 10003;
+	padding: 6px 0;
+	white-space: nowrap;
 }
 
-.dropdown-content a {
-  color: #111;
-  padding: 10px 14px;
-  text-decoration: none;
-  display: block;
-  text-align: center;
-  font-size: 1rem;
+.dropdown-content a,
+.dropdown-content button {
+	display: block;
+	width: 100%;
+	text-align: left;
+	padding: 10px 14px;
+	background: transparent;
+	color: var(--dropdown-text);
+	text-decoration: none;
+	border: none;
+	font-size: 1rem;
+	cursor: pointer;
 }
 
-.dropdown-content a:hover {
-  background-color: #ddd;
-  width: 100%;
+.dropdown-content a:hover,
+.dropdown-content button:hover {
+	background-color: var(--dropdown-hover-bg);
+	color: var(--dropdown-text);
 }
 
-.dropdown:hover .dropdown-content { display: flex; }
+.dropdown:hover .dropdown-content {
+	display: block;
+}
 
 .dropdown:hover .dropbtn {
-	background-color: #ddd;
+	background-color: var(--dropdown-hover-bg);
 	color: #522D80;
 }
 

@@ -223,6 +223,21 @@ async function queryProducts() {
 		//product price shown in the catalog grid
 		let price = document.createElement("p");
 		price.innerText = product.price+" Points";
+		let availability = document.createElement("p");
+		const status = product.availabilityStatus;
+		availability.innerText = status;
+		if (status=="In Stock") {
+			availability.style.color = "green";
+		}
+		else if (status=="Low Stock") {
+			availability.style.color = "orange";
+		}
+		else {
+			availability.style.color = "red";
+		}
+		let rating = document.createElement("p");
+		rating.style.display = "flex";
+		rating.innerHTML = `${product.rating}/5&nbsp;<p style="color: #d4bb1b;">★</p>`;
 
 		//establish relationships between elements
 		productDiv.appendChild(productImg);
@@ -258,6 +273,8 @@ async function queryProducts() {
 		}
 		productDiv.appendChild(name);
 		productDiv.appendChild(price);
+		productDiv.appendChild(availability);
+		productDiv.appendChild(rating);
 
 		//give product div an event listener that opens up the advanced details
 		productDiv.addEventListener("click", showProductDetails);
@@ -306,9 +323,12 @@ async function addProductToCart(event) {
 			productID: productID
 		})
 	});
+	if (await response.ok) {
+		cartButton.classList.add("cart-added");
+	}
 }
 
-function showProductDetails(event) {
+async function showProductDetails(event) {
 	//no action if the remove or add button was pressed
 	if (event.target.classList.contains("remove-button")) {return}
 	if (event.target.classList.contains("add-button")) {return}
@@ -390,6 +410,11 @@ function showProductDetails(event) {
 	//add event listener for cart button
 	let cartButton = document.querySelector(".cart");
 	cartButton.addEventListener("click", addProductToCart);
+	const response = await fetch(`/product/inCart/${productDetails.id}`);
+	const inCart = await response.json();
+	if (inCart) {
+		cartButton.classList.add("cart-added")
+	}
 
 	//add each image
 	let imageDiv = document.getElementById("popup-images");

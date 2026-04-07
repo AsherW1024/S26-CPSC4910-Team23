@@ -20,8 +20,46 @@ body {
 .container.is-max-desktop.mt-6 .box {
     border-radius: 14px;
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.20);
-    background: #ffffff;
-    color: #111;
+    background: var(--surface-bg);
+    color: var(--surface-text);
+    border: 1px solid var(--surface-border);
+}
+
+.container.is-max-desktop.mt-6 .box .title,
+.container.is-max-desktop.mt-6 .box .label,
+.container.is-max-desktop.mt-6 .box p,
+.container.is-max-desktop.mt-6 .box strong,
+.container.is-max-desktop.mt-6 .box h1,
+.container.is-max-desktop.mt-6 .box h2,
+.container.is-max-desktop.mt-6 .box h3,
+.container.is-max-desktop.mt-6 .box h4,
+.container.is-max-desktop.mt-6 .box h5,
+.container.is-max-desktop.mt-6 .box h6 {
+    color: var(--surface-text);
+}
+
+.container.is-max-desktop.mt-6 .box .input,
+.container.is-max-desktop.mt-6 .box .textarea,
+.container.is-max-desktop.mt-6 .box select,
+.container.is-max-desktop.mt-6 .box .select select {
+    background: var(--input-bg);
+    color: var(--input-text);
+    border: 1px solid var(--input-border);
+}
+
+.container.is-max-desktop.mt-6 .box .input::placeholder,
+.container.is-max-desktop.mt-6 .box .textarea::placeholder {
+    color: rgba(127, 127, 127, 0.8);
+}
+
+.container.is-max-desktop.mt-6 .box .icon {
+    color: var(--surface-text);
+}
+
+.container.is-max-desktop.mt-6 .box .notification {
+    background: rgba(128, 128, 128, 0.12);
+    color: var(--surface-text);
+    border: 1px solid var(--surface-border);
 }
 
 .error {
@@ -129,9 +167,10 @@ body {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
 	gap: 15px;
-	background-color: rgb(207, 255, 255);
+	background: rgba(128, 128, 128, 0.08);
 	padding: 20px;
 	border-radius: 10px;
+	border: 1px solid var(--surface-border);
 }
 
 .select-many label input{

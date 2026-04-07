@@ -1,7 +1,7 @@
 .profile-page {
 	min-height: calc(100vh - 52px);
-	background: #0f1115;
-	color: #f4f6fb;
+	background: var(--page-bg);
+	color: var(--page-text);
 	display: flex;
 	justify-content: center;
 	align-items: flex-start;
@@ -31,5 +31,5 @@
 .profile-card p {
 	font-size: 2vw;
 	margin: 22px 0;
-	color: #f4f6fb;
+	color: var(--page-text);
 }

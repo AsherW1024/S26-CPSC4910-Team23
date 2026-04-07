@@ -11,12 +11,50 @@
   <div class="section">
     <div class="container">
       <div class="box">
-        <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
+        <div class="is-flex is-justify-content-space-between is-align-items-center mb-4" style="gap: 1rem">
           <h1 class="title is-3">Sponsor Invoice Report</h1>
           <a class="button is-info" href="/reports/invoices?format=csv">Download CSV</a>
         </div>
 
         <p class="mb-4">Fee rate currently applied: <strong>{{ (feeRate * 100)|round(2) }}%</strong></p>
+
+        <form method="GET" class="mb-4">
+          <div class="columns is-multiline">
+            <div class="column is-3">
+              <label class="label">Start Date</label>
+              <input class="input" type="date" name="start" value="{{ start }}">
+            </div>
+
+            <div class="column is-3">
+              <label class="label">End Date</label>
+              <input class="input" type="date" name="end" value="{{ end }}">
+            </div>
+
+            {% if ReportType == "points" %}
+            <div class="column is-3">
+              <label class="label">Driver Filter</label>
+              <input class="input" type="text" name="driver" placeholder="Name, email, or username" value="{{ driverFilter }}">
+            </div>
+            {% endif %}
+
+            <div class="column is-2">
+              <label class="label">Rows per Page</label>
+              <div class="select is-fullwidth">
+                <select name="pageCount" onchange="this.form.submit()">
+                  <option value="10" {% if pageRows==10 %}selected{% endif %}>10</option>
+                  <option value="25" {% if pageRows==25 %}selected{% endif %}>25</option>
+                  <option value="50" {% if pageRows==50 %}selected{% endif %}>50</option>
+                  <option value="100" {% if pageRows==100 %}selected{% endif %}>100</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="column is-2">
+              <label class="label">&nbsp;</label>
+              <button class="button is-light is-fullwidth" type="submit">Filter</button>
+            </div>
+          </div>
+        </form>
 
         <div class="table-container">
           <table class="table is-fullwidth is-striped is-hoverable">
@@ -55,6 +93,41 @@
               {% endfor %}
             </tbody>
           </table>
+          <nav class="pagination is-centered" role="navigation">
+            {% if page > 1 %}
+              <a href="?page={{ page - 1 }}&pageCount={{ pageRows }}&start={{ start }}&end={{ end }}{% if driverFilter %}&driver={{ driverFilter }}{% endif %}" class="pagination-previous">Previous</a>
+            {% else %}
+              <a href="#" class="pagination-previous" disabled>Previous</a>
+            {% endif %}
+
+            {% if pageNum|length > 1 and page < pageNum|length %}
+              <a href="?page={{ page + 1 }}&pageCount={{ pageRows }}&start={{ start }}&end={{ end }}{% if driverFilter %}&driver={{ driverFilter }}{% endif %}" class="pagination-next">Next page</a>
+            {% else %}
+              <a href="#" class="pagination-next" disabled>Next page</a>
+            {% endif %}
+
+            <ul class="pagination-list">
+              {% set notellipsis = [true] %}
+              {% for p in pageNum %}
+                {% set show = p == 1 or p % 10 == 0 or p == page or p == pageNum|length or (p >= page - 3 and p <= page + 3) %}
+                {% if show %}
+                  {% if p == page %}
+                    <a href="" class="pagination-link is-current" aria-label="Page {{ p }}" aria-current="page">{{ p }}</a>
+                    {% if notellipsis.pop() %} {% endif %}
+                    {% if notellipsis.append(true) %} {% endif %}
+                  {% else %}
+                    <li><a href="?page={{ p }}&pageCount={{ pageRows }}&start={{ start }}&end={{ end }}{% if driverFilter %}&driver={{ driverFilter }}{% endif %}" class="pagination-link">{{ p }}</a></li>
+                    {% if notellipsis.pop() %} {% endif %}
+                    {% if notellipsis.append(true) %} {% endif %}
+                  {% endif %}
+                {% elif notellipsis[0] %}
+                  <li><span class="pagination-ellipsis">&hellip;</span></li>
+                  {% if notellipsis.pop() %} {% endif %}
+                  {% if notellipsis.append(false) %} {% endif %}
+                {% endif %}
+              {% endfor %}
+            </ul>
+          </nav>
         </div>
       </div>
     </div>
