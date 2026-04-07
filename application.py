@@ -4354,25 +4354,32 @@ def getCartData(userID, orgID):
 
 @application.route("/orders/confirm", methods=["POST"])
 def orderConfirmation():
-	if "UserID" not in session:
+	if "UserID" not in session or "OrgID" not in session:
 		return redirect(url_for("home"))
-	
-	#grab cart data
+
 	userID = session.get("UserID")
 	orgID = session.get("OrgID")
-	cartData = getCartData(userID=userID, orgID=orgID)
 
-	#grab address data from form
-	addressDict = {}
-	addressDict["address"] = request.form.get("address")
-	addressDict["city"] = request.form.get("city")
-	addressDict["state"] = request.form.get("state")
+	validation = validate_redemption_request(userID, orgID)
+	if not validation["ok"]:
+		log_redemption_denial(userID, orgID, validation["message"], validation.get("total", 0))
+		flash(validation["message"], "validation")
+		return redirect(url_for("cart"))
 
-	#calculate order total
-	orderTotal = getCartTotal(userID, orgID)
+	addressDict = {
+		"address": request.form.get("address", "").strip(),
+		"city": request.form.get("city", "").strip(),
+		"state": request.form.get("state", "").strip()
+	}
 
-	#send user to confirmation screen to confirm before the pull the trigger on their order
-	return render_template("confirm_order.html", layout="orgnav.html", cart=cartData, address=addressDict, total=orderTotal)
+	return render_template(
+		"confirm_order.html",
+		layout="orgnav.html",
+		cart=validation["cart"],
+		address=addressDict,
+		total=validation["total"],
+		driverPoints=validation["driver_points"]
+	)
 
 @application.route("/orders", methods=["POST"])
 def makeOrder():
