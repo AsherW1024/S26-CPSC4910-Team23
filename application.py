@@ -4385,24 +4385,37 @@ def orderConfirmation():
 def makeOrder():
 	if "UserID" not in session or "OrgID" not in session:
 		return redirect(url_for("home"))
-	
+
 	try:
 		userID = session.get("UserID")
 		orgID = session.get("OrgID")
 
-		cartTotal = getCartTotal(userID, orgID)
-		driverPointTotal = getDriverPoints()
-		newDriverPointTotal = driverPointTotal-cartTotal
+		validation = validate_redemption_request(userID, orgID)
+		if not validation["ok"]:
+			log_redemption_denial(userID, orgID, validation["message"], validation.get("total", 0))
+			flash(validation["message"], "validation")
+			return redirect(url_for("cart"))
 
-		#lower driver's point total
+		expected_total = int(request.form.get("expected_total") or 0)
+		if expected_total != validation["total"]:
+			message = f"Your cart total changed from {expected_total} to {validation['total']} points. Please review your order again before confirming."
+			log_redemption_denial(userID, orgID, message, validation["total"])
+			flash(message, "validation")
+			return redirect(url_for("cart"))
+
+		newDriverPointTotal = validation["driver_points"] - validation["total"]
+		if newDriverPointTotal < 0:
+			message = "This redemption was denied because it would make the point balance go below zero."
+			log_redemption_denial(userID, orgID, message, validation["total"])
+			flash(message, "validation")
+			return redirect(url_for("cart"))
+
 		adjustDriverPoints(userID, orgID, newDriverPointTotal)
 
-		#insert info into Orders table
 		address = request.form.get("address")
 		city = request.form.get("city")
 		state = request.form.get("state")
 
-		#insert into Order table with a cursor to keep track of that entry's orderID
 		connection = getDbConnection()
 		cursor = connection.cursor()
 		insertOrderQuery = """
@@ -4411,42 +4424,41 @@ def makeOrder():
 			VALUES 
 				(%s,%s,%s,%s,%s,%s,%s,%s + INTERVAL 1 WEEK)
 		"""
-		cursor.execute(query=insertOrderQuery, args=(userID,orgID,cartTotal,address,city,state,datetime.now(),datetime.now()))
+		cursor.execute(
+			query=insertOrderQuery,
+			args=(userID, orgID, validation["total"], address, city, state, datetime.now(), datetime.now())
+		)
 		connection.commit()
 		orderID = cursor.lastrowid
 		cursor.close()
 
-		#insert list of items into OrderItems table
-		cartItems = getCartData(userID, orgID)
 		insertOrderItemQuery = """
 			INSERT INTO OrderItems
 				(orderID, productID, unitPrice, totalPrice, amount)
 			VALUES
 				(%s,%s,%s,%s,%s)
 		"""
-		for item in cartItems:
+		for item in validation["cart"]:
 			productID = item.get("id")
-			unitPrice = item.get("price")
-			amount = item.get("quantity")
-			totalPrice = unitPrice*amount
-			updateDb(insertOrderItemQuery, params=(orderID,productID,unitPrice,totalPrice,amount))
+			unitPrice = int(item.get("price") or 0)
+			amount = int(item.get("quantity") or 0)
+			totalPrice = unitPrice * amount
+			updateDb(insertOrderItemQuery, params=(orderID, productID, unitPrice, totalPrice, amount))
 
-		#delete all items from user's cart
 		deleteCartItemsQuery = """
 			DELETE FROM Cart
 			WHERE
 				userID=%s
 				AND orgID=%s
 		"""
-		updateDb(query=deleteCartItemsQuery, params=(userID,orgID))
+		updateDb(query=deleteCartItemsQuery, params=(userID, orgID))
 
 		session["Points"] = newDriverPointTotal
-
-		#for an alert confirming to the user that the purchase was successful
 		flash("Purchase successful. Order confirmed.", category="orderConfirmation")
 
 	except Exception as e:
 		print(e)
+		flash("We could not complete your order right now. Please try again.", "validation")
 		return redirect(url_for("checkout"))
 
 	return redirect(url_for("cart"))
