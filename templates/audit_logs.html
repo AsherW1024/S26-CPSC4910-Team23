@@ -109,28 +109,28 @@
       </div>
 
       <nav class="pagination is-centered" role="navigation">
-        {% if page > 1 %}
-          <a href="?page={{ page - 1 }}&pageCount={{ pageRows }}&q={{ keyword }}" class="pagination-previous">Previous</a>
-        {% else %}
-          <a href="#" class="pagination-previous" disabled>Previous</a>
-        {% endif %}
-      
-        {% if pageNum|length > 1 and page < pageNum|length %}
-          <a href="?page={{ page + 1 }}&pageCount={{ pageRows }}&q={{ keyword }}" class="pagination-next">Next page</a>
-        {% else %}
-          <a href="#" class="pagination-next" disabled>Next page</a>
-        {% endif %}
-      
-        <ul class="pagination-list">
-          {% for p in pageNum %}
-            {% if p == page %}
-              <li><a href="#" class="pagination-link is-current" aria-current="page">{{ p }}</a></li>
-            {% else %}
-              <li><a href="?page={{ p }}&pageCount={{ pageRows }}&q={{ keyword }}" class="pagination-link">{{ p }}</a></li>
-            {% endif %}
-          {% endfor %}
-        </ul>
-      </nav>
+      {% if page > 1 %}
+        <a href="?{{ queryString }}&page={{ page - 1 }}" class="pagination-previous">Previous</a>
+      {% else %}
+        <a href="#" class="pagination-previous" disabled>Previous</a>
+      {% endif %}
+
+      {% if pageNum|length > 1 and page < pageNum|length %}
+        <a href="?{{ queryString }}&page={{ page + 1 }}" class="pagination-next">Next page</a>
+      {% else %}
+        <a href="#" class="pagination-next" disabled>Next page</a>
+      {% endif %}
+
+      <ul class="pagination-list">
+        {% for p in pageNum %}
+          {% if p == page %}
+            <li><a href="#" class="pagination-link is-current" aria-current="page">{{ p }}</a></li>
+          {% else %}
+            <li><a href="?{{ queryString }}&page={{ p }}" class="pagination-link">{{ p }}</a></li>
+          {% endif %}
+        {% endfor %}
+      </ul>
+    </nav>
     </div>
   </div>
 </div>
