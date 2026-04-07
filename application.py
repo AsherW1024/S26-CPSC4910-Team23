@@ -2151,6 +2151,15 @@ def audit_logs():
 
     nav = "orgnav.html" if session.get("Organization") else "activenav.html"
 
+    queryString = urlencode({
+	"q": keyword,
+	"sponsor": sponsor_filter,
+	"start": start_date,
+	"end": end_date,
+	"category": category_filter,
+	"pageCount": rowsPerPage
+	})
+
     return render_template(
         "audit_logs.html",
 		layout=nav,
@@ -2162,7 +2171,8 @@ def audit_logs():
 		categoryFilter=category_filter,
 		page=page,
 		pageNum=range(1, numPages + 1),
-		pageRows=rowsPerPage
+		pageRows=rowsPerPage,
+		queryString=queryString
 	)
 
 @application.route("/<accountType>/users/<int:UserID>/edit", methods=["POST"])
