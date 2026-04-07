@@ -9,12 +9,25 @@
 
 {% block content %}
 <div class="form-container">
+	{% with messages = get_flashed_messages(with_categories=true) %}
+		{% if messages %}
+			<div class="container is-max-desktop mb-4">
+				{% for category, message in messages %}
+					{% if category == "validation" %}
+						<article class="message is-danger">
+							<div class="message-body">{{ message }}</div>
+						</article>
+					{% endif %}
+				{% endfor %}
+			</div>
+		{% endif %}
+	{% endwith %}
 	<div class="box">
 		<form method="POST" action="/orders/confirm">
 			<div class="field">
 				<label class="label">Street Address</label>
 				<div class="control">
-					<input class="input" type="text" name="address" placeholder="Address" value="555 Elm Street" required>
+					<input class="input" id="address" type="text" name="address" placeholder="Address" value="555 Elm Street" autocomplete="street-address" required>
 					<span class="error">
 						Please enter a valid address
 					</span>
@@ -24,7 +37,7 @@
 			<div class="field">
 				<label class="label">City</label>
 				<div class="control">
-					<input class="input" type="text" name="city" placeholder="City Name" value="Silent Hill" required>
+					<input class="input" id="city" type="text" name="city" placeholder="City Name" value="Silent Hill" autocomplete="address-level2" required>
 					<span class="error">
 						Please enter a valid city
 					</span>
@@ -34,7 +47,7 @@
 			<div class="field">
 				<label class="label">State</label>
 				<div class="control">
-					<select name="state" class="input" required>
+					<select id="state" name="state" class="input" autocomplete="address-level1" required>
 						<option value="" disabled>Select a state</option>
 						<option value="AL">Alabama</option>
 						<option value="AK">Alaska</option>

@@ -1,6 +1,7 @@
 from flask import Flask, render_template, redirect, url_for, request, session, flash, jsonify, Response
 from functools import wraps
 from datetime import datetime, timedelta
+from urllib.parse import urlencode
 from werkzeug.security import generate_password_hash, check_password_hash
 import pymysql
 from config import db_config
@@ -89,28 +90,7 @@ def get_org_name_for_user(user_id):
     return row.get("OrganizationName") if row else None
 
 def log_password_event(event_type: str, actor_user_id=None, target_user_id=None):
-    actor_ip = get_request_ip()
     event_time = datetime.now()
-
-    org_name = None
-    for uid in (target_user_id, actor_user_id):
-        if uid and not org_name:
-            org_name = get_org_name_for_user(uid)
-
-    org_id = None
-    if org_name:
-        org = paramQueryDb("SELECT OrganizationID FROM Organizations WHERE Name=%s", (org_name,))
-        if org:
-            org_id = org.get("OrganizationID")
-
-    try:
-        updateDb("""
-            INSERT INTO PasswordChangeLog
-            (OrganizationID, ActorUserID, TargetUserID, EventType, EventTime, ActorIP)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """, (org_id, actor_user_id, target_user_id, event_type, event_time, actor_ip))
-    except Exception as e:
-        print("PasswordChangeLog insert skipped:", e)
 
     try:
         actor_username = None
@@ -152,72 +132,6 @@ def format_currency(value):
     except Exception:
         return "0.00"
 
-def ensure_reporting_tables():
-    ddl_statements = [
-        """
-        CREATE TABLE IF NOT EXISTS InvoiceEmailLog (
-            InvoiceEmailLogID INT AUTO_INCREMENT PRIMARY KEY,
-            OrgID INT NOT NULL,
-            InvoiceMonth VARCHAR(7) NOT NULL,
-            RecipientEmail VARCHAR(255) NULL,
-            ActionTaken VARCHAR(50) NOT NULL,
-            TriggeredByUserID INT NULL,
-            Notes TEXT NULL,
-            CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-        )
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS OrderStatusAudit (
-            OrderStatusAuditID INT AUTO_INCREMENT PRIMARY KEY,
-            OrderID INT NOT NULL,
-            StatusName VARCHAR(50) NOT NULL,
-            Notes TEXT NULL,
-            CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-        )
-        """
-    ]
-    for ddl in ddl_statements:
-        try:
-            updateDb(ddl)
-        except Exception as e:
-            print("ensure_reporting_tables skipped:", e)
-
-def ensure_sprint8_tables():
-    ddl_statements = [
-        """
-        CREATE TABLE IF NOT EXISTS DriverAddresses (
-            AddressID INT AUTO_INCREMENT PRIMARY KEY,
-            DriverID INT NOT NULL,
-            AddressType VARCHAR(20) NOT NULL,
-            FullName VARCHAR(150) NOT NULL,
-            Street VARCHAR(255) NOT NULL,
-            City VARCHAR(100) NOT NULL,
-            StateRegion VARCHAR(100) NOT NULL,
-            PostalCode VARCHAR(20) NOT NULL,
-            Country VARCHAR(100) NOT NULL,
-            CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            UNIQUE KEY uq_driver_address_type (DriverID, AddressType)
-        )
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS PendingPointTransactions (
-            PendingTransactionID INT AUTO_INCREMENT PRIMARY KEY,
-            OrganizationID INT NOT NULL,
-            DriverUName VARCHAR(100) NOT NULL,
-            TransactionType VARCHAR(30) NOT NULL,
-            PendingPoints INT NOT NULL DEFAULT 0,
-            Description VARCHAR(255) NULL,
-            Status VARCHAR(20) NOT NULL DEFAULT 'Pending',
-            CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-        )
-        """
-    ]
-    for ddl in ddl_statements:
-        try:
-            updateDb(ddl)
-        except Exception as e:
-            print("ensure_sprint8_tables skipped:", e)
 
 def parse_iso_date(raw_value):
     if not raw_value:
@@ -235,7 +149,13 @@ def getOrgData():
 	rows = selectDb("""SELECT * FROM Organizations""")
 	return rows
 
-def get_sales_by_product_rows(org_id=None):
+def get_sales_by_product_rows(org_id=None, start=None, end=None, rowsPerPage=None, offset=None):
+    count_query = """
+        SELECT
+            COUNT(DISTINCT oi.productID) AS totalRows
+        FROM OrderItems oi
+        JOIN Orders o ON o.orderID = oi.orderID
+    """
     base_query = """
         SELECT
             oi.productID,
@@ -252,15 +172,29 @@ def get_sales_by_product_rows(org_id=None):
         where_clauses.append("o.orgID = %s")
         params.append(org_id)
 
+    if start:
+        where_clauses.append("orderTime >= %s")
+        params.append(start + " 00:00:00")
+
+    if end:
+        where_clauses.append("orderTime <= %s")
+        params.append(end + " 23:59:59")
+
     if where_clauses:
+        count_query += " WHERE " + " AND ".join(where_clauses)
         base_query += " WHERE " + " AND ".join(where_clauses)
 
     base_query += """
         GROUP BY oi.productID
         ORDER BY grossSales DESC, quantitySold DESC
+		LIMIT %s OFFSET %s
     """
+	
+    rowTotal = selectDb(count_query, tuple(params)) or [{"totalRows": 0}]
+    rows = selectDb(base_query, tuple(list(params) + [rowsPerPage, offset])) or []
 
-    rows = selectDb(base_query, tuple(params)) or []
+    total_rows = rowTotal[0]["totalRows"] if rowTotal else 0 
+    numPages = max(1, math.ceil(total_rows / rowsPerPage)) if rowsPerPage else 1
 
     enriched_rows = []
     for row in rows:
@@ -280,7 +214,7 @@ def get_sales_by_product_rows(org_id=None):
             "grossSales": float(row.get("grossSales") or 0)
         })
 
-    return enriched_rows
+    return enriched_rows, numPages
 
 def get_refund_cancellation_impact_rows(org_id=None):
     base_query = """
@@ -347,8 +281,14 @@ def get_refund_cancellation_impact_rows(org_id=None):
     summary["netSales"] = summary["grossSales"] - summary["refundTotal"] - summary["cancelledTotal"]
     return summary, detailed_rows
 
-def get_invoice_rows(fee_rate=0.01):
-    rows = selectDb("""
+def get_invoice_rows(fee_rate=0.01, start=None, end=None, rowsPerPage=None, offset=None):
+	count_query = """
+        SELECT
+            COUNT(DISTINCT o.orgID) AS totalRows
+        FROM Orders o
+        LEFT JOIN Organizations org ON org.OrganizationID = o.orgID
+    """
+	base_query = """
         SELECT
             o.orgID,
             org.Name AS OrganizationName,
@@ -356,25 +296,49 @@ def get_invoice_rows(fee_rate=0.01):
             SUM(o.pointTotal) AS salesTotal
         FROM Orders o
         LEFT JOIN Organizations org ON org.OrganizationID = o.orgID
+    """
+	params = []
+	where_clauses = []
+
+	if start:
+		where_clauses.append("orderTime >= %s")
+		params.append(start + " 00:00:00")
+
+	if end:
+		where_clauses.append("orderTime <= %s")
+		params.append(end + " 23:59:59")
+
+	if where_clauses:
+		count_query += " WHERE " + " AND ".join(where_clauses)
+		base_query += " WHERE " + " AND ".join(where_clauses)
+
+	base_query += """
         GROUP BY o.orgID, org.Name
         ORDER BY salesTotal DESC
-    """, ()) or []
+		LIMIT %s OFFSET %s
+    """
 
-    invoice_rows = []
-    for row in rows:
-        sales_total = float(row.get("salesTotal") or 0)
-        fee_amount = round(sales_total * fee_rate, 2)
-        invoice_rows.append({
-            "orgID": row.get("orgID"),
-            "organizationName": row.get("OrganizationName") or f"Organization {row.get('orgID')}",
-            "orderCount": row.get("orderCount") or 0,
-            "salesTotal": sales_total,
-            "feeRate": fee_rate,
-            "feeAmount": fee_amount,
-            "invoiceTotal": round(sales_total + fee_amount, 2),
-            "feeExplanation": f"{int(fee_rate * 100)}% fee applied to sales total"
-        })
-    return invoice_rows
+	rowTotal = selectDb(count_query, tuple(params)) or [{"totalRows": 0}]
+	rows = selectDb(base_query, tuple(list(params) + [rowsPerPage, offset])) or []
+
+	total_rows = rowTotal[0]["totalRows"] if rowTotal else 0
+	numPages = max(1, math.ceil(total_rows / rowsPerPage)) if rowsPerPage else 1
+
+	invoice_rows = []
+	for row in rows:
+		sales_total = float(row.get("salesTotal") or 0)
+		fee_amount = round(sales_total * fee_rate, 2)
+		invoice_rows.append({
+			"orgID": row.get("orgID"),
+			"organizationName": row.get("OrganizationName") or f"Organization {row.get('orgID')}",
+			"orderCount": row.get("orderCount") or 0,
+			"salesTotal": sales_total,
+			"feeRate": fee_rate,
+			"feeAmount": fee_amount,
+			"invoiceTotal": round(sales_total + fee_amount, 2),
+			"feeExplanation": f"{int(fee_rate * 100)}% fee applied to sales total"
+		})
+	return invoice_rows, numPages
 
 def get_about_info():
     rows = queryDb("SELECT TeamNum, VersionNum, ReleaseDate, ProductName, ProductDescription FROM Admins WHERE AdminID = 1")
@@ -503,10 +467,6 @@ def selectDb(query: str, params=None):
 	finally:
 		if connection:
 			connection.close()
-
-# Initialize reporting and Sprint 8 support tables on startup.
-ensure_reporting_tables()
-ensure_sprint8_tables()
 
 """
 Check if the user is an admin and logged in. 
@@ -651,16 +611,6 @@ def registerUser():
 				VALUES (%s, %s)""", (newUser['UserID'], orgExists["OrganizationID"]))
 			flash("Sponsor account created please login", "created")
 		else:	
-			newUser = paramQueryDb("SELECT UserID FROM Users WHERE Email=%s OR Username=%s", 
-				(email, username))
-			if not orgExists:
-				updateDb(
-					"""INSERT INTO Drivers (DriverID, OrganizationID)
-					VALUES (%s, %s)""", (newUser['UserID'], None))
-			else:
-				updateDb(
-					"""INSERT INTO Drivers (DriverID, OrganizationID)
-					VALUES (%s, %s)""", (newUser['UserID'], orgExists["OrganizationID"]))
 			flash("Driver account created please login", "created")
 	if "UserID" in session:
 		getOrganization()
@@ -1207,7 +1157,7 @@ def adminEnrollDriverPage(OrganizationID):
 		rowTotal = selectDb("""
 			SELECT COUNT(*) AS totalRows
 			FROM Users u
-			JOIN Drivers d ON u.UserID = d.DriverID
+			JOIN DriverOrganizations d ON u.UserID = d.DriverID
 			WHERE u.UserType = "Driver"
 			AND (d.OrganizationID IS NULL OR d.OrganizationID = 0)
 			AND (u.Name LIKE %s OR u.Email LIKE %s OR u.Username LIKE %s)
@@ -1216,7 +1166,7 @@ def adminEnrollDriverPage(OrganizationID):
 		drivers = selectDb("""
 			SELECT u.UserID, u.Name, u.Email, u.Username
 			FROM Users u
-			JOIN Drivers d ON u.UserID = d.DriverID
+			JOIN DriverOrganizations d ON u.UserID = d.DriverID
 			WHERE u.UserType = "Driver"
 			AND (d.OrganizationID IS NULL OR d.OrganizationID = 0)
 			AND (u.Name LIKE %s OR u.Email LIKE %s OR u.Username LIKE %s)
@@ -1227,7 +1177,7 @@ def adminEnrollDriverPage(OrganizationID):
 		rowTotal = selectDb("""
 			SELECT COUNT(*) AS totalRows
 			FROM Users u
-			JOIN Drivers d ON u.UserID = d.DriverID
+			JOIN DriverOrganizations d ON u.UserID = d.DriverID
 			WHERE u.UserType = "Driver"
 			AND (d.OrganizationID IS NULL OR d.OrganizationID = 0)
 		""", ())
@@ -1235,7 +1185,7 @@ def adminEnrollDriverPage(OrganizationID):
 		drivers = selectDb("""
 			SELECT u.UserID, u.Name, u.Email, u.Username
 			FROM Users u
-			JOIN Drivers d ON u.UserID = d.DriverID
+			JOIN DriverOrganizations d ON u.UserID = d.DriverID
 			WHERE u.UserType = "Driver"
 			AND (d.OrganizationID IS NULL OR d.OrganizationID = 0)
 			ORDER BY u.Name
@@ -1269,7 +1219,7 @@ def get_driver_by_identifier(identifier):
     return paramQueryDb("""
         SELECT u.UserID, u.Name, u.Email, u.Username, d.OrganizationID
         FROM Users u
-        JOIN Drivers d ON d.DriverID = u.UserID
+        JOIN DriverOrganizations d ON d.DriverID = u.UserID
         WHERE u.UserType = 'Driver'
           AND (u.Username = %s OR u.Email = %s OR u.Name = %s)
         LIMIT 1
@@ -1304,7 +1254,7 @@ def enroll_driver_without_numeric_ids():
         return redirect(url_for("enroll_driver_without_numeric_ids"))
 
     updateDb("""
-        UPDATE Drivers
+        UPDATE DriverOrganizations
         SET OrganizationID = %s
         WHERE DriverID = %s
     """, (org["OrganizationID"], driver["UserID"]))
@@ -1345,7 +1295,7 @@ def adminEnrollDriverPost(OrganizationID, UserID):
 
 	# enroll the driver directly
 	updateDb("""
-		UPDATE Drivers
+		UPDATE DriverOrganizations
 		SET OrganizationID = %s
 		WHERE DriverID = %s
 	""", (OrganizationID, UserID))
@@ -1574,7 +1524,7 @@ def report(ReportType):
 			FROM OrganizationApplications a
 			JOIN Organizations o ON a.OrganizationID = o.OrganizationID
 			{where}
-			ORDER BY a.DateApplied DESC
+			ORDER BY a.ApplicationStatus Desc, a.DateApplied DESC
 		"""
 		csv_headers = ["DateApplied", "Name", "DriverUName", "ReviewedByUName", "ApplicationStatus", "ReviewReason"]
 
@@ -1642,8 +1592,24 @@ def report(ReportType):
 @application.route("/reports/sales-by-driver")
 @permission_required("view_reports")
 def salesByDriverReport():
+	start = request.args.get("start", "").strip()
+	end = request.args.get("end", "").strip()
+	driverFilter = request.args.get("driver", "").strip()
+	organizationFilter = request.args.get("organization", "").strip()
+	page = request.args.get("page", 1, type=int)
+	rowsPerPage = request.args.get("pageCount", 10, type=int)
+	offset = (page - 1) * rowsPerPage
 	export_format = request.args.get("format", "").lower()
 
+	count_query = """
+		SELECT
+			COUNT(DISTINCT o.userID) AS totalRows
+		FROM OrderItems oi
+		JOIN Orders o ON o.orderID = oi.orderID
+		JOIN Users u ON u.UserID = o.userID
+		JOIN DriverOrganizations d ON u.userID = d.DriverID
+		JOIN Organizations org ON d.OrganizationID = org.OrganizationID
+	"""
 	base_query = """
         SELECT
             o.userID,
@@ -1652,29 +1618,61 @@ def salesByDriverReport():
             SUM(oi.totalPrice) AS grossSales
         FROM OrderItems oi
         JOIN Orders o ON o.orderID = oi.orderID
+		JOIN Users u ON u.UserID = o.userID
+		JOIN DriverOrganizations d ON u.userID = d.DriverID
+		JOIN Organizations org ON d.OrganizationID = org.OrganizationID
     """
 	params = []
 	where_clauses = []
 
 	if session.get("Organization") != None:
 		where_clauses.append("o.orgID = %s")
-		params.append(session["Organization"])
+		params.append(session["OrgID"])
+
+	if start:
+		where_clauses.append("o.orderTime >= %s")
+		params.append(start + " 00:00:00")
+
+	if end:
+		where_clauses.append("o.orderTime <= %s")
+		params.append(end + " 23:59:59")
+
+	if driverFilter:
+		driver = f"%{driverFilter}%"
+		where_clauses.append("""
+			(
+				u.Email LIKE %s OR
+				u.Username LIKE %s OR
+				u.Name LIKE %s
+			)
+		""")
+		params.extend([driver, driver, driver])
+
+	if organizationFilter:
+		organization = f"%{organizationFilter}%"
+		where_clauses.append("org.Name LIKE %s")
+		params.append(organization)
 
 	if where_clauses:
+		count_query += " WHERE " + " AND ".join(where_clauses)
 		base_query += " WHERE " + " AND ".join(where_clauses)
 
 	base_query += """
 		GROUP BY o.userID
 		ORDER BY grossSales DESC, quantityBought DESC
+		LIMIT %s OFFSET %s
 		"""
 
-	rows = selectDb(base_query, tuple(params)) or []
+	rowTotal = selectDb(count_query, tuple(params)) or [{"totalRows": 0}]
+	rows = selectDb(base_query, tuple(list(params) + [rowsPerPage, offset])) or []
+
+	total_rows = rowTotal[0]["totalRows"] if rowTotal else 0
+	numPages = max(1, math.ceil(total_rows / rowsPerPage)) if rowsPerPage else 1
 
 	try:
 		driverData = getDriverData() or {}
 	except Exception:
 		driverData = {}
-
 
 	enriched_rows = []
 	for row in rows:
@@ -1707,14 +1705,32 @@ def salesByDriverReport():
 		"salesByDriverReport.html",
 		layout="nav.html" if not session.get("UserID") else ("orgnav.html" if session.get("Organization") != None else "activenav.html"),
 		rows=rows,
-		summary=summary
+		summary=summary,
+		driverFilter=driverFilter,
+		organizationFilter=organizationFilter,
+		page=page,
+        pageNum=range(1, numPages + 1),
+        pageRows=rowsPerPage
 	)
 
 @application.route("/reports/sales-by-organization")
 @permission_required("view_reports")
 def salesByOrganizationReport():
+	start = request.args.get("start", "").strip()
+	end = request.args.get("end", "").strip()
+	organizationFilter = request.args.get("organization", "").strip()
+	page = request.args.get("page", 1, type=int)
+	rowsPerPage = request.args.get("pageCount", 10, type=int)
+	offset = (page - 1) * rowsPerPage
 	export_format = request.args.get("format", "").lower()
 	
+	count_query = """
+		SELECT
+            COUNT(DISTINCT o.orgID) AS totalRows
+        FROM OrderItems oi
+        JOIN Orders o ON o.orderID = oi.orderID
+		JOIN Organizations org ON o.orgID = org.OrganizationID
+    """
 	base_query = """
         SELECT
             o.orgID,
@@ -1723,15 +1739,38 @@ def salesByOrganizationReport():
             SUM(oi.totalPrice) AS grossSales
         FROM OrderItems oi
         JOIN Orders o ON o.orderID = oi.orderID
+		JOIN Organizations org ON o.orgID = org.OrganizationID
     """
 	params = []
+	where_clauses = []
+
+	if start:
+		where_clauses.append("orderTime >= %s")
+		params.append(start + " 00:00:00")
+
+	if end:
+		where_clauses.append("orderTime <= %s")
+		params.append(end + " 23:59:59")
+
+	if organizationFilter:
+		organization = f"%{organizationFilter}%"
+		where_clauses.append("org.Name LIKE %s")
+		params.append(organization)
+
+	if where_clauses:
+		base_query += " WHERE " + " AND ".join(where_clauses)
 
 	base_query += """
 		GROUP BY o.orgID
 		ORDER BY grossSales DESC, quantityBought DESC
+		LIMIT %s OFFSET %s
 		"""
 
-	rows = selectDb(base_query, tuple(params)) or []
+	rowTotal = selectDb(count_query, tuple(params)) or [{"totalRows": 0}]
+	rows = selectDb(base_query, tuple(list(params) + [rowsPerPage, offset])) or []
+
+	total_rows = rowTotal[0]["totalRows"] if rowTotal else 0
+	numPages = max(1, math.ceil(total_rows / rowsPerPage)) if rowsPerPage else 1
 
 	try:
 		orgData = getOrgData() or {}
@@ -1769,36 +1808,48 @@ def salesByOrganizationReport():
 		"salesByOrgReport.html",
 		layout="nav.html" if not session.get("UserID") else ("activenav.html"),
 		rows=rows,
-		summary=summary
+		summary=summary,
+		organizationFilter=organizationFilter,
+		page=page,
+        pageNum=range(1, numPages + 1),
+        pageRows=rowsPerPage
 	)
 
 @application.route("/reports/sales-by-product")
 @permission_required("view_reports")
 def sales_by_product_report():
-    org_id = request.args.get("orgID", type=int)
-    export_format = request.args.get("format", "").lower()
+	start = request.args.get("start", "").strip()
+	end = request.args.get("end", "").strip()
+	page = request.args.get("page", 1, type=int)
+	rowsPerPage = request.args.get("pageCount", 10, type=int)
+	offset = (page - 1) * rowsPerPage
+	org_id = request.args.get("orgID", type=int)
+	export_format = request.args.get("format", "").lower()
 
-    rows = get_sales_by_product_rows(org_id=org_id)
+	rows, numPages = get_sales_by_product_rows(org_id=org_id, start=start, end=end, rowsPerPage=rowsPerPage, offset=offset)
 
-    summary = {
-        "productCount": len(rows),
-        "quantitySold": sum(int(r.get("quantitySold") or 0) for r in rows),
-        "grossSales": sum(float(r.get("grossSales") or 0) for r in rows)
-    }
+	summary = {
+		"productCount": len(rows),
+		"quantitySold": sum(int(r.get("quantitySold") or 0) for r in rows),
+		"grossSales": sum(float(r.get("grossSales") or 0) for r in rows)
+	}
 
-    if export_format == "csv":
-        return build_csv_response(
-            "sales_by_product_report.csv",
-            ["productID", "productName", "category", "brand", "orderCount", "quantitySold", "grossSales"],
-            rows
-        )
+	if export_format == "csv":
+		return build_csv_response(
+			"sales_by_product_report.csv",
+			["productID", "productName", "category", "brand", "orderCount", "quantitySold", "grossSales"],
+			rows
+		)
 
-    return render_template(
-        "sales_by_product_report.html",
-        layout="nav.html" if not session.get("UserID") else ("orgnav.html" if session.get("Organization") else "activenav.html"),
-        rows=rows,
-        summary=summary
-    )
+	return render_template(
+		"sales_by_product_report.html",
+		layout="nav.html" if not session.get("UserID") else ("orgnav.html" if session.get("Organization") else "activenav.html"),
+		rows=rows,
+		summary=summary,
+		page=page,
+        pageNum=range(1, numPages + 1),
+        pageRows=rowsPerPage
+	)
 
 @application.route("/reports/refunds-impact")
 @permission_required("view_reports")
@@ -1849,24 +1900,32 @@ def admin_update_order_status(order_id):
 @application.route("/reports/invoices")
 @permission_required("view_reports")
 def invoice_report():
-    fee_rate = request.args.get("feeRate", default=0.01, type=float)
-    export_format = request.args.get("format", "").lower()
+	start = request.args.get("start", "").strip()
+	end = request.args.get("end", "").strip()
+	page = request.args.get("page", 1, type=int)
+	rowsPerPage = request.args.get("pageCount", 10, type=int)
+	offset = (page - 1) * rowsPerPage
+	fee_rate = request.args.get("feeRate", default=0.01, type=float)
+	export_format = request.args.get("format", "").lower()
 
-    rows = get_invoice_rows(fee_rate=fee_rate)
+	rows, numPages = get_invoice_rows(fee_rate=fee_rate, start=start, end=end, rowsPerPage=rowsPerPage, offset=offset)
 
-    if export_format == "csv":
-        return build_csv_response(
-            "invoice_report.csv",
-            ["orgID", "organizationName", "orderCount", "salesTotal", "feeRate", "feeAmount", "invoiceTotal", "feeExplanation"],
-            rows
-        )
+	if export_format == "csv":
+		return build_csv_response(
+			"invoice_report.csv",
+			["orgID", "organizationName", "orderCount", "salesTotal", "feeRate", "feeAmount", "invoiceTotal", "feeExplanation"],
+			rows
+		)
 
-    return render_template(
-        "invoice_report.html",
-        layout="nav.html" if not session.get("UserID") else ("orgnav.html" if session.get("Organization") else "activenav.html"),
-        rows=rows,
-        feeRate=fee_rate
-    )
+	return render_template(
+		"invoice_report.html",
+		layout="nav.html" if not session.get("UserID") else ("orgnav.html" if session.get("Organization") else "activenav.html"),
+		rows=rows,
+		feeRate=fee_rate,
+		page=page,
+        pageNum=range(1, numPages + 1),
+        pageRows=rowsPerPage
+	)
 
 @application.route("/reports/invoices/resend", methods=["POST"])
 @permission_required("view_reports")
@@ -1922,66 +1981,157 @@ def resend_invoice_email():
 @permission_required("view_audit_logs")
 def audit_logs():
     keyword = request.args.get("q", "").strip()
+    sponsor_filter = request.args.get("sponsor", "").strip()
+    start_date = request.args.get("start", "").strip()
+    end_date = request.args.get("end", "").strip()
+    category_filter = request.args.get("category", "").strip()
     export_format = request.args.get("format", "").lower()
 
+    page = request.args.get("page", 1, type=int)
+    rowsPerPage = request.args.get("pageCount", 20, type=int)
+
+    if rowsPerPage not in [20, 50, 100]:
+        rowsPerPage = 20
+
+    offset = (page - 1) * rowsPerPage
+
     base_query = """
-        SELECT *
-        FROM (
-            SELECT
-                pa.DateAdjusted AS EventDate,
-                'PasswordAdjustments' AS SourceTable,
-                pa.TypeOfChange AS EventType,
-                COALESCE(actor.Name, pa.AdjustedByUName) AS Actor,
-                COALESCE(target.Name, pa.AdjustedUName) AS Target,
-                CONCAT('Password change event for ', pa.AdjustedUName) AS Details
-            FROM PasswordAdjustments pa
-            LEFT JOIN Users actor ON actor.Username = pa.AdjustedByUName
-            LEFT JOIN Users target ON target.Username = pa.AdjustedUName
+		SELECT *
+		FROM (
+			SELECT
+				pa.DateAdjusted AS EventDate,
+				'PasswordAdjustments' AS SourceTable,
+				pa.TypeOfChange AS EventType,
+				COALESCE(actor.Name, pa.AdjustedByUName) AS Actor,
+				actor.Email AS ActorEmail,
+				COALESCE(target.Name, pa.AdjustedUName) AS Target,
+				target.Email AS TargetEmail,
+				CONCAT('Password change event for ', pa.AdjustedUName) AS Details,
+				COALESCE(s_actor.Name, s_target.Name, '') AS SponsorName,
+				COALESCE(s_actor.Email, s_target.Email, '') AS SponsorEmail,
+				COALESCE(s_actor.Username, s_target.Username, '') AS SponsorUsername
+			FROM PasswordAdjustments pa
+			LEFT JOIN Users actor ON actor.Username = pa.AdjustedByUName
+			LEFT JOIN Users target ON target.Username = pa.AdjustedUName
+			LEFT JOIN Users s_actor ON s_actor.UserType = 'Sponsor' AND s_actor.Username = pa.AdjustedByUName
+			LEFT JOIN Users s_target ON s_target.UserType = 'Sponsor' AND s_target.Username = pa.AdjustedUName
 
-            UNION ALL
+			UNION ALL
 
-            SELECT
-                l.LoginDate AS EventDate,
-                'Logins' AS SourceTable,
-                CASE
-                    WHEN l.LoginResult = 1 THEN 'Successful Login'
-                    ELSE 'Failed Login'
-                END AS EventType,
-                COALESCE(u.Name, l.LoginUser) AS Actor,
-                '' AS Target,
-                CONCAT('Login user: ', l.LoginUser) AS Details
-            FROM Logins l
-            LEFT JOIN Users u ON (u.Email = l.LoginUser OR u.Username = l.LoginUser)
+			SELECT
+				l.LoginDate AS EventDate,
+				'Logins' AS SourceTable,
+				CASE
+					WHEN l.LoginResult = 1 THEN 'Successful Login'
+					ELSE 'Failed Login'
+				END AS EventType,
+				COALESCE(u.Name, l.LoginUser) AS Actor,
+				u.Email AS ActorEmail,
+				'' AS Target,
+				'' AS TargetEmail,
+				CONCAT('Login user: ', l.LoginUser) AS Details,
+				COALESCE(s_u.Name, '') AS SponsorName,
+				COALESCE(s_u.Email, '') AS SponsorEmail,
+				COALESCE(s_u.Username, '') AS SponsorUsername
+			FROM Logins l
+			LEFT JOIN Users u ON (u.Email = l.LoginUser OR u.Username = l.LoginUser)
+			LEFT JOIN Users s_u ON s_u.UserType = 'Sponsor' AND s_u.UserID = u.UserID
 
-            UNION ALL
+			UNION ALL
 
-            SELECT
-                p.DateAdjusted AS EventDate,
-                'PointAdjustments' AS SourceTable,
-                p.AdjustmentType AS EventType,
-                p.AdjustedByUName AS Actor,
-                p.DriverUName AS Target,
-                CONCAT('Points: ', p.AdjustmentPoints, ' | Reason: ', COALESCE(p.AdjustmentReason, '')) AS Details
-            FROM PointAdjustments p
-        ) audit_rows
-    """
+			SELECT
+				p.DateAdjusted AS EventDate,
+				'PointAdjustments' AS SourceTable,
+				p.AdjustmentType AS EventType,
+				COALESCE(actor.Name, p.AdjustedByUName) AS Actor,
+				actor.Email AS ActorEmail,
+				COALESCE(target.Name, p.DriverUName) AS Target,
+				target.Email AS TargetEmail,
+				CONCAT('Points: ', p.AdjustmentPoints, ' | Reason: ', COALESCE(p.AdjustmentReason, '')) AS Details,
+				COALESCE(s_actor.Name, '') AS SponsorName,
+				COALESCE(s_actor.Email, '') AS SponsorEmail,
+				COALESCE(s_actor.Username, '') AS SponsorUsername
+			FROM PointAdjustments p
+			LEFT JOIN Users actor ON actor.Username = p.AdjustedByUName
+			LEFT JOIN Users target ON target.Username = p.DriverUName
+			LEFT JOIN Users s_actor ON s_actor.UserType = 'Sponsor' AND s_actor.Username = p.AdjustedByUName
+		) audit_rows
+	"""
 
     params = []
+    where_clauses = []
+
     if keyword:
         like = f"%{keyword}%"
-        base_query += """
-            WHERE
-                SourceTable LIKE %s OR
-                EventType LIKE %s OR
-                Actor LIKE %s OR
-                Target LIKE %s OR
-                Details LIKE %s
-        """
-        params.extend([like, like, like, like, like])
+        where_clauses.append("""
+			(
+				SourceTable LIKE %s OR
+				EventType LIKE %s OR
+				Actor LIKE %s OR
+				ActorEmail LIKE %s OR
+				Target LIKE %s OR
+				TargetEmail LIKE %s OR
+				Details LIKE %s
+			)
+		""")
+        params.extend([like, like, like, like, like, like, like])
+
+    if sponsor_filter:
+        sponsor_like = f"%{sponsor_filter}%"
+        where_clauses.append("""
+			(
+				SponsorName LIKE %s OR
+				SponsorEmail LIKE %s OR
+				SponsorUsername LIKE %s
+			)
+		""")
+        params.extend([sponsor_like, sponsor_like, sponsor_like])
+
+    if start_date:
+        where_clauses.append("DATE(EventDate) >= %s")
+        params.append(start_date)
+
+    if end_date:
+        where_clauses.append("DATE(EventDate) <= %s")
+        params.append(end_date)
+
+    if category_filter:
+        where_clauses.append("SourceTable = %s")
+        params.append(category_filter)
+
+    if where_clauses:
+        base_query += " WHERE " + " AND ".join(where_clauses)
+
+    count_query = f"""
+		SELECT COUNT(*) AS totalRows
+		FROM ({base_query}) counted_audit_rows
+	"""
+
+    rowTotal = selectDb(count_query, tuple(params)) or [{"totalRows": 0}]
+    totalRows = rowTotal[0]["totalRows"] if rowTotal else 0
+    numPages = max(1, math.ceil(totalRows / rowsPerPage))
 
     base_query += " ORDER BY EventDate DESC"
 
-    rows = selectDb(base_query, tuple(params)) or []
+    if export_format == "csv":
+        rows = selectDb(base_query, tuple(params)) or []
+        return build_csv_response(
+            "audit_logs.csv",
+            [
+                "EventDate",
+                "SourceTable",
+				"EventType",
+				"Actor",
+				"ActorEmail",
+				"Target",
+				"TargetEmail",
+				"Details"
+			],
+			rows
+		)
+
+    paged_query = base_query + " LIMIT %s OFFSET %s"
+    rows = selectDb(paged_query, tuple(list(params) + [rowsPerPage, offset])) or []
 
     if export_format == "csv":
         return build_csv_response(
@@ -1991,12 +2141,30 @@ def audit_logs():
         )
 
     nav = "orgnav.html" if session.get("Organization") else "activenav.html"
+
+    queryString = urlencode({
+	"q": keyword,
+	"sponsor": sponsor_filter,
+	"start": start_date,
+	"end": end_date,
+	"category": category_filter,
+	"pageCount": rowsPerPage
+	})
+
     return render_template(
         "audit_logs.html",
-        layout=nav,
-        rows=rows,
-        keyword=keyword
-    )
+		layout=nav,
+		rows=rows,
+		keyword=keyword,
+		sponsorFilter=sponsor_filter,
+		startDate=start_date,
+		endDate=end_date,
+		categoryFilter=category_filter,
+		page=page,
+		pageNum=range(1, numPages + 1),
+		pageRows=rowsPerPage,
+		queryString=queryString
+	)
 
 @application.route("/<accountType>/users/<int:UserID>/edit", methods=["POST"])
 def userEditPost(accountType, UserID):	
@@ -2047,11 +2215,43 @@ def deleteUser(accountType, UserID):
 		updateDb("DELETE FROM Sponsors WHERE SponsorID = %s", (UserID,))
 	elif user["UserType"] == "Driver": 
 		updateDb("DELETE FROM Drivers WHERE DriverID = %s", (UserID,))
+		updateDb("DELETE FROM DriverOrganizations WHERE DriverID = %s", (UserID,))
 	updateDb("DELETE FROM Users WHERE UserID = %s", (UserID,))
 	
 	flash("User deleted successfully.", "success")
 	return redirect(f"/{accountType}/users")
 
+
+def get_admin_dashboard_summary():
+    sponsors_row = paramQueryDb("""
+        SELECT COUNT(*) AS total
+        FROM Users
+        WHERE UserType = 'Sponsor'
+    """, ()) or {"total": 0}
+
+    drivers_row = paramQueryDb("""
+        SELECT COUNT(*) AS total
+        FROM Users
+        WHERE UserType = 'Driver'
+    """, ()) or {"total": 0}
+
+    pending_apps_row = paramQueryDb("""
+        SELECT COUNT(*) AS total
+        FROM OrganizationApplications
+        WHERE ApplicationStatus = 'Pending'
+    """, ()) or {"total": 0}
+
+    organizations_row = paramQueryDb("""
+        SELECT COUNT(*) AS total
+        FROM Organizations
+    """, ()) or {"total": 0}
+
+    return {
+        "sponsors": int(sponsors_row.get("total") or 0),
+        "drivers": int(drivers_row.get("total") or 0),
+        "pending_applications": int(pending_apps_row.get("total") or 0),
+        "organizations": int(organizations_row.get("total") or 0),
+    }
 
 #The different website pages
 @application.route("/")
@@ -2062,6 +2262,8 @@ def home():
 			session["Organization"] = None
 
 		driver_point_summary = None
+		admin_dashboard_summary = None
+
 		if session.get("role") == "Driver" and session.get("OrgID"):
 			try:
 				driver_point_summary = get_driver_point_history(
@@ -2072,12 +2274,25 @@ def home():
 			except Exception as e:
 				print("driver_point_summary skipped:", e)
 
+		if session.get("role") == "Admin":
+			try:
+				admin_dashboard_summary = get_admin_dashboard_summary()
+			except Exception as e:
+				print("admin_dashboard_summary skipped:", e)
+
 		return render_template(
 			"home.html",
 			layout="activenav.html",
-			driver_point_summary=driver_point_summary
+			driver_point_summary=driver_point_summary,
+			admin_dashboard_summary=admin_dashboard_summary
 		)
-	return render_template("home.html", layout="nav.html")
+
+	return render_template(
+		"home.html",
+		layout="nav.html",
+		driver_point_summary=None,
+		admin_dashboard_summary=None
+	)
 
 """
 This is the about page. Right now it serves as the landing page. Later this will
@@ -2186,7 +2401,13 @@ def registerAboutEdits():
 @application.route("/bugReport")
 def bugReport():
 	prevPage = request.referrer
-	return render_template("bugReport.html", layout="activenav.html", prevPage=prevPage)
+	layout = "orgnav.html" if session.get("OrgID") else "activenav.html"
+	return render_template("bugReport.html", layout=layout, prevPage=prevPage)
+
+
+@application.route("/support")
+def support():
+	return redirect(url_for("bugReport"))
 
 @application.route("/bugReport", methods=["POST"])
 def postBugReport():
@@ -2544,7 +2765,7 @@ def organizationEdit(OrgID):
 
 @application.route("/organizations/<int:OrgID>/delete", methods=["POST"])
 def organizationDelete(OrgID):
-	updateDb("UPDATE Drivers SET OrganizationID = %s WHERE OrganizationID = %s", ("0", OrgID))
+	updateDb("UPDATE DriverOrganizations SET OrganizationID = %s WHERE OrganizationID = %s", ("0", OrgID))
 	updateDb("DELETE FROM Organizations WHERE OrganizationID = %s", (OrgID,))
 	
 	flash("Organization deleted successfully.", "success")
@@ -2770,7 +2991,7 @@ def removeOrgUser(UserID):
 	if user[0]["UserType"] == "Sponsor":
 		updateDb("""UPDATE Sponsors SET OrganizationID = %s WHERE SponsorID = %s""", (None, UserID,))
 	elif user[0]["UserType"] == "Driver":
-		updateDb("""UPDATE Drivers SET OrganizationID = %s WHERE DriverID = %s""", (None, UserID,))
+		updateDb("""UPDATE DriverOrganizations SET OrganizationID = %s WHERE DriverID = %s""", (None, UserID,))
 	return redirect(url_for("organizationUsers"))
 
 @application.route("/organization/apply")
@@ -2835,10 +3056,14 @@ def apply():
 @application.route("/organization/apply/<int:OrgID>")
 def applyPost(OrgID):
 	user = paramQueryDb("""SELECT Username FROM Users WHERE UserID = %s""", (session['UserID'],))
+	org = paramQueryDb("""SELECT Name FROM Organizations WHERE OrganizationID = %s""", (OrgID,))
 	timeApplied = datetime.now()
+
 	updateDb("""INSERT INTO OrganizationApplications (OrganizationID, DriverUName, ApplicationStatus, DateApplied)
 				VALUES (%s, %s, %s, %s)""", (OrgID, user['Username'], "Pending", timeApplied))
-	flash(f"You have applied for enrollment in { organization } ", "enrolled")
+
+	org_name = org["Name"] if org else "the organization"
+	flash(f"You have applied for enrollment in {org_name}.", "enrolled")
 	return redirect(url_for("apply"))
 
 @application.route("/organization/apply/cancel/<int:OrgID>")
@@ -2920,7 +3145,7 @@ def acceptedApplications(UserID):
 	timeJoined= datetime.now()
 	updateDb("""UPDATE OrganizationApplications SET ApplicationStatus = %s, ReviewedByUName = %s, ReviewReason = %s WHERE DriverUName = %s AND OrganizationID = %s""", ("Accepted", user["Username"], reason, driver["Username"], session["OrgID"]))
 	updateDb("""
-		UPDATE Drivers
+		UPDATE DriverOrganizations
 		SET OrganizationID = %s
 		WHERE DriverID = %s
 	""", (session["OrgID"], UserID))
@@ -2943,7 +3168,7 @@ def rejectedApplications(UserID):
 	return redirect(url_for("applications"))
 
 @application.route("/organization/<int:OrgID>/leave", methods=["POST"])
-def organization_leave():
+def organization_leave(OrgID):
     if "UserID" not in session:
         flash("Please login first.", "auth")
         return redirect(url_for("login"))
@@ -2953,9 +3178,9 @@ def organization_leave():
         return redirect(url_for("organization"))
 
     updateDb(
-        "DELETE FROM DriverOrganizations WHERE OrganizationID=%s AND UserID=%s",
-        (OrgID, session["UserID"])
-    )
+		"DELETE FROM DriverOrganizations WHERE OrganizationID=%s AND DriverID=%s",
+		(OrgID, session["UserID"])
+	)
 
     session.pop("Organization", None)
     flash("You left the organization.", "success")
@@ -3987,28 +4212,127 @@ def adjustDriverPoints(driverID, orgID, newPointTotal):
 	"""
 	updateDb(query=adjustDriverPointsQuery, params=(newPointTotal, driverID, orgID))
 
+def get_driver_org_membership(driverID, orgID):
+	return paramQueryDb(
+		"""
+		SELECT DriverID, OrganizationID, TotalPoints
+		FROM DriverOrganizations
+		WHERE DriverID=%s AND OrganizationID=%s
+		""",
+		(driverID, orgID)
+	)
+
+
+def log_redemption_denial(userID, orgID, reason, points_attempted=0):
+	try:
+		user = paramQueryDb("SELECT Username FROM Users WHERE UserID=%s", (userID,))
+		username = user.get("Username") if user else f"user-{userID}"
+		membership = get_driver_org_membership(userID, orgID) or {}
+		current_points = int(membership.get("TotalPoints") or 0)
+
+		updateDb(
+			"""
+			INSERT INTO PointAdjustments
+			(OrganizationID, AdjustedByUName, DriverUName, AdjustmentType, DriverTotalPoints, AdjustmentPoints, AdjustmentReason, DateAdjusted)
+			VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+			""",
+			(orgID, username, username, "Denied", current_points, int(points_attempted or 0), reason, datetime.now())
+		)
+	except Exception as e:
+		print("Redemption denial log skipped:", e)
+
+
+def validate_redemption_request(userID, orgID):
+	membership = get_driver_org_membership(userID, orgID)
+	if not membership:
+		return {
+			"ok": False,
+			"message": "Redemption blocked because your sponsor affiliation for this organization is missing.",
+			"cart": [],
+			"total": 0,
+			"driver_points": 0
+		}
+
+	cartData = getCartData(userID, orgID)
+	if not cartData:
+		return {
+			"ok": False,
+			"message": "Your cart is empty.",
+			"cart": [],
+			"total": 0,
+			"driver_points": int(membership.get("TotalPoints") or 0)
+		}
+
+	validated_cart = []
+	current_total = 0
+
+	for item in cartData:
+		productID = item.get("id")
+		quantity = int(item.get("quantity") or 0)
+
+		live_product = getProductData(productID)
+		if not live_product:
+			return {
+				"ok": False,
+				"message": "A product in your cart could not be loaded right now. Please return to the catalog and try again.",
+				"cart": [],
+				"total": 0,
+				"driver_points": int(membership.get("TotalPoints") or 0)
+			}
+
+		live_product = adjustPrice([live_product])[0]
+		live_price = int(live_product.get("price") or 0)
+		available_stock = int(live_product.get("stock") or 0)
+
+		if available_stock < quantity:
+			return {
+				"ok": False,
+				"message": f"{item.get('title')} is no longer available in the quantity you selected. Please return to the catalog or update your cart.",
+				"cart": [],
+				"total": 0,
+				"driver_points": int(membership.get("TotalPoints") or 0)
+			}
+
+		item["price"] = live_price
+		item["stock"] = available_stock
+		item["availability_label"] = "In Stock" if available_stock > 0 else "Out of Stock"
+
+		validated_cart.append(item)
+		current_total += live_price * quantity
+
+	driver_points = int(membership.get("TotalPoints") or 0)
+
+	if current_total > driver_points:
+		return {
+			"ok": False,
+			"message": "You do not have enough points to complete this redemption.",
+			"cart": validated_cart,
+			"total": current_total,
+			"driver_points": driver_points
+		}
+
+	return {
+		"ok": True,
+		"message": "",
+		"cart": validated_cart,
+		"total": current_total,
+		"driver_points": driver_points
+	}
+
 @application.route("/cart/checkout")
 def checkout():
-	if "UserID" not in session:
+	if "UserID" not in session or "OrgID" not in session:
 		return redirect(url_for("home"))
-	try:
-		userID = session.get("UserID")
-		orgID = session.get("OrgID")
 
-		cartTotal = getCartTotal(userID, orgID)
+	userID = session.get("UserID")
+	orgID = session.get("OrgID")
 
-		driverPointTotal = getDriverPoints()
-
-		#don't let user get past cart screen unless they have enough points
-		if driverPointTotal < cartTotal:
-			raise Exception("Driver does not have enough points to complete the order")
-
-	#go back to cart screen if an error occurs
-	except Exception as e:
-		print(e)
+	validation = validate_redemption_request(userID, orgID)
+	if not validation["ok"]:
+		log_redemption_denial(userID, orgID, validation["message"], validation.get("total", 0))
+		flash(validation["message"], "validation")
 		return redirect(url_for("cart"))
 
-	#if user has enough points for the order, continue to checkout screen
 	return render_template("checkout.html", layout="orgnav.html")
 
 def getCartData(userID, orgID):
@@ -4020,69 +4344,96 @@ def getCartData(userID, orgID):
 			AND orgID=%s
 	"""
 	rows = selectDb(query=getCartItemsQuery, params=(userID, orgID))
-	#collect just the product ids into a list
+
 	cartProductIds = []
-	#collect quantities of products into a list
 	cartQuantities = []
 	for row in rows:
 		cartProductIds.append(row.get("productID"))
 		cartQuantities.append(row.get("amount"))
 
 	cartProductData = []
-	for productId in cartProductIds:
-		cartProductData.append(getProductData(productId))
+	validQuantities = []
+
+	for i, productId in enumerate(cartProductIds):
+		product = getProductData(productId)
+		if product:
+			cartProductData.append(product)
+			validQuantities.append(cartQuantities[i])
+
+	if not cartProductData:
+		return []
 
 	cartProductData = adjustPrice(cartProductData)
 
-	for i, amount in enumerate(cartQuantities):
+	for i, amount in enumerate(validQuantities):
 		cartProductData[i]["quantity"] = amount
 
 	return cartProductData
 
 @application.route("/orders/confirm", methods=["POST"])
 def orderConfirmation():
-	if "UserID" not in session:
+	if "UserID" not in session or "OrgID" not in session:
 		return redirect(url_for("home"))
-	
-	#grab cart data
+
 	userID = session.get("UserID")
 	orgID = session.get("OrgID")
-	cartData = getCartData(userID=userID, orgID=orgID)
 
-	#grab address data from form
-	addressDict = {}
-	addressDict["address"] = request.form.get("address")
-	addressDict["city"] = request.form.get("city")
-	addressDict["state"] = request.form.get("state")
+	validation = validate_redemption_request(userID, orgID)
+	if not validation["ok"]:
+		log_redemption_denial(userID, orgID, validation["message"], validation.get("total", 0))
+		flash(validation["message"], "validation")
+		return redirect(url_for("cart"))
 
-	#calculate order total
-	orderTotal = getCartTotal(userID, orgID)
+	addressDict = {
+		"address": request.form.get("address", "").strip(),
+		"city": request.form.get("city", "").strip(),
+		"state": request.form.get("state", "").strip()
+	}
 
-	#send user to confirmation screen to confirm before the pull the trigger on their order
-	return render_template("confirm_order.html", layout="orgnav.html", cart=cartData, address=addressDict, total=orderTotal)
+	return render_template(
+		"confirm_order.html",
+		layout="orgnav.html",
+		cart=validation["cart"],
+		address=addressDict,
+		total=validation["total"],
+		driverPoints=validation["driver_points"]
+	)
 
 @application.route("/orders", methods=["POST"])
 def makeOrder():
 	if "UserID" not in session or "OrgID" not in session:
 		return redirect(url_for("home"))
-	
+
 	try:
 		userID = session.get("UserID")
 		orgID = session.get("OrgID")
 
-		cartTotal = getCartTotal(userID, orgID)
-		driverPointTotal = getDriverPoints()
-		newDriverPointTotal = driverPointTotal-cartTotal
+		validation = validate_redemption_request(userID, orgID)
+		if not validation["ok"]:
+			log_redemption_denial(userID, orgID, validation["message"], validation.get("total", 0))
+			flash(validation["message"], "validation")
+			return redirect(url_for("cart"))
 
-		#lower driver's point total
+		expected_total = int(request.form.get("expected_total") or 0)
+		if expected_total != validation["total"]:
+			message = f"Your cart total changed from {expected_total} to {validation['total']} points. Please review your order again before confirming."
+			log_redemption_denial(userID, orgID, message, validation["total"])
+			flash(message, "validation")
+			return redirect(url_for("cart"))
+
+		newDriverPointTotal = validation["driver_points"] - validation["total"]
+		if newDriverPointTotal < 0:
+			message = "This redemption was denied because it would make the point balance go below zero."
+			log_redemption_denial(userID, orgID, message, validation["total"])
+			flash(message, "validation")
+			return redirect(url_for("cart"))
+
 		adjustDriverPoints(userID, orgID, newDriverPointTotal)
 
-		#insert info into Orders table
 		address = request.form.get("address")
 		city = request.form.get("city")
 		state = request.form.get("state")
 
-		#insert into Order table with a cursor to keep track of that entry's orderID
 		connection = getDbConnection()
 		cursor = connection.cursor()
 		insertOrderQuery = """
@@ -4091,42 +4442,41 @@ def makeOrder():
 			VALUES 
 				(%s,%s,%s,%s,%s,%s,%s,%s + INTERVAL 1 WEEK)
 		"""
-		cursor.execute(query=insertOrderQuery, args=(userID,orgID,cartTotal,address,city,state,datetime.now(),datetime.now()))
+		cursor.execute(
+			query=insertOrderQuery,
+			args=(userID, orgID, validation["total"], address, city, state, datetime.now(), datetime.now())
+		)
 		connection.commit()
 		orderID = cursor.lastrowid
 		cursor.close()
 
-		#insert list of items into OrderItems table
-		cartItems = getCartData(userID, orgID)
 		insertOrderItemQuery = """
 			INSERT INTO OrderItems
 				(orderID, productID, unitPrice, totalPrice, amount)
 			VALUES
 				(%s,%s,%s,%s,%s)
 		"""
-		for item in cartItems:
+		for item in validation["cart"]:
 			productID = item.get("id")
-			unitPrice = item.get("price")
-			amount = item.get("quantity")
-			totalPrice = unitPrice*amount
-			updateDb(insertOrderItemQuery, params=(orderID,productID,unitPrice,totalPrice,amount))
+			unitPrice = int(item.get("price") or 0)
+			amount = int(item.get("quantity") or 0)
+			totalPrice = unitPrice * amount
+			updateDb(insertOrderItemQuery, params=(orderID, productID, unitPrice, totalPrice, amount))
 
-		#delete all items from user's cart
 		deleteCartItemsQuery = """
 			DELETE FROM Cart
 			WHERE
 				userID=%s
 				AND orgID=%s
 		"""
-		updateDb(query=deleteCartItemsQuery, params=(userID,orgID))
+		updateDb(query=deleteCartItemsQuery, params=(userID, orgID))
 
 		session["Points"] = newDriverPointTotal
-
-		#for an alert confirming to the user that the purchase was successful
 		flash("Purchase successful. Order confirmed.", category="orderConfirmation")
 
 	except Exception as e:
 		print(e)
+		flash("We could not complete your order right now. Please try again.", "validation")
 		return redirect(url_for("checkout"))
 
 	return redirect(url_for("cart"))
@@ -4757,7 +5107,7 @@ def process_admin_bulk_lines(lines):
 
 				try:
 					updateDb(
-						"INSERT INTO Drivers (DriverID, OrganizationID) VALUES (%s, %s)",
+						"INSERT INTO DriverOrganizations (DriverID, OrganizationID) VALUES (%s, %s)",
 						(new_user["UserID"], org["OrganizationID"])
 					)
 				except Exception as e:

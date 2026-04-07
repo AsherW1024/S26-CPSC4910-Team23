@@ -11,51 +11,126 @@
   <div class="container is-max-desktop mt-6">
     <div class="box">
       <h2 class="title is-2">Audit Log Search</h2>
-      <form method="GET" class="mb-4">
-        <div class="columns is-vcentered">
-          <div class="column">
-            <label class="label">Keyword</label>
-            <input class="input" type="text" name="q" value="{{ keyword }}" placeholder="driver name, username, sponsor...">
+        <form method="GET" class="mb-4">
+          <div class="columns is-multiline">
+            <div class="column is-4">
+              <label class="label">Keyword</label>
+              <input class="input" type="text" name="q" value="{{ keyword }}" placeholder="driver name, username, sponsor...">
+            </div>
+        
+            <div class="column is-3">
+              <label class="label">Sponsor</label>
+              <input class="input" type="text" name="sponsor" value="{{ sponsorFilter }}" placeholder="sponsor name, email, username...">
+            </div>
+        
+            <div class="column is-2">
+              <label class="label">Date From</label>
+              <input class="input" type="date" name="start" value="{{ startDate }}">
+            </div>
+        
+            <div class="column is-2">
+              <label class="label">Date To</label>
+              <input class="input" type="date" name="end" value="{{ endDate }}">
+            </div>
+        
+            <div class="column is-3">
+              <label class="label">Category</label>
+              <div class="select is-fullwidth">
+                <select name="category">
+                  <option value="" {% if not categoryFilter %}selected{% endif %}>All</option>
+                  <option value="PasswordAdjustments" {% if categoryFilter == "PasswordAdjustments" %}selected{% endif %}>Password Adjustments</option>
+                  <option value="Logins" {% if categoryFilter == "Logins" %}selected{% endif %}>Logins</option>
+                  <option value="PointAdjustments" {% if categoryFilter == "PointAdjustments" %}selected{% endif %}>Point Adjustments</option>
+                </select>
+              </div>
+            </div>
+        
+            <div class="column is-2">
+              <label class="label">Rows per Page</label>
+              <div class="select is-fullwidth">
+                <select name="pageCount" onchange="this.form.submit()">
+                  <option value="20" {% if pageRows == 20 %}selected{% endif %}>20</option>
+                  <option value="50" {% if pageRows == 50 %}selected{% endif %}>50</option>
+                  <option value="100" {% if pageRows == 100 %}selected{% endif %}>100</option>
+                </select>
+              </div>
+            </div>
+        
+            <div class="column is-narrow">
+              <label class="label">&nbsp;</label>
+              <button class="button is-light" type="submit">Search</button>
+            </div>
+        
+            <div class="column is-narrow">
+              <label class="label">&nbsp;</label>
+              <a class="button is-white" href="/admin/audit-logs">Clear</a>
+            </div>
+        
+            <div class="column is-narrow">
+              <label class="label">&nbsp;</label>
+              <button class="button is-info" type="submit" name="format" value="csv">Download CSV</button>
+            </div>
           </div>
-          <div class="column is-narrow">
-            <label class="label">&nbsp;</label>
-            <button class="button is-light" type="submit">Search</button>
-          </div>
-          <div class="column is-narrow">
-            <label class="label">&nbsp;</label>
-            <button class="button is-info" type="submit" name="format" value="csv">Download CSV</button>
-          </div>
-        </div>
-      </form>
+        </form>
 
-      <table class="table is-fullwidth is-striped">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Source</th>
-            <th>Event</th>
-            <th>Actor</th>
-            <th>Target</th>
-            <th>Details</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for r in rows %}
-          <tr>
-            <td>{{ r.EventDate }}</td>
-            <td>{{ r.SourceTable }}</td>
-            <td>{{ r.EventType }}</td>
-            <td>{{ r.Actor }}</td>
-            <td>{{ r.Target }}</td>
-            <td>{{ r.Details }}</td>
-          </tr>
+      <div class="table-container">
+        <table class="table is-fullwidth is-striped">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Source</th>
+              <th>Event</th>
+              <th>Actor</th>
+              <th>Actor Email</th>
+              <th>Target</th>
+              <th>Target Email</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in rows %}
+            <tr>
+              <td>{{ r.EventDate }}</td>
+              <td>{{ r.SourceTable }}</td>
+              <td>{{ r.EventType }}</td>
+              <td>{{ r.Actor }}</td>
+              <td>{{ r.ActorEmail }}</td>
+              <td>{{ r.Target }}</td>
+              <td>{{ r.TargetEmail }}</td>
+              <td>{{ r.Details }}</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="8">No audit rows found.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <nav class="pagination is-centered" role="navigation">
+      {% if page > 1 %}
+        <a href="?{{ queryString }}&page={{ page - 1 }}" class="pagination-previous">Previous</a>
+      {% else %}
+        <a href="#" class="pagination-previous" disabled>Previous</a>
+      {% endif %}
+
+      {% if pageNum|length > 1 and page < pageNum|length %}
+        <a href="?{{ queryString }}&page={{ page + 1 }}" class="pagination-next">Next page</a>
+      {% else %}
+        <a href="#" class="pagination-next" disabled>Next page</a>
+      {% endif %}
+
+      <ul class="pagination-list">
+        {% for p in pageNum %}
+          {% if p == page %}
+            <li><a href="#" class="pagination-link is-current" aria-current="page">{{ p }}</a></li>
           {% else %}
-          <tr>
-            <td colspan="6">No audit rows found.</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+            <li><a href="?{{ queryString }}&page={{ p }}" class="pagination-link">{{ p }}</a></li>
+          {% endif %}
+        {% endfor %}
+      </ul>
+    </nav>
     </div>
   </div>
 </div>

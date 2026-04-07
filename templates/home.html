@@ -7,46 +7,85 @@
 {% endblock %}
 
 {% block content %}
-<div class="home-page">
-    <div class="home-card">
-        <h1>Home Page</h1>
+    <div class="home-page-wrapper">
+        <div class="home-page">
+            <div class="home-card">
+                <h1>Home Page</h1>
 
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <ul class=flashes>
-                {% for category, message in messages %}
-                    {% if category in ["driver", "admin", "sponsor"] %}
-                        <h2 class="{{ category }}">{{ message }}</h2>
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        <ul class=flashes>
+                        {% for category, message in messages %}
+                            {% if category in ["driver", "admin", "sponsor"] %}
+                                <h2 class="{{ category }}">{{ message }}</h2>
+                            {% endif %}
+                        {% endfor %}
+                        </ul>
                     {% endif %}
-                {% endfor %}
+                {% endwith %}
+
+                <p>We welcome you to our good driving team!</p>
+                <p>We help sponsors incentivize good driving through rewards.</p>
+                <p>We hope you enjoy our system!</p>
+            </div>
+        </div>
+
+        {% if session.get("role") == "Admin" and admin_dashboard_summary %}
+        <div class="admin-dashboard-section">
+            <div class="admin-dashboard-header">
+                <h2>Admin Dashboard</h2>
+                <p>Quick overview of users, organizations, and pending activity.</p>
+            </div>
+
+            <div class="admin-dashboard-grid">
+                <a class="admin-dashboard-card" href="/admin/users">
+                    <div class="dashboard-card-label">Sponsors</div>
+                    <div class="dashboard-card-value">{{ admin_dashboard_summary.sponsors }}</div>
+                    <div class="dashboard-card-link">Open Edit Users</div>
+                </a>
+
+                <a class="admin-dashboard-card" href="/admin/users">
+                    <div class="dashboard-card-label">Drivers</div>
+                    <div class="dashboard-card-value">{{ admin_dashboard_summary.drivers }}</div>
+                    <div class="dashboard-card-link">Open Edit Users</div>
+                </a>
+
+                <a class="admin-dashboard-card" href="/reports/applications">
+                    <div class="dashboard-card-label">Pending Applications</div>
+                    <div class="dashboard-card-value">{{ admin_dashboard_summary.pending_applications }}</div>
+                    <div class="dashboard-card-link">Open Application Report</div>
+                </a>
+
+                <a class="admin-dashboard-card" href="/organizations">
+                    <div class="dashboard-card-label">Organizations</div>
+                    <div class="dashboard-card-value">{{ admin_dashboard_summary.organizations }}</div>
+                    <div class="dashboard-card-link">Open Organizations</div>
+                </a>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if session.get("role") == "Driver" and driver_point_summary %}
+        <div class="home-driver-summary">
+            <div class="box">
+                <h2 class="title is-5">Points Activity</h2>
+                <p><strong>Current Balance:</strong> {{ driver_point_summary.balance }}</p>
+
+                {% if driver_point_summary.transactions %}
+                <ul>
+                    {% for tx in driver_point_summary.transactions %}
+                    <li>
+                        {{ tx.display_date }} — {{ tx.transaction_type }} — {{ tx.delta_points }}
+                    </li>
+                    {% endfor %}
                 </ul>
-            {% endif %}
-        {% endwith %}
+                {% else %}
+                <p>No recent point activity.</p>
+                {% endif %}
 
-        <p>We welcome you to our good driving team!</p>
-        <p>We help sponsors incentivize good driving through rewards.</p>
-        <p>We hope you enjoy our system!</p>
+                <a class="button is-link is-small" href="{{ url_for('driver_point_history') }}">View Full Point History</a>
+            </div>
+        </div>
+        {% endif %}
     </div>
-</div>
-
-{% if session.get("role") == "Driver" and driver_point_summary %}
-<div class="box" style="margin-top: 1.5rem;">
-	<h2 class="title is-5">Points Activity</h2>
-	<p><strong>Current Balance:</strong> {{ driver_point_summary.balance }}</p>
-
-	{% if driver_point_summary.transactions %}
-	<ul>
-		{% for tx in driver_point_summary.transactions %}
-		<li>
-			{{ tx.display_date }} — {{ tx.transaction_type }} — {{ tx.delta_points }}
-		</li>
-		{% endfor %}
-	</ul>
-	{% else %}
-	<p>No recent point activity.</p>
-	{% endif %}
-
-	<a class="button is-link is-small" href="{{ url_for('driver_point_history') }}">View Full Point History</a>
-</div>
-{% endif %}
 {% endblock %}
