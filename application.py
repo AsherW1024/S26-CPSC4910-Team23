@@ -93,15 +93,6 @@ def log_password_event(event_type: str, actor_user_id=None, target_user_id=None)
     event_time = datetime.now()
 
     try:
-        updateDb("""
-            INSERT INTO PasswordAdjustments
-            (AdjustedByUName, AdjustedUName, TypeOfChange, DateAdjusted)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """, (actor_user_id, target_user_id, event_type, event_time))
-    except Exception as e:
-        print("PasswordChangeLog insert skipped:", e)
-
-    try:
         actor_username = None
         target_username = None
 
