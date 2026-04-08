@@ -49,7 +49,8 @@
 			</thead>
 			<tbody>
 				{%for order in orders%}
-				<tr data-order-id="{{order.get('productID')}}" class="order-row">
+				<tr data-order-id="{{order.get('orderID')}}" class="order-row">
+					<a href='/order/{{order.get("orderID")}}/details'>hello</a>
 					<td class="cell"><div class="cell-content"><img src="{{order.get('thumbnail')}}" alt="Thumbnail for order {{ order.get('orderID') }}"></div></td>
 					<td class="cell"><div class="cell-content"><p>{{order.get("itemQuantity")}}</p></div></td>
 					<td class="cell"><div class="cell-content"><p>{{order.get('pointTotal')}} Points</p></div></td>

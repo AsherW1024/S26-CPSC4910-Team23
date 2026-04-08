@@ -5229,6 +5229,37 @@ def inCart(productID):
 		print(e)
 		return jsonify(False)
 
+@application.route("/order/<int:orderID>/details")
+def orderDetails(orderID):
+	if "UserID" not in session or "OrgID" not in session or session.get("role")!="Driver":
+		return redirect(url_for("home"))
+	
+	getOrderQuery = """
+		SELECT *
+		FROM Orders
+		WHERE orderID=%s
+	"""
+	getOrderItemsQuery = """
+		SELECT *
+		FROM OrderItems
+		WHERE orderID=%s
+	"""
+	try:
+		orderDbDetails = paramQueryDb(query=getOrderQuery, params=(orderID))
+		orderItems = selectDb(query=getOrderItemsQuery, params=(orderID))
+	except Exception as e:
+		print(e)
+		return redirect(url_for("previousOrders"))
+	
+	#don't show order details if the order details don't match the session details
+	if orderDbDetails.get("userID")!=session.get("UserID") or orderDbDetails.get("orgID")!=session.get("OrgID"):
+		return redirect(url_for("previousOrders"))
+
+	print(orderDbDetails)
+	print(orderItems)
+
+	return redirect(url_for("previousOrders"))
+
 """
 This lets us test locally. Should not execute in AWS
 """
