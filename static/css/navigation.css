@@ -313,3 +313,78 @@ body, input, select, textarea, button {
     width: 100%;
   }
 }
+
+.notification-dropdown {
+	position: relative;
+  }
+  
+  .notification-dropbtn {
+	position: relative;
+	min-width: 60px;
+  }
+  
+  .notification-badge {
+	position: absolute;
+	top: 8px;
+	right: 8px;
+	min-width: 18px;
+	height: 18px;
+	padding: 0 5px;
+	border-radius: 999px;
+	background: #d9534f;
+	color: #ffffff;
+	font-size: 0.72rem;
+	line-height: 18px;
+	text-align: center;
+	font-weight: 700;
+  }
+  
+  .notification-dropdown-content {
+	min-width: 320px;
+	max-width: 420px;
+	white-space: normal;
+	max-height: 420px;
+	overflow-y: auto;
+  }
+  
+  .notification-dropdown-header {
+	padding: 10px 14px;
+	font-weight: 700;
+	border-bottom: 1px solid var(--surface-border);
+  }
+  
+  .notification-dropdown-item {
+	display: block;
+	padding: 12px 14px;
+	border-bottom: 1px solid var(--surface-border);
+  }
+  
+  .notification-dropdown-item.is-unread {
+	background: rgba(0, 115, 230, 0.08);
+  }
+  
+  .notification-dropdown-item-title {
+	font-weight: 700;
+	margin-bottom: 4px;
+  }
+  
+  .notification-dropdown-item-message {
+	font-size: 0.92rem;
+	margin-bottom: 6px;
+	opacity: 0.92;
+  }
+  
+  .notification-dropdown-item-time {
+	font-size: 0.8rem;
+	opacity: 0.7;
+  }
+  
+  .notification-dropdown-empty {
+	padding: 12px 14px;
+	opacity: 0.75;
+  }
+  
+  .notification-view-all-link {
+	font-weight: 700;
+	border-top: 1px solid var(--surface-border);
+  }

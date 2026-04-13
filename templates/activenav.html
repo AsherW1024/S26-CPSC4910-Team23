@@ -64,6 +64,36 @@
                     <a href="/reports/invoices">Invoice Report</a>
                 </div>
             </div>
+            <div class="dropdown notification-dropdown">
+                <button class="dropbtn notification-dropbtn" type="button">
+                    <i class="fa fa-bell fa-1x"></i>
+                    {% if nav_unread_notification_count > 0 %}
+                        <span class="notification-badge">{{ nav_unread_notification_count }}</span>
+                    {% endif %}
+                </button>
+                <div class="dropdown-content notification-dropdown-content">
+                    <div class="notification-dropdown-header">Recent Notifications</div>
+            
+                    {% if nav_recent_notifications %}
+                        {% for notification in nav_recent_notifications %}
+                            <a class="notification-dropdown-item {% if notification.IsRead == 0 %}is-unread{% endif %}"
+                               href="{{ url_for('open_notification', notification_id=notification.NotificationID) }}">
+                                <div class="notification-dropdown-item-title">{{ notification.Title }}</div>
+                                <div class="notification-dropdown-item-message">{{ notification.Message }}</div>
+                                <div class="notification-dropdown-item-time">
+                                    {{ notification.display_date }} {{ notification.display_time }}
+                                </div>
+                            </a>
+                        {% endfor %}
+                    {% else %}
+                        <div class="notification-dropdown-empty">No notifications yet.</div>
+                    {% endif %}
+            
+                    <a class="notification-view-all-link" href="{{ url_for('notifications_page') }}">
+                        View all my notifications
+                    </a>
+                </div>
+            </div>
             {% endif %}
             <div class="dropdown">
                 <button class="icon-bars dropbtn" type="button">

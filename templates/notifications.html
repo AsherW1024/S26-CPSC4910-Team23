@@ -1,0 +1,42 @@
+{% extends layout %}
+
+{% block title %}Notifications{% endblock %}
+
+{% block page_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/settings.css">
+<link rel="stylesheet" type="text/css" href="/static/css/home.css">
+{% endblock %}
+
+{% block content %}
+<div class="settings-page">
+  <div class="settings-wrap">
+    <div class="notifications-page-header">
+      <h1>My Notifications</h1>
+      <form method="POST" action="{{ url_for('notifications_mark_all_read') }}">
+        <button class="button is-info" type="submit">Mark all as read</button>
+      </form>
+    </div>
+
+    <div class="settings-card">
+      {% if notifications %}
+        <div class="full-notification-list">
+          {% for notification in notifications %}
+            <a class="full-notification-item {% if notification.IsRead == 0 %}is-unread{% endif %}"
+               href="{{ url_for('open_notification', notification_id=notification.NotificationID) }}">
+              <div class="full-notification-top">
+                <span class="full-notification-title">{{ notification.Title }}</span>
+                <span class="full-notification-time">
+                  {{ notification.display_date }} {{ notification.display_time }}
+                </span>
+              </div>
+              <div class="full-notification-message">{{ notification.Message }}</div>
+            </a>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p>No notifications yet.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

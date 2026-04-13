@@ -136,3 +136,133 @@
 	border-radius: 16px;
 	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
 }
+
+.home-notification-bar-wrap {
+	width: 100%;
+	max-width: 1200px;
+	margin: 24px auto 0;
+	padding: 0 20px;
+	box-sizing: border-box;
+}
+
+.home-notification-bar {
+	background: var(--surface-bg);
+	color: var(--surface-text);
+	border: 1px solid var(--surface-border);
+	border-radius: 16px;
+	padding: 18px 20px;
+	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.10);
+}
+
+.home-notification-bar-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 16px;
+	margin-bottom: 12px;
+}
+
+.home-notification-bar-header h2 {
+	margin: 0;
+	font-size: 1.35rem;
+	color: #0073e6;
+}
+
+.home-notification-bar-header a {
+	color: #0073e6;
+	text-decoration: none;
+	font-weight: 700;
+}
+
+.home-notification-list {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.home-notification-item {
+	display: block;
+	text-decoration: none;
+	color: var(--surface-text);
+	background: rgba(128, 128, 128, 0.06);
+	border: 1px solid var(--surface-border);
+	border-radius: 12px;
+	padding: 12px 14px;
+}
+
+.home-notification-item.is-unread {
+	background: rgba(0, 115, 230, 0.08);
+}
+
+.home-notification-title-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	gap: 12px;
+	margin-bottom: 6px;
+}
+
+.home-notification-title {
+	font-weight: 700;
+}
+
+.home-notification-time {
+	font-size: 0.85rem;
+	opacity: 0.7;
+	white-space: nowrap;
+}
+
+.home-notification-message {
+	font-size: 0.95rem;
+	opacity: 0.92;
+}
+
+.notifications-page-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 16px;
+	margin-bottom: 16px;
+}
+
+.full-notification-list {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.full-notification-item {
+	display: block;
+	text-decoration: none;
+	color: var(--surface-text);
+	border: 1px solid var(--surface-border);
+	border-radius: 12px;
+	padding: 14px 16px;
+	background: rgba(128, 128, 128, 0.06);
+}
+
+.full-notification-item.is-unread {
+	background: rgba(0, 115, 230, 0.08);
+}
+
+.full-notification-top {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	gap: 12px;
+	margin-bottom: 8px;
+}
+
+.full-notification-title {
+	font-weight: 700;
+}
+
+.full-notification-time {
+	font-size: 0.85rem;
+	opacity: 0.7;
+	white-space: nowrap;
+}
+
+.full-notification-message {
+	opacity: 0.92;
+}

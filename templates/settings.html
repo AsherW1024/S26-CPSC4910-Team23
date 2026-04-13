@@ -63,6 +63,16 @@
           </form>
       </div>
       <div class="settings-row">
+        <label for="notificationsEnabledCheck"> Notifications Enabled </label>
+        <form method="POST" action="/settings/notificationsEnabled" style="display:inline;">
+          <input id="notificationsEnabledCheck"
+                 type="checkbox"
+                 {% if notificationsEnabled==1 %} checked {% endif %}
+                 name="notificationsEnabled"
+                 onchange="this.form.submit()">
+        </form>
+      </div>
+      <div class="settings-row">
         <label for="notifcheck"> Essential Notifications Only </label>
         <form method="POST" action="/settings/essentialNotifications" style="display:inline;">
           <input id="notifcheck" type="checkbox" {% if essentialNotifs==1 %} checked {% endif %} name="essentialNotif" onchange="this.form.submit()">  

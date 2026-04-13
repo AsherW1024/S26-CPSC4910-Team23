@@ -110,6 +110,23 @@ def log_password_event(event_type: str, actor_user_id=None, target_user_id=None)
                 (AdjustedUName, AdjustedByUName, TypeOfChange, DateAdjusted)
                 VALUES (%s, %s, %s, %s)
             """, (target_username, actor_username or target_username, event_type, event_time))
+
+        if target_user_id and event_type in {"password_changed", "reset", "reset_requested", "reset_issued"}:
+            event_messages = {
+                "password_changed": "Your password was changed successfully.",
+                "reset": "Your password was reset successfully.",
+                "reset_requested": "A password reset request was created for your account.",
+                "reset_issued": "A password reset link was issued for your account."
+            }
+
+            create_notification_for_user_if_allowed(
+                target_user_id,
+                title="Account Update",
+                message=event_messages.get(event_type, "Your account was updated."),
+                notification_type="account",
+                is_essential=1,
+                related_url="/profile"
+            )
     except Exception as e:
         print("PasswordAdjustments insert skipped:", e)
 
@@ -467,6 +484,96 @@ def selectDb(query: str, params=None):
 	finally:
 		if connection:
 			connection.close()
+
+# -----------------------------
+# Notification Helpers
+# -----------------------------
+def create_notification(user_id, title, message, notification_type="general", is_essential=0, related_url=None):
+    try:
+        updateDb("""
+            INSERT INTO Notifications
+            (UserID, Title, Message, NotificationType, IsEssential, RelatedURL)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (user_id, title, message, notification_type, int(is_essential), related_url))
+    except Exception as e:
+        print("create_notification skipped:", e)
+
+
+def get_user_notification_preferences(user_id):
+    prefs = paramQueryDb("""
+        SELECT NotificationsEnabled, EssentialNotifsOnly
+        FROM Users
+        WHERE UserID=%s
+    """, (user_id,))
+    return prefs or {"NotificationsEnabled": 1, "EssentialNotifsOnly": 0}
+
+
+def create_notification_for_user_if_allowed(user_id, title, message, notification_type="general", is_essential=0, related_url=None):
+    prefs = get_user_notification_preferences(user_id)
+
+    if int(prefs.get("NotificationsEnabled") or 0) != 1:
+        return
+
+    if int(prefs.get("EssentialNotifsOnly") or 0) == 1 and int(is_essential) != 1:
+        return
+
+    create_notification(user_id, title, message, notification_type, is_essential, related_url)
+
+
+def get_recent_notifications(user_id, limit=10):
+    rows = selectDb("""
+        SELECT NotificationID, Title, Message, NotificationType, IsRead, IsEssential, RelatedURL, CreatedAt
+        FROM Notifications
+        WHERE UserID=%s
+        ORDER BY CreatedAt DESC
+        LIMIT %s
+    """, (user_id, limit)) or []
+
+    for row in rows:
+        created = row.get("CreatedAt")
+        row["display_date"] = created.strftime("%b %d, %Y") if created else ""
+        row["display_time"] = created.strftime("%I:%M %p") if created else ""
+    return rows
+
+
+def get_all_notifications(user_id):
+    rows = selectDb("""
+        SELECT NotificationID, Title, Message, NotificationType, IsRead, IsEssential, RelatedURL, CreatedAt
+        FROM Notifications
+        WHERE UserID=%s
+        ORDER BY CreatedAt DESC
+    """, (user_id,)) or []
+
+    for row in rows:
+        created = row.get("CreatedAt")
+        row["display_date"] = created.strftime("%b %d, %Y") if created else ""
+        row["display_time"] = created.strftime("%I:%M %p") if created else ""
+    return rows
+
+
+def get_unread_notification_count(user_id):
+    row = paramQueryDb("""
+        SELECT COUNT(*) AS total
+        FROM Notifications
+        WHERE UserID=%s AND IsRead=0
+    """, (user_id,))
+    return int(row.get("total") or 0) if row else 0
+
+
+def mark_notification_read(notification_id, user_id):
+    updateDb("""
+        UPDATE Notifications
+        SET IsRead=1
+        WHERE NotificationID=%s AND UserID=%s
+    """, (notification_id, user_id))
+
+
+def mark_all_notifications_read(user_id):
+    updateDb("""
+        UPDATE Notifications
+        SET IsRead=1
+        WHERE UserID=%s AND IsRead=0
+    """, (user_id,))
 
 """
 Check if the user is an admin and logged in. 
@@ -861,6 +968,26 @@ def inject_permission_context():
         'current_permissions': get_role_permissions(session.get('role')),
         'idle_timeout_minutes': IDLE_TIMEOUT_MINUTES
     }
+
+@application.context_processor
+def inject_notification_context():
+    if "UserID" not in session:
+        return {
+            "nav_recent_notifications": [],
+            "nav_unread_notification_count": 0
+        }
+
+    try:
+        return {
+            "nav_recent_notifications": get_recent_notifications(session["UserID"], limit=10),
+            "nav_unread_notification_count": get_unread_notification_count(session["UserID"])
+        }
+    except Exception as e:
+        print("inject_notification_context skipped:", e)
+        return {
+            "nav_recent_notifications": [],
+            "nav_unread_notification_count": 0
+        }
 
 def init_security_tables():
     ddl_statements = [
@@ -2263,6 +2390,8 @@ def home():
 
 		driver_point_summary = None
 		admin_dashboard_summary = None
+		recent_notifications = []
+		notification_bar_items = []
 
 		if session.get("role") == "Driver" and session.get("OrgID"):
 			try:
@@ -2280,19 +2409,76 @@ def home():
 			except Exception as e:
 				print("admin_dashboard_summary skipped:", e)
 
+		try:
+			recent_notifications = get_recent_notifications(session["UserID"], limit=10)
+			notification_bar_items = recent_notifications[:3]
+		except Exception as e:
+			print("homepage notifications skipped:", e)
+
 		return render_template(
 			"home.html",
 			layout="activenav.html",
 			driver_point_summary=driver_point_summary,
-			admin_dashboard_summary=admin_dashboard_summary
+			admin_dashboard_summary=admin_dashboard_summary,
+			notification_bar_items=notification_bar_items
 		)
 
 	return render_template(
 		"home.html",
 		layout="nav.html",
 		driver_point_summary=None,
-		admin_dashboard_summary=None
+		admin_dashboard_summary=None,
+		notification_bar_items=[]
 	)
+
+@application.route("/notifications")
+def notifications_page():
+    guard = require_login()
+    if guard:
+        return guard
+
+    rows = get_all_notifications(session["UserID"])
+    return render_template(
+        "notifications.html",
+        layout="activenav.html",
+        notifications=rows
+    )
+
+
+@application.route("/notifications/<int:notification_id>/open")
+def open_notification(notification_id):
+    guard = require_login()
+    if guard:
+        return guard
+
+    row = paramQueryDb("""
+        SELECT NotificationID, RelatedURL
+        FROM Notifications
+        WHERE NotificationID=%s AND UserID=%s
+    """, (notification_id, session["UserID"]))
+
+    if not row:
+        flash("Notification not found.", "validation")
+        return redirect(url_for("notifications_page"))
+
+    mark_notification_read(notification_id, session["UserID"])
+
+    related_url = row.get("RelatedURL")
+    if related_url:
+        return redirect(related_url)
+
+    return redirect(url_for("notifications_page"))
+
+
+@application.route("/notifications/mark-all-read", methods=["POST"])
+def notifications_mark_all_read():
+    guard = require_login()
+    if guard:
+        return guard
+
+    mark_all_notifications_read(session["UserID"])
+    flash("All notifications marked as read.", "success")
+    return redirect(url_for("notifications_page"))
 
 """
 This is the about page. Right now it serves as the landing page. Later this will
@@ -2561,16 +2747,25 @@ def registerProfileEdits():
 def settings():
 	hasPhoneNum = False
 	prefs = selectDb("""
-			SELECT PrefCommMethod, EssentialNotifsOnly, PhoneNumber, ThemePref, FontPref
+			SELECT PrefCommMethod, EssentialNotifsOnly, NotificationsEnabled, PhoneNumber, ThemePref, FontPref
 			FROM Users 
 			WHERE UserID=%s
 			ORDER BY UserID
 		""", (session["UserID"],))
 	if prefs[0]["PhoneNumber"] != None:
 		hasPhoneNum = True
-	return render_template("settings.html", layout = "activenav.html", themePref=prefs[0]["ThemePref"] ,fontPref=prefs[0]["FontPref"] ,
-							currentPref=prefs[0]["PrefCommMethod"], hasPhoneNum=hasPhoneNum, essentialNotifs=prefs[0]["EssentialNotifsOnly"],
-							shippingAddress=session.get("shipping_address", {}), billingAddress=session.get("billing_address", {})) 
+	return render_template(
+        "settings.html",
+        layout="activenav.html",
+        themePref=prefs[0]["ThemePref"],
+        fontPref=prefs[0]["FontPref"],
+		currentPref=prefs[0]["PrefCommMethod"],
+        hasPhoneNum=hasPhoneNum,
+        essentialNotifs=prefs[0]["EssentialNotifsOnly"],
+        notificationsEnabled=prefs[0]["NotificationsEnabled"],
+		shippingAddress=session.get("shipping_address", {}),
+        billingAddress=session.get("billing_address", {})
+    )
 
 @application.route("/settings/addresses", methods=["POST"])
 def save_settings_addresses():
@@ -2632,6 +2827,16 @@ def essentialNotifications():
 	essentialNotif = 1 if request.form.get("essentialNotif") else 0
 	updateDb(f"UPDATE Users SET EssentialNotifsOnly=%s WHERE UserID=%s", (essentialNotif, session["UserID"]))
 	return redirect(url_for("settings"))
+
+@application.route("/settings/notificationsEnabled", methods=["POST"])
+def notificationsEnabled():
+    enabled = 1 if request.form.get("notificationsEnabled") else 0
+    updateDb(
+        "UPDATE Users SET NotificationsEnabled=%s WHERE UserID=%s",
+        (enabled, session["UserID"])
+    )
+    flash("Notification preference updated.", "success")
+    return redirect(url_for("settings"))
 
 @application.route("/<int:UserID>/organizations")
 def DriverOrganizations(UserID):
@@ -4622,6 +4827,23 @@ def create_point_adjustment_for_driver(driver_username, org_id, points, reason):
 		reason or "Bulk upload",
 		datetime.now()
 	))
+
+	# create notification for the driver
+	driver_user = paramQueryDb("""
+		SELECT UserID, Name
+		FROM Users
+		WHERE Username=%s
+	""", (driver_username,))
+
+	if driver_user:
+		create_notification_for_user_if_allowed(
+			driver_user["UserID"],
+			title="Points Awarded",
+			message=f"You received {int(points)} points. Reason: {reason or 'Bulk upload'}",
+			notification_type="points",
+			is_essential=0,
+			related_url="/driver/points"
+		)
 
 def get_driver_point_history(driver_id, org_id, limit=None):
 	user = paramQueryDb("SELECT Username FROM Users WHERE UserID=%s", (driver_id,))
