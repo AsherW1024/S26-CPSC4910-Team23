@@ -166,6 +166,25 @@ def getOrgData():
 	rows = selectDb("""SELECT * FROM Organizations""")
 	return rows
 
+def get_sponsors_for_organization(org_id, sort_order="desc"):
+	order_direction = "DESC"
+	if sort_order == "asc":
+		order_direction = "ASC"
+
+	query = f"""
+		SELECT
+			u.UserID,
+			u.Name,
+			u.Email,
+			u.Username,
+			u.TimeCreated
+		FROM Sponsors s
+		JOIN Users u ON u.UserID = s.SponsorID
+		WHERE s.OrganizationID = %s
+		ORDER BY u.TimeCreated {order_direction}, u.Name ASC
+	"""
+	return selectDb(query, (org_id,)) or []
+
 def get_sales_by_product_rows(org_id=None, start=None, end=None, rowsPerPage=None, offset=None):
     count_query = """
         SELECT
@@ -3022,10 +3041,37 @@ def organizationDelete(OrgID):
 @application.route("/organization")
 def organization():
 	getOrganization()
+
+	sort_order = request.args.get("sponsorSort", "desc").strip().lower()
+	if sort_order not in ["asc", "desc"]:
+		sort_order = "desc"
+
 	if ("Organization" in session and session["Organization"] != None) or session.get('role') == "Admin":
-		return render_template("organization.html", layout="orgnav.html", organizationName=session["Organization"])
-	else:
-		return render_template("organization.html", layout="orgnav.html", organizationName="None")
+		sponsor_rows = []
+
+		try:
+			org_id = session.get("OrgID")
+			if org_id:
+				sponsor_rows = get_sponsors_for_organization(org_id, sort_order=sort_order)
+		except Exception as e:
+			print("Failed to load sponsor rows:", e)
+			sponsor_rows = []
+
+		return render_template(
+			"organization.html",
+			layout="orgnav.html",
+			organizationName=session["Organization"],
+			sponsorRows=sponsor_rows,
+			sponsorSort=sort_order
+		)
+
+	return render_template(
+		"organization.html",
+		layout="orgnav.html",
+		organizationName="None",
+		sponsorRows=[],
+		sponsorSort="desc"
+	)
 
 @application.route("/organization/users")
 def organizationUsers():

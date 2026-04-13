@@ -2,6 +2,15 @@
 <div id="popup-content-bg">
 	<div id="popup-content-div">
 		<button id="popup-close">X</button>
+		<div class="popup-action-row">
+			<button
+				type="button"
+				class="popup-share-button"
+				data-product-id="{{ productDetails.id }}">
+				Copy Product Link
+			</button>
+			<span id="popup-copy-feedback" class="popup-copy-feedback" aria-live="polite"></span>
+		</div>
 		<div id="popup-images">
 			{%for prodImage in productDetails.images%}
 			<img src="{{prodImage}}">

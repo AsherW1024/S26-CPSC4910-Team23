@@ -9,6 +9,47 @@
 {% block content %}
 <div class="organization-page">
     <div class="organization-card">
+        <div class="organization-page">
+            <div class="organization-card">
+                <h1>{{ organizationName }}</h1>
+                <p>We welcome you to {{ organizationName }} good driving team!</p>
+                <p>We help sponsors incentivize good driving through rewards.</p>
+                <p>We hope you enjoy our system!</p>
+            </div>
+        
+            {% if session.get('role') == 'Admin' %}
+            <div class="organization-sponsor-section">
+                <div class="organization-sponsor-header">
+                    <h2>Sponsors</h2>
+        
+                    <form method="GET" action="{{ url_for('organization') }}" class="organization-sort-form">
+                        <label for="sponsorSort">Sort by account creation date</label>
+                        <select id="sponsorSort" name="sponsorSort" onchange="this.form.submit()">
+                            <option value="desc" {% if sponsorSort == "desc" %}selected{% endif %}>Newest first</option>
+                            <option value="asc" {% if sponsorSort == "asc" %}selected{% endif %}>Oldest first</option>
+                        </select>
+                    </form>
+                </div>
+        
+                {% if sponsorRows %}
+                <div class="organization-sponsor-list">
+                    {% for sponsor in sponsorRows %}
+                    <div class="organization-sponsor-item">
+                        <div class="organization-sponsor-name">{{ sponsor.Name }}</div>
+                        <div class="organization-sponsor-meta">{{ sponsor.Email }}</div>
+                        <div class="organization-sponsor-meta">@{{ sponsor.Username }}</div>
+                        <div class="organization-sponsor-date">
+                            Created: {{ sponsor.TimeCreated.strftime('%Y-%m-%d %H:%M') if sponsor.TimeCreated else 'Unknown' }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="organization-empty-state">No sponsors found for this organization.</p>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
         <h1>{{ organizationName }}</h1>
         <p>We welcome you to {{ organizationName }} good driving team!</p>
         <p>We help sponsors incentivize good driving through rewards.</p>

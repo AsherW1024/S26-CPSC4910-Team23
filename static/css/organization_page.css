@@ -26,3 +26,83 @@
 	font-size: 2vw;
 	margin: 24px 0;
 }
+
+.organization-page {
+	flex-direction: column;
+	align-items: center;
+	gap: 28px;
+}
+
+.organization-sponsor-section {
+	width: 100%;
+	max-width: 1100px;
+	background: var(--surface-bg);
+	color: var(--surface-text);
+	border: 1px solid var(--surface-border);
+	border-radius: 18px;
+	padding: 24px;
+	box-sizing: border-box;
+	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+}
+
+.organization-sponsor-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 16px;
+	flex-wrap: wrap;
+	margin-bottom: 20px;
+}
+
+.organization-sponsor-header h2 {
+	margin: 0;
+	color: #0073e6;
+	font-size: clamp(1.6rem, 3vw, 2.2rem);
+}
+
+.organization-sort-form {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
+}
+
+.organization-sort-form label {
+	font-weight: 600;
+}
+
+.organization-sort-form select {
+	padding: 8px 10px;
+	border-radius: 8px;
+}
+
+.organization-sponsor-list {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+	gap: 16px;
+}
+
+.organization-sponsor-item {
+	border: 1px solid var(--surface-border);
+	border-radius: 14px;
+	padding: 16px;
+	background: rgba(128, 128, 128, 0.06);
+}
+
+.organization-sponsor-name {
+	font-size: 1.1rem;
+	font-weight: 700;
+	margin-bottom: 8px;
+}
+
+.organization-sponsor-meta,
+.organization-sponsor-date {
+	font-size: 0.95rem;
+	opacity: 0.9;
+	margin-bottom: 4px;
+}
+
+.organization-empty-state {
+	margin: 0;
+	opacity: 0.8;
+}
