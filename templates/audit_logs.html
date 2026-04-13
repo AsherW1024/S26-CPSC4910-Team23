@@ -44,7 +44,19 @@
                 </select>
               </div>
             </div>
-        
+            
+            <div class="column is-2">
+              <label class="label">User Type</label>
+              <div class="select is-fullwidth">
+                <select name="userType">
+                  <option value="" {% if not userTypeFilter %}selected{% endif %}>All</option>
+                  <option value="Driver" {% if userTypeFilter == "Driver" %}selected{% endif %}>Driver</option>
+                  <option value="Sponsor" {% if userTypeFilter == "Sponsor" %}selected{% endif %}>Sponsor</option>
+                  <option value="Admin" {% if userTypeFilter == "Admin" %}selected{% endif %}>Admin</option>
+                </select>
+              </div>
+            </div>
+
             <div class="column is-2">
               <label class="label">Rows per Page</label>
               <div class="select is-fullwidth">
@@ -82,8 +94,10 @@
               <th>Event</th>
               <th>Actor</th>
               <th>Actor Email</th>
+              <th>Actor Type</th>
               <th>Target</th>
               <th>Target Email</th>
+              <th>Target Type</th>
               <th>Details</th>
             </tr>
           </thead>
@@ -95,42 +109,83 @@
               <td>{{ r.EventType }}</td>
               <td>{{ r.Actor }}</td>
               <td>{{ r.ActorEmail }}</td>
+              <td>{{ r.ActorUserType }}</td>
               <td>{{ r.Target }}</td>
               <td>{{ r.TargetEmail }}</td>
+              <td>{{ r.TargetUserType }}</td>
               <td>{{ r.Details }}</td>
             </tr>
             {% else %}
             <tr>
-              <td colspan="8">No audit rows found.</td>
+              <td colspan="10">No audit rows found.</td>
             </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
 
-      <nav class="pagination is-centered" role="navigation">
-      {% if page > 1 %}
-        <a href="?{{ queryString }}&page={{ page - 1 }}" class="pagination-previous">Previous</a>
-      {% else %}
-        <a href="#" class="pagination-previous" disabled>Previous</a>
-      {% endif %}
-
-      {% if pageNum|length > 1 and page < pageNum|length %}
-        <a href="?{{ queryString }}&page={{ page + 1 }}" class="pagination-next">Next page</a>
-      {% else %}
-        <a href="#" class="pagination-next" disabled>Next page</a>
-      {% endif %}
-
-      <ul class="pagination-list">
-        {% for p in pageNum %}
-          {% if p == page %}
-            <li><a href="#" class="pagination-link is-current" aria-current="page">{{ p }}</a></li>
-          {% else %}
-            <li><a href="?{{ queryString }}&page={{ p }}" class="pagination-link">{{ p }}</a></li>
+      <nav class="pagination is-centered audit-pagination" role="navigation">
+        {% if page > 1 %}
+          <a href="?{{ queryString }}&page={{ page - 1 }}" class="pagination-previous">Previous</a>
+        {% else %}
+          <a href="#" class="pagination-previous" disabled>Previous</a>
+        {% endif %}
+      
+        {% if totalPages > 1 and page < totalPages %}
+          <a href="?{{ queryString }}&page={{ page + 1 }}" class="pagination-next">Next page</a>
+        {% else %}
+          <a href="#" class="pagination-next" disabled>Next page</a>
+        {% endif %}
+      
+        <ul class="pagination-list">
+          {% if pageNum and pageNum[0] > 1 %}
+            <li><a href="?{{ queryString }}&page=1" class="pagination-link">1</a></li>
+            {% if pageNum[0] > 2 %}
+              <li><span class="pagination-ellipsis">&hellip;</span></li>
+            {% endif %}
           {% endif %}
-        {% endfor %}
-      </ul>
-    </nav>
+      
+          {% for p in pageNum %}
+            {% if p == page %}
+              <li><a href="#" class="pagination-link is-current" aria-current="page">{{ p }}</a></li>
+            {% else %}
+              <li><a href="?{{ queryString }}&page={{ p }}" class="pagination-link">{{ p }}</a></li>
+            {% endif %}
+          {% endfor %}
+      
+          {% if pageNum and pageNum[-1] < totalPages %}
+            {% if pageNum[-1] < totalPages - 1 %}
+              <li><span class="pagination-ellipsis">&hellip;</span></li>
+            {% endif %}
+            <li><a href="?{{ queryString }}&page={{ totalPages }}" class="pagination-link">{{ totalPages }}</a></li>
+          {% endif %}
+        </ul>
+      </nav>
+      
+      <div class="audit-jump-wrap">
+        <form method="GET" class="audit-jump-form">
+          <input type="hidden" name="q" value="{{ keyword }}">
+          <input type="hidden" name="sponsor" value="{{ sponsorFilter }}">
+          <input type="hidden" name="start" value="{{ startDate }}">
+          <input type="hidden" name="end" value="{{ endDate }}">
+          <input type="hidden" name="category" value="{{ categoryFilter }}">
+          <input type="hidden" name="userType" value="{{ userTypeFilter }}">
+          <input type="hidden" name="pageCount" value="{{ pageRows }}">
+      
+          <label class="label audit-jump-label" for="jumpPage">Jump to page</label>
+          <input
+            class="input audit-jump-input"
+            id="jumpPage"
+            type="number"
+            name="jumpPage"
+            min="1"
+            max="{{ totalPages }}"
+            placeholder="Page #"
+          >
+          <button class="button is-light" type="submit">Go</button>
+          <span class="audit-page-total">of {{ totalPages }}</span>
+        </form>
+      </div>
     </div>
   </div>
 </div>

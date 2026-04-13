@@ -485,6 +485,20 @@ def selectDb(query: str, params=None):
 		if connection:
 			connection.close()
 
+def build_nearby_pages(current_page, total_pages, window_size=10):
+    if total_pages <= 0:
+        return []
+
+    half_window = window_size // 2
+    start_page = max(1, current_page - half_window)
+    end_page = start_page + window_size - 1
+
+    if end_page > total_pages:
+        end_page = total_pages
+        start_page = max(1, end_page - window_size + 1)
+
+    return list(range(start_page, end_page + 1))
+
 # -----------------------------
 # Notification Helpers
 # -----------------------------
@@ -2112,186 +2126,215 @@ def audit_logs():
     start_date = request.args.get("start", "").strip()
     end_date = request.args.get("end", "").strip()
     category_filter = request.args.get("category", "").strip()
+    user_type_filter = request.args.get("userType", "").strip()
     export_format = request.args.get("format", "").lower()
 
     page = request.args.get("page", 1, type=int)
     rowsPerPage = request.args.get("pageCount", 20, type=int)
+    jump_page = request.args.get("jumpPage", "").strip()
 
     if rowsPerPage not in [20, 50, 100]:
         rowsPerPage = 20
 
-    offset = (page - 1) * rowsPerPage
+    if jump_page.isdigit():
+        page = max(1, int(jump_page))
 
     base_query = """
-		SELECT *
-		FROM (
-			SELECT
-				pa.DateAdjusted AS EventDate,
-				'PasswordAdjustments' AS SourceTable,
-				pa.TypeOfChange AS EventType,
-				COALESCE(actor.Name, pa.AdjustedByUName) AS Actor,
-				actor.Email AS ActorEmail,
-				COALESCE(target.Name, pa.AdjustedUName) AS Target,
-				target.Email AS TargetEmail,
-				CONCAT('Password change event for ', pa.AdjustedUName) AS Details,
-				COALESCE(s_actor.Name, s_target.Name, '') AS SponsorName,
-				COALESCE(s_actor.Email, s_target.Email, '') AS SponsorEmail,
-				COALESCE(s_actor.Username, s_target.Username, '') AS SponsorUsername
-			FROM PasswordAdjustments pa
-			LEFT JOIN Users actor ON actor.Username = pa.AdjustedByUName
-			LEFT JOIN Users target ON target.Username = pa.AdjustedUName
-			LEFT JOIN Users s_actor ON s_actor.UserType = 'Sponsor' AND s_actor.Username = pa.AdjustedByUName
-			LEFT JOIN Users s_target ON s_target.UserType = 'Sponsor' AND s_target.Username = pa.AdjustedUName
+        SELECT *
+        FROM (
+            SELECT
+                pa.DateAdjusted AS EventDate,
+                'PasswordAdjustments' AS SourceTable,
+                pa.TypeOfChange AS EventType,
 
-			UNION ALL
+                COALESCE(actor.Name, pa.AdjustedByUName) AS Actor,
+                actor.Email AS ActorEmail,
+                actor.UserType AS ActorUserType,
 
-			SELECT
-				l.LoginDate AS EventDate,
-				'Logins' AS SourceTable,
-				CASE
-					WHEN l.LoginResult = 1 THEN 'Successful Login'
-					ELSE 'Failed Login'
-				END AS EventType,
-				COALESCE(u.Name, l.LoginUser) AS Actor,
-				u.Email AS ActorEmail,
-				'' AS Target,
-				'' AS TargetEmail,
-				CONCAT('Login user: ', l.LoginUser) AS Details,
-				COALESCE(s_u.Name, '') AS SponsorName,
-				COALESCE(s_u.Email, '') AS SponsorEmail,
-				COALESCE(s_u.Username, '') AS SponsorUsername
-			FROM Logins l
-			LEFT JOIN Users u ON (u.Email = l.LoginUser OR u.Username = l.LoginUser)
-			LEFT JOIN Users s_u ON s_u.UserType = 'Sponsor' AND s_u.UserID = u.UserID
+                COALESCE(target.Name, pa.AdjustedUName) AS Target,
+                target.Email AS TargetEmail,
+                target.UserType AS TargetUserType,
 
-			UNION ALL
+                CONCAT('Password change event for ', pa.AdjustedUName) AS Details,
 
-			SELECT
-				p.DateAdjusted AS EventDate,
-				'PointAdjustments' AS SourceTable,
-				p.AdjustmentType AS EventType,
-				COALESCE(actor.Name, p.AdjustedByUName) AS Actor,
-				actor.Email AS ActorEmail,
-				COALESCE(target.Name, p.DriverUName) AS Target,
-				target.Email AS TargetEmail,
-				CONCAT('Points: ', p.AdjustmentPoints, ' | Reason: ', COALESCE(p.AdjustmentReason, '')) AS Details,
-				COALESCE(s_actor.Name, '') AS SponsorName,
-				COALESCE(s_actor.Email, '') AS SponsorEmail,
-				COALESCE(s_actor.Username, '') AS SponsorUsername
-			FROM PointAdjustments p
-			LEFT JOIN Users actor ON actor.Username = p.AdjustedByUName
-			LEFT JOIN Users target ON target.Username = p.DriverUName
-			LEFT JOIN Users s_actor ON s_actor.UserType = 'Sponsor' AND s_actor.Username = p.AdjustedByUName
-		) audit_rows
-	"""
+                COALESCE(s_actor.Name, s_target.Name, '') AS SponsorName,
+                COALESCE(s_actor.Email, s_target.Email, '') AS SponsorEmail,
+                COALESCE(s_actor.Username, s_target.Username, '') AS SponsorUsername
+            FROM PasswordAdjustments pa
+            LEFT JOIN Users actor ON actor.Username = pa.AdjustedByUName
+            LEFT JOIN Users target ON target.Username = pa.AdjustedUName
+            LEFT JOIN Sponsors sa ON actor.UserID = sa.SponsorID
+            LEFT JOIN Users s_actor ON s_actor.UserID = sa.SponsorID
+            LEFT JOIN Sponsors st ON target.UserID = st.SponsorID
+            LEFT JOIN Users s_target ON s_target.UserID = st.SponsorID
 
-    params = []
+            UNION ALL
+
+            SELECT
+                l.LoginDate AS EventDate,
+                'Logins' AS SourceTable,
+                CASE
+                    WHEN l.LoginResult = 1 THEN 'Successful Login'
+                    ELSE 'Failed Login'
+                END AS EventType,
+
+                COALESCE(u.Name, l.LoginUser) AS Actor,
+                u.Email AS ActorEmail,
+                u.UserType AS ActorUserType,
+
+                '' AS Target,
+                '' AS TargetEmail,
+                '' AS TargetUserType,
+
+                CONCAT('Login user: ', l.LoginUser) AS Details,
+
+                COALESCE(su.Name, '') AS SponsorName,
+                COALESCE(su.Email, '') AS SponsorEmail,
+                COALESCE(su.Username, '') AS SponsorUsername
+            FROM Logins l
+            LEFT JOIN Users u ON (u.Email = l.LoginUser OR u.Username = l.LoginUser)
+            LEFT JOIN Sponsors s ON u.UserID = s.SponsorID
+            LEFT JOIN Users su ON su.UserID = s.SponsorID
+
+            UNION ALL
+
+            SELECT
+                p.DateAdjusted AS EventDate,
+                'PointAdjustments' AS SourceTable,
+                p.AdjustmentType AS EventType,
+
+                COALESCE(actor.Name, p.AdjustedByUName) AS Actor,
+                actor.Email AS ActorEmail,
+                actor.UserType AS ActorUserType,
+
+                COALESCE(target.Name, p.DriverUName) AS Target,
+                target.Email AS TargetEmail,
+                target.UserType AS TargetUserType,
+
+                CONCAT('Points: ', p.AdjustmentPoints, ' | Reason: ', COALESCE(p.AdjustmentReason, '')) AS Details,
+
+                COALESCE(s_user.Name, '') AS SponsorName,
+                COALESCE(s_user.Email, '') AS SponsorEmail,
+                COALESCE(s_user.Username, '') AS SponsorUsername
+            FROM PointAdjustments p
+            LEFT JOIN Users actor ON actor.Username = p.AdjustedByUName
+            LEFT JOIN Users target ON target.Username = p.DriverUName
+            LEFT JOIN Sponsors s ON actor.UserID = s.SponsorID
+            LEFT JOIN Users s_user ON s_user.UserID = s.SponsorID
+        ) audit_rows
+    """
+
     where_clauses = []
+    params = []
 
     if keyword:
         like = f"%{keyword}%"
         where_clauses.append("""
-			(
-				SourceTable LIKE %s OR
-				EventType LIKE %s OR
-				Actor LIKE %s OR
-				ActorEmail LIKE %s OR
-				Target LIKE %s OR
-				TargetEmail LIKE %s OR
-				Details LIKE %s
-			)
-		""")
+            (
+                SourceTable LIKE %s OR
+                EventType LIKE %s OR
+                Actor LIKE %s OR
+                ActorEmail LIKE %s OR
+                Target LIKE %s OR
+                TargetEmail LIKE %s OR
+                Details LIKE %s
+            )
+        """)
         params.extend([like, like, like, like, like, like, like])
 
     if sponsor_filter:
         sponsor_like = f"%{sponsor_filter}%"
         where_clauses.append("""
-			(
-				SponsorName LIKE %s OR
-				SponsorEmail LIKE %s OR
-				SponsorUsername LIKE %s
-			)
-		""")
+            (
+                SponsorName LIKE %s OR
+                SponsorEmail LIKE %s OR
+                SponsorUsername LIKE %s
+            )
+        """)
         params.extend([sponsor_like, sponsor_like, sponsor_like])
 
     if start_date:
-        where_clauses.append("DATE(EventDate) >= %s")
-        params.append(start_date)
+        where_clauses.append("EventDate >= %s")
+        params.append(start_date + " 00:00:00")
 
     if end_date:
-        where_clauses.append("DATE(EventDate) <= %s")
-        params.append(end_date)
+        where_clauses.append("EventDate <= %s")
+        params.append(end_date + " 23:59:59")
 
     if category_filter:
         where_clauses.append("SourceTable = %s")
         params.append(category_filter)
 
+    if user_type_filter:
+        where_clauses.append("(ActorUserType = %s OR TargetUserType = %s)")
+        params.extend([user_type_filter, user_type_filter])
+
+    where_sql = ""
     if where_clauses:
-        base_query += " WHERE " + " AND ".join(where_clauses)
+        where_sql = " WHERE " + " AND ".join(where_clauses)
 
     count_query = f"""
-		SELECT COUNT(*) AS totalRows
-		FROM ({base_query}) counted_audit_rows
-	"""
+        SELECT COUNT(*) AS totalRows
+        FROM ({base_query + where_sql}) filtered_audit_rows
+    """
+
+    ordered_query = base_query + where_sql + " ORDER BY EventDate DESC"
 
     rowTotal = selectDb(count_query, tuple(params)) or [{"totalRows": 0}]
-    totalRows = rowTotal[0]["totalRows"] if rowTotal else 0
-    numPages = max(1, math.ceil(totalRows / rowsPerPage))
+    total_rows = rowTotal[0]["totalRows"] if rowTotal else 0
+    numPages = max(1, math.ceil(total_rows / rowsPerPage)) if rowsPerPage else 1
 
-    base_query += " ORDER BY EventDate DESC"
+    if page > numPages:
+        page = numPages
+
+    offset = (page - 1) * rowsPerPage
 
     if export_format == "csv":
-        rows = selectDb(base_query, tuple(params)) or []
+        rows = selectDb(ordered_query, tuple(params)) or []
         return build_csv_response(
             "audit_logs.csv",
             [
-                "EventDate",
-                "SourceTable",
-				"EventType",
-				"Actor",
-				"ActorEmail",
-				"Target",
-				"TargetEmail",
-				"Details"
-			],
-			rows
-		)
-
-    paged_query = base_query + " LIMIT %s OFFSET %s"
-    rows = selectDb(paged_query, tuple(list(params) + [rowsPerPage, offset])) or []
-
-    if export_format == "csv":
-        return build_csv_response(
-            "audit_logs.csv",
-            ["EventDate", "SourceTable", "EventType", "Actor", "Target", "Details"],
+                "EventDate", "SourceTable", "EventType",
+                "Actor", "ActorEmail", "ActorUserType",
+                "Target", "TargetEmail", "TargetUserType",
+                "Details"
+            ],
             rows
         )
 
-    nav = "orgnav.html" if session.get("Organization") else "activenav.html"
+    rows = selectDb(ordered_query + " LIMIT %s OFFSET %s", tuple(list(params) + [rowsPerPage, offset])) or []
 
-    queryString = urlencode({
-	"q": keyword,
-	"sponsor": sponsor_filter,
-	"start": start_date,
-	"end": end_date,
-	"category": category_filter,
-	"pageCount": rowsPerPage
-	})
+    nearby_pages = build_nearby_pages(page, numPages, window_size=10)
+
+    query_params = {
+        "q": keyword,
+        "sponsor": sponsor_filter,
+        "start": start_date,
+        "end": end_date,
+        "category": category_filter,
+        "userType": user_type_filter,
+        "pageCount": rowsPerPage
+    }
+    queryString = urlencode({k: v for k, v in query_params.items() if v not in [None, ""]})
+
+    nav = "orgnav.html" if session.get("Organization") else "activenav.html"
 
     return render_template(
         "audit_logs.html",
-		layout=nav,
-		rows=rows,
-		keyword=keyword,
-		sponsorFilter=sponsor_filter,
-		startDate=start_date,
-		endDate=end_date,
-		categoryFilter=category_filter,
-		page=page,
-		pageNum=range(1, numPages + 1),
-		pageRows=rowsPerPage,
-		queryString=queryString
-	)
+        layout=nav,
+        rows=rows,
+        keyword=keyword,
+        sponsorFilter=sponsor_filter,
+        startDate=start_date,
+        endDate=end_date,
+        categoryFilter=category_filter,
+        userTypeFilter=user_type_filter,
+        page=page,
+        totalPages=numPages,
+        pageNum=nearby_pages,
+        pageRows=rowsPerPage,
+        queryString=queryString
+    )
 
 @application.route("/<accountType>/users/<int:UserID>/edit", methods=["POST"])
 def userEditPost(accountType, UserID):	
