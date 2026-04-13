@@ -5260,6 +5260,15 @@ def orderDetails(orderID):
 
 	#this status probably should be stroed in db, TODO: fix that crap
 	orderDbDetails["status"] = "Delivered" if datetime.now().date() >= orderDbDetails.get("estimatedArrival") else "In Transit"
+	
+	#used to move a key value pair from productData to orderItems
+	def addToItem(toDict, fromDict, key):
+		toDict[key] = fromDict.get(key)
+	#add some data needed for order items display on order_details page
+	for item in orderItems:
+		productData = getProductData(item.get("productID"))
+		addToItem(toDict=item, fromDict=productData, key="title")
+		addToItem(toDict=item, fromDict=productData, key="thumbnail")
 
 	return render_template("order_details.html", layout="orgnav.html", orderData=orderDbDetails, orderItems=orderItems)
 

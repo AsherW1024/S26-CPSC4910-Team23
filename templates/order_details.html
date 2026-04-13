@@ -38,6 +38,34 @@
 		</table>
 	</div>
 
+	<div id="order-overview" class="section-bg">
+		<h2 class="section-title">Items</h2>
+		<table class="section-content">
+			<thead>
+				<tr>
+					<th>Image</th>
+					<th>Name</th>
+					<th>Cost</th>
+					<th>Number</th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for item in orderItems %}
+				<tr class="product-row" data-product-id="{{item.productID}}">
+					<td><img src="{{item.get('thumbnail')}}"></td>
+					<td>{{item.get("title")}}</td>
+					<td>{{item.get("unitPrice")}} Points</td>
+					<td>{{item.get("amount")}}</td>
+				</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	</div>
+
+	<div id="popup-overlay-bg" hidden></div>
+
 </div>
+
+<script src="/static/js/order_details.js"></script>
 
 {% endblock %}

@@ -2,7 +2,11 @@
 <div id="popup-content-bg">
 	<div id="popup-content-div">
 		<button id="popup-close">X</button>
-		<div id="popup-images"></div>
+		<div id="popup-images">
+			{%for prodImage in productDetails.images%}
+			<img src="{{prodImage}}">
+			{%endfor%}
+		</div>
 		<h2 class="product-name">{{productDetails.title}}</H3>
 		<div id="popup-price">
 			<div class="side-by-side">
