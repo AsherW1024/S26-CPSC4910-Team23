@@ -1,0 +1,43 @@
+{% extends layout %}
+
+{% block title %}Order Details{% endblock %}
+
+{% block page_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/order_details.css">
+{% endblock %}
+
+{% block content %}
+<div class="content">
+	<div id="order-overview" class="section-bg">
+		<h2 class="section-title">Order Overview</h2>
+		<table class="section-content">
+			<thead>
+				<tr>
+					<th>Total</th>
+					<th>Item Count</th>
+					<th>Order Date</th>
+					<th>Delivery Address</th>
+					<th>Status</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr>
+					<td>{{orderData.get("pointTotal")}} Points</td>
+					<td>{{orderItems|length}}</td>
+					<td>{{orderData.get("orderTime")}}</td>
+					{% set streetAddress = orderData.get("deliveryAddress")%}
+					{%set cityState = orderData.get("deliveryCity")+", "+orderData.get("deliveryState")%}
+					<td>
+						<span>{{streetAddress}}</span>
+						<br>
+						<span>{{cityState}}</span>
+					</td>
+					<td>{{orderData.get("status")}}</td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+
+</div>
+
+{% endblock %}

@@ -5254,11 +5254,14 @@ def orderDetails(orderID):
 	#don't show order details if the order details don't match the session details
 	if orderDbDetails.get("userID")!=session.get("UserID") or orderDbDetails.get("orgID")!=session.get("OrgID"):
 		return redirect(url_for("previousOrders"))
+	
+	if not orderDbDetails:
+		return redirect(url_for("previousOrders"))
 
-	print(orderDbDetails)
-	print(orderItems)
+	#this status probably should be stroed in db, TODO: fix that crap
+	orderDbDetails["status"] = "Delivered" if datetime.now().date() >= orderDbDetails.get("estimatedArrival") else "In Transit"
 
-	return redirect(url_for("previousOrders"))
+	return render_template("order_details.html", layout="orgnav.html", orderData=orderDbDetails, orderItems=orderItems)
 
 """
 This lets us test locally. Should not execute in AWS

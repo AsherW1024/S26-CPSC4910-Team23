@@ -1,0 +1,17 @@
+.content {
+	padding: 20px;
+}
+.section-bg{
+	background-color: rgb(209, 217, 222);
+	padding: 20px;
+	border-radius: 30px;
+}
+.section-title{
+	padding-left: 2%;
+}
+.section-content th,td{
+	text-align: center !important;
+}
+.section-content th{
+	border-bottom: 1px solid black !important;
+}
