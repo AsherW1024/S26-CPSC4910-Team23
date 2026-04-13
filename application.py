@@ -2967,9 +2967,6 @@ def adjustDriverPointsPost(UserID):
 		if newTotal < 0:
 			newTotal = 0  # clamp (or change to block if your rules require)
 
-	# Update driver points
-	updateDb("UPDATE DriverOrganizations SET TotalPoints=%s WHERE DriverID=%s", (newTotal, UserID))
-
 	# Try to record feedback in an audit table if it exists (won't crash if not)
 	user = paramQueryDb("""SELECT Username FROM Users WHERE UserID = %s""", (session["UserID"],))
 	organization = paramQueryDb("""SELECT OrganizationID FROM Organizations WHERE Name = %s""", (session["Organization"],))
@@ -4825,16 +4822,6 @@ def processSponsorBulkFile(bulkFile, orgID):
 				driverID = queryResults.get("DriverID") if queryResults else None
 				previousPoints = queryResults.get("TotalPoints") if queryResults else None
 				if driverID and points:
-					#change driver points
-					updateDriverPointsQuery = """
-						UPDATE DriverOrganizations
-						SET
-							TotalPoints=%s
-						WHERE 
-							DriverID=%s
-							AND OrganizationID=%s
-					"""
-					updateDb(updateDriverPointsQuery, params=(points, driverID, orgID))
 					#get driver's username from usertable
 					getDriverUsernameQuery = """
 						SELECT Username
