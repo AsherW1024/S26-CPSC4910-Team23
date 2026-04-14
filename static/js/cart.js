@@ -139,7 +139,7 @@ function decreaseAmount(event) {
 			showAppFeedback(errorData.message || "Could not update quantity.", "error");
 		}
 		else {
-			responseData = await response.json();
+			const responseData = await response.json();
 			const newPointAmount = responseData.newPriceDisplay;
 			priceEl.innerText = `${newPointAmount} Points`;
 		}
