@@ -1,0 +1,17 @@
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <section class="app-status-wrap" aria-label="System messages">
+      {% for category, message in messages %}
+        {% set is_error = category in ['validation', 'auth', 'notfound', 'username', 'email', 'password', 'resetFail', 'failedAttempts', 'bulkError'] %}
+        {% set is_success = category in ['success', 'orderConfirmation', 'created', 'enrolled', 'registered', 'driver', 'admin', 'sponsor'] %}
+        <div
+          class="app-status-message {% if is_error %}app-status-error{% elif is_success %}app-status-success{% else %}app-status-info{% endif %}"
+          role="{% if is_error %}alert{% else %}status{% endif %}"
+          aria-live="{% if is_error %}assertive{% else %}polite{% endif %}"
+          aria-atomic="true">
+          {{ message }}
+        </div>
+      {% endfor %}
+    </section>
+  {% endif %}
+{% endwith %}
