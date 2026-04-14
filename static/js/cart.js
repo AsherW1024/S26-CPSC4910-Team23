@@ -72,7 +72,7 @@ function increaseAmount(event) {
 	}
 
 	incrementTimer = setTimeout(async()=> {
-		response = await fetch("/cart/update", {
+		const response = await fetch("/cart/update", {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
@@ -89,7 +89,7 @@ function increaseAmount(event) {
 			showAppFeedback(errorData.message || "Could not update quantity.", "error");
 		}
 		else {
-			responseData = await response.json();
+			const responseData = await response.json();
 			newPointAmount = responseData.newPriceDisplay;
 			priceEl.innerText = `${newPointAmount} Points`;
 		}
@@ -122,7 +122,7 @@ function decreaseAmount(event) {
 	}
 
 	decrementTimer = setTimeout(async()=> {
-		response = await fetch("/cart/update", {
+		const response = await fetch("/cart/update", {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
@@ -140,7 +140,7 @@ function decreaseAmount(event) {
 		}
 		else {
 			responseData = await response.json();
-			newPointAmount = responseData.newPriceDisplay;
+			const newPointAmount = responseData.newPriceDisplay;
 			priceEl.innerText = `${newPointAmount} Points`;
 		}
 		decrementStartValue = null;
