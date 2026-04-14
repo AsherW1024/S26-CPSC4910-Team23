@@ -4337,7 +4337,7 @@ def addToCart():
 			print(f"Issue with query in '/car/add': {e}")
 			return jsonify({"message": "Issue updating cart"}), 400
 		
-		return jsonify({"message": "Success"}), 200
+		return jsonify({"message": "Item added to cart."}), 200
 	return jsonify({"message": "Permission error"}), 400
 
 @application.route("/cart/update", methods=["POST"])
@@ -4379,7 +4379,7 @@ def updateCart():
 		
 		newPriceDisplay = productPrice*amount
 
-		return jsonify({"message": "Success", "newPriceDisplay": newPriceDisplay}), 200
+		return jsonify({"message": "Cart updated.", "newPriceDisplay": newPriceDisplay}), 200
 	return jsonify({"message": "Permission error"}), 400
 
 @application.route("/cart/remove", methods=["POST"])
