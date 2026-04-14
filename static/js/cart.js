@@ -34,19 +34,25 @@ async function showProductPopup(event) {
 
 async function removeFromCart(event) {
 	const removeButton = event.target;
-	const productRow = removeButton.parentElement.parentElement.parentElement;
+	const productRow = removeButton.closest(".product-row");
 	const productID = productRow.dataset.productId;
-	
-	response = await fetch("/cart/remove", {
-		method: 'POST',
+
+	const response = await fetch("/cart/remove", {
+		method: "POST",
 		headers: {
-			'Content-Type': 'application/json',
+			"Content-Type": "application/json",
 		},
-		body: JSON.stringify({
-			productID: productID
-		})
+		body: JSON.stringify({ productID })
 	});
-	window.location.reload();
+
+	const data = await readJsonSafely(response);
+
+	if (response.ok) {
+		showAppFeedback(data.message || "Item removed from cart.", "success");
+		window.location.reload();
+	} else {
+		showAppFeedback(data.message || "Could not remove the item.", "error");
+	}
 }
 
 let incrementTimer = null;
@@ -79,6 +85,8 @@ function increaseAmount(event) {
 
 		if (!response.ok) {
 			amountDisplay.innerText = incrementStartValue;
+			const errorData = await readJsonSafely(response);
+			showAppFeedback(errorData.message || "Could not update quantity.", "error");
 		}
 		else {
 			responseData = await response.json();
@@ -127,6 +135,8 @@ function decreaseAmount(event) {
 
 		if (!response.ok) {
 			amountDisplay.innerText = decrementStartValue;
+			const errorData = await readJsonSafely(response);
+			showAppFeedback(errorData.message || "Could not update quantity.", "error");
 		}
 		else {
 			responseData = await response.json();
