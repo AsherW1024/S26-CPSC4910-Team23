@@ -4771,6 +4771,14 @@ def makeOrder():
 		updateDb(query=deleteCartItemsQuery, params=(userID, orgID))
 
 		session["Points"] = newDriverPointTotal
+		create_notification_for_user_if_allowed(
+			userID,
+			title="Order Confirmed",
+			message=f"Your order #{orderID} was placed successfully.",
+			notification_type="order",
+			is_essential=0,
+			related_url="/orders"
+		)
 		flash("Purchase successful. Order confirmed.", category="orderConfirmation")
 
 	except Exception as e:
