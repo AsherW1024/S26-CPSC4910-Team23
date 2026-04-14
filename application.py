@@ -2675,6 +2675,8 @@ def postBugReport():
 	updateDb("""INSERT INTO BugReports (Title, Description, Severity)
 				VALUES (%s, %s, %s)""", (title, description, severity))
 	
+	flash("Bug report submitted successfully.", "success")
+
 	return redirect(prevPage or url_for("home"))
 
 @application.route("/profile")
@@ -2881,13 +2883,15 @@ def settingsAppearance():
 @application.route("/settings/communicationPreference", methods=["POST"])
 def communicationPreference():
 	commPref = request.form.get("commPref")
-	updateDb(f"UPDATE Users SET PrefCommMethod=%s WHERE UserID=%s", (commPref, session["UserID"]))
+	updateDb("UPDATE Users SET PrefCommMethod=%s WHERE UserID=%s", (commPref, session["UserID"]))
+	flash("Communication preference updated.", "success")
 	return redirect(url_for("settings"))
 
 @application.route("/settings/essentialNotifications", methods=["POST"])
 def essentialNotifications():
 	essentialNotif = 1 if request.form.get("essentialNotif") else 0
-	updateDb(f"UPDATE Users SET EssentialNotifsOnly=%s WHERE UserID=%s", (essentialNotif, session["UserID"]))
+	updateDb("UPDATE Users SET EssentialNotifsOnly=%s WHERE UserID=%s", (essentialNotif, session["UserID"]))
+	flash("Essential notification preference updated.", "success")
 	return redirect(url_for("settings"))
 
 @application.route("/settings/notificationsEnabled", methods=["POST"])
