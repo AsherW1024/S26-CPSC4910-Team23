@@ -1,7 +1,7 @@
-incrementButtons = document.querySelectorAll(".increment-button");
-decrementButtons = document.querySelectorAll(".decrement-button");
-removeButtons = document.querySelectorAll(".remove-cart-item");
-productRows = document.querySelectorAll(".product-row");
+const incrementButtons = document.querySelectorAll(".increment-button");
+const decrementButtons = document.querySelectorAll(".decrement-button");
+const removeButtons = document.querySelectorAll(".remove-cart-item");
+const productRows = document.querySelectorAll(".product-row");
 
 for (const row of productRows) {
 	row.addEventListener("click", showProductPopup);
@@ -19,11 +19,11 @@ for (const button of removeButtons) {
 async function showProductPopup(event) {
 	//dont show popup if user was interacting with a button
 	if (event.target.tagName === "BUTTON") {return}
-	productID = event.target.closest(".product-row").dataset.productId;
-	popupDiv = document.getElementById("popup-overlay-bg");
-	response = await fetch(`/product/${productID}`);
+	const productID = event.target.closest(".product-row").dataset.productId;
+	const popupDiv = document.getElementById("popup-overlay-bg");
+	const response = await fetch(`/product/${productID}`);
 	if (response.ok) {
-		popupHtml = await response.text();
+		const popupHtml = await response.text();
 		popupDiv.innerHTML = popupHtml;
 		popupDiv.hidden = false;
 		const popupScript = document.createElement("script");

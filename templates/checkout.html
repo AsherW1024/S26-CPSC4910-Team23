@@ -72,7 +72,7 @@
 						<option value="KS">Kansas</option>
 						<option value="KY">Kentucky</option>
 						<option value="LA">Louisiana</option>
-						<option value="ME" selected>Maine</option>
+						<option value="ME" {% if shipping_address and shipping_address.state == 'ME' %}selected{% endif %}>Maine</option>
 						<option value="MD">Maryland</option>
 						<option value="MA">Massachusetts</option>
 						<option value="MI">Michigan</option>
