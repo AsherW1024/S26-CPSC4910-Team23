@@ -4404,7 +4404,7 @@ def removeFromCart():
 		except Exception as e:
 			print(e)
 			return jsonify({"message": "Error removing product from cart"}), 400
-		return redirect(url_for("cart"))
+		return jsonify({"message": "Item removed from cart."}), 200
 
 	return jsonify({"message": "Permission error"}), 400
 
