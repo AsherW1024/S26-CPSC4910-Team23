@@ -1,7 +1,7 @@
 <link rel="stylesheet" type="text/css" href="/static/css/product_popup.css">
-<div id="popup-content-bg">
-	<div id="popup-content-div">
-		<button id="popup-close">X</button>
+<div id="popup-content-bg" role="presentation">
+	<div id="popup-content-div" role="dialog" aria-modal="true" aria-labelledby="popup-title">
+		<button id="popup-close" type="button" aria-label="Close product details">X</button>
 		<div class="popup-action-row">
 			<button
 				type="button"
@@ -13,10 +13,10 @@
 		</div>
 		<div id="popup-images">
 			{%for prodImage in productDetails.images%}
-			<img src="{{prodImage}}">
+			<img src="{{prodImage}}" alt="{{ productDetails.title }} image">
 			{%endfor%}
 		</div>
-		<h2 class="product-name">{{productDetails.title}}</H3>
+		<h2 id="popup-title" class="product-name">{{productDetails.title}}</h2>
 		<div id="popup-price">
 			<div class="side-by-side">
 				<h3 class="popup-label">Point Cost:</h3>
