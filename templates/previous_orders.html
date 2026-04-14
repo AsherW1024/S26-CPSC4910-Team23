@@ -50,7 +50,14 @@
 			<tbody>
 				{%for order in orders%}
 				{%set orderID = order.get('orderID')%}
-				<tr data-order-id="{{orderID}}" class="order-row" onclick="window.location='/order/{{orderID}}/details'">
+				<tr
+					data-order-id="{{orderID}}"
+					class="order-row"
+					tabindex="0"
+					role="link"
+					aria-label="Open details for order {{ orderID }}"
+					onclick="window.location='/order/{{orderID}}/details'"
+					onkeydown="if(event.key==='Enter' || event.key===' '){ event.preventDefault(); window.location='/order/{{orderID}}/details'; }">
 					<td class="cell"><div class="cell-content"><img src="{{order.get('thumbnail')}}" alt="Thumbnail for order {{ order.get('orderID') }}"></div></td>
 					<td class="cell"><div class="cell-content"><p>{{order.get("itemQuantity")}}</p></div></td>
 					<td class="cell"><div class="cell-content"><p>{{order.get('pointTotal')}} Points</p></div></td>
