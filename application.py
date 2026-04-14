@@ -3199,11 +3199,11 @@ def exit_impersonation():
 
 @application.route("/organization/users/<int:UserID>/points")
 def adjustDriverPoints(UserID):
-    guard = require_sponsor()
-    if guard:
+    #guard = require_sponsor()
+    #if guard:
     # allow Admin too
-        if session.get("role") != "Admin":
-            return guard
+        #if session.get("role") != "Admin":
+            #return guard
 
     driver = paramQueryDb("""
         SELECT u.UserID, u.Name AS DriverName, u.Email, u.Username, o.Name AS OrgName, d.TotalPoints
@@ -3221,11 +3221,11 @@ def adjustDriverPoints(UserID):
 
 @application.route("/organization/users/<int:UserID>/points", methods=["POST"])
 def adjustDriverPointsPost(UserID):
-	guard = require_sponsor()
-	if guard:
+	#guard = require_sponsor()
+	#if guard:
     # allow Admin too
-		if session.get("role") != "Admin":
-			return guard
+		#if session.get("role") != "Admin":
+		#	return guard
 			
     # Read + validate inputs
 	adjustmentType = request.form.get("adjustType")
