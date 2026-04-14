@@ -8,9 +8,11 @@
     <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.2/css/bulma.min.css">
     <link rel="stylesheet" type="text/css" href="/static/css/navigation.css">
     {% block page_css %}{% endblock %}
+    <script src="/static/js/app_feedback.js" defer></script>
 </head>
 
 <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
     <div class="topnav">
         <div class="nav-left">
             <a href="/"> Home </a>
@@ -146,6 +148,10 @@
         </div>
     </div>
     
-    {% block content %}{% endblock %}
+    <div id="app-feedback-container" class="app-feedback-container" aria-live="polite" aria-atomic="true"></div>
+    {% include "_status_messages.html" %}
+    <main id="main-content">
+        {% block content %}{% endblock %}
+    </main>
 </body>
 </html>
