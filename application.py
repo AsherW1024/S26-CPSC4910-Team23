@@ -4624,7 +4624,11 @@ def checkout():
 		flash(validation["message"], "validation")
 		return redirect(url_for("cart"))
 
-	return render_template("checkout.html", layout="orgnav.html")
+	return render_template(
+		"checkout.html",
+		layout="orgnav.html",
+		shipping_address=session.get("shipping_address", {})
+	)
 
 def getCartData(userID, orgID):
 	getCartItemsQuery = """
