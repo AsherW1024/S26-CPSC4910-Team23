@@ -214,9 +214,15 @@ async function queryProducts() {
 			productDiv.classList.add("not-included");
 		}
 		productDiv.dataset.index = index;
+
+		productDiv.tabIndex = 0;
+		productDiv.setAttribute("role", "button");
+		productDiv.setAttribute("aria-label", `Open details for ${product.title}`);
+		
 		//image shown in catalog grid
 		let productImg = document.createElement("img")
 		productImg.src = product.thumbnail;
+		productImg.alt = `${product.title} product image`;
 		//product name show in the catalog grid
 		let name = document.createElement("h3");
 		name.innerText = product.title;
@@ -279,6 +285,12 @@ async function queryProducts() {
 		//give product div an event listener that opens up the advanced details
 		productDiv.addEventListener("click", showProductDetails);
 
+		productDiv.addEventListener("keydown", (event) => {
+			if (event.key === "Enter" || event.key === " ") {
+				event.preventDefault();
+				showProductDetails.call(productDiv, event);
+			}
+		});
 		//append elements to the grid;
 		grid.appendChild(productDiv);
 	});
@@ -314,17 +326,20 @@ function closePopup() {
 async function addProductToCart(event) {
 	const cartButton = event.target.closest(".cart");
 	const productID = cartButton.dataset.productId;
-	let response = await fetch ("/cart/add", {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-		},
-		body: JSON.stringify({
-			productID: productID
-		})
+
+	const response = await fetch("/cart/add", {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ productID })
 	});
-	if (await response.ok) {
+
+	const data = await readJsonSafely(response);
+
+	if (response.ok) {
 		cartButton.classList.add("cart-added");
+		showAppFeedback(data.message || "Added to cart.", "success");
+	} else {
+		showAppFeedback(data.message || "Could not add to cart.", "error");
 	}
 }
 
