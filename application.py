@@ -3273,6 +3273,7 @@ def adjustDriverPointsPost(UserID):
 		INSERT INTO PointAdjustments(OrganizationID, AdjustedByUName, DriverUName, AdjustmentType, DriverTotalPoints, AdjustmentPoints, AdjustmentReason, DateAdjusted)
 		VALUES (%s, %s, %s, %s, %s, %s, %s)
 		""", (organization.get("OrganizationID"), user.get("Username"), driver["Username"], adjustmentType, newTotal, points, reason, datetime.now()))
+		updateDb("""UPDATE DriverOrganizations SET TotalPoints = %s WHERE DriverID = %s""", (newTotal, UserID))
 	except Exception as e:
 		# If table doesn't exist, keep app working
 		print("PointDeductions insert skipped:", e)
