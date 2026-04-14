@@ -51,8 +51,8 @@
 			</thead>
 			<tbody>
 				{% for item in orderItems %}
-				<tr class="product-row" data-product-id="{{item.productID}}">
-					<td><img src="{{item.get('thumbnail')}}"></td>
+				<tr class="product-row" data-product-id="{{item.productID}}" tabindex="0" role="button" aria-label="Open product details for {{ item.get('title') }}">
+					<td><img src="{{item.get('thumbnail')}}" alt="{{ item.get('title') }} product image"></td>
 					<td>{{item.get("title")}}</td>
 					<td>{{item.get("unitPrice")}} Points</td>
 					<td>{{item.get("amount")}}</td>
