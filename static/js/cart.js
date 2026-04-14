@@ -90,7 +90,7 @@ function increaseAmount(event) {
 		}
 		else {
 			const responseData = await response.json();
-			newPointAmount = responseData.newPriceDisplay;
+			const newPointAmount = responseData.newPriceDisplay;
 			priceEl.innerText = `${newPointAmount} Points`;
 		}
 		incrementStartValue=null;
