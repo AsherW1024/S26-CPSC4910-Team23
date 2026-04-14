@@ -25,30 +25,35 @@
 	<div class="box">
 		<form method="POST" action="/orders/confirm">
 			<div class="field">
-				<label class="label">Street Address</label>
+				<label class="label" for="address">Street Address</label>
+				<p class="help">Enter the shipping street address for this order.</p>
 				<div class="control">
-					<input class="input" id="address" type="text" name="address" placeholder="Address" value="555 Elm Street" autocomplete="street-address" required>
-					<span class="error">
-						Please enter a valid address
-					</span>
+					<input class="input" id="address" type="text" name="address"
+						placeholder="123 Main St"
+						value="{{ shipping_address.street if shipping_address else '' }}"
+						autocomplete="street-address" required aria-describedby="addressHelp">
+					<span id="addressHelp" class="error">Please enter a valid street address.</span>
 				</div>
 			</div>
 
 			<div class="field">
-				<label class="label">City</label>
+				<label class="label" for="city">City</label>
+				<p class="help">Enter the city for the shipping address.</p>
 				<div class="control">
-					<input class="input" id="city" type="text" name="city" placeholder="City Name" value="Silent Hill" autocomplete="address-level2" required>
-					<span class="error">
-						Please enter a valid city
-					</span>
+					<input class="input" id="city" type="text" name="city"
+						placeholder="City"
+						value="{{ shipping_address.city if shipping_address else '' }}"
+						autocomplete="address-level2" required aria-describedby="cityHelp">
+					<span id="cityHelp" class="error">Please enter a valid city.</span>
 				</div>
 			</div>
 
 			<div class="field">
-				<label class="label">State</label>
+				<label class="label" for="state">State</label>
+				<p class="help">Choose the state for the shipping address.</p>
 				<div class="control">
-					<select id="state" name="state" class="input" autocomplete="address-level1" required>
-						<option value="" disabled>Select a state</option>
+					<select id="state" name="state" class="input" autocomplete="address-level1" required aria-describedby="stateHelp">
+						<option value="" {% if not shipping_address or not shipping_address.state %}selected{% endif %} disabled>Select a state</option>
 						<option value="AL">Alabama</option>
 						<option value="AK">Alaska</option>
 						<option value="AZ">Arizona</option>
@@ -88,7 +93,7 @@
 						<option value="OR">Oregon</option>
 						<option value="PA">Pennsylvania</option>
 						<option value="RI">Rhode Island</option>
-						<option value="SC">South Carolina</option>
+						<option value="SC" {% if shipping_address and shipping_address.state == 'SC' %}selected{% endif %}>South Carolina</option>
 						<option value="SD">South Dakota</option>
 						<option value="TN">Tennessee</option>
 						<option value="TX">Texas</option>
@@ -100,9 +105,7 @@
 						<option value="WI">Wisconsin</option>
 						<option value="WY">Wyoming</option>
 					</select>
-					<span class="error">
-						Please enter a valid state
-					</span>
+					<span id="stateHelp" class="error">Please select a valid state.</span>
 				</div>
 			</div>
 
