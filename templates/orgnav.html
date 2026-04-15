@@ -26,10 +26,14 @@
             {% if session.get('role') != "Driver" %}
                 {% if session.get('role') != "Driver" %}
                     <a href="/organization/applications"> Applications </a>
-                    {% if session.get('role') == "Sponsor" %}
-                        <a href="/organization/point_value">Point Value</a>
-                        <a href="/catalog/rules">Catalog Rules</a>
-                    {% endif %}
+                    <div class="dropdown">
+                        <button class="dropbtn" type="button">Organization Adjustments</button>
+                        <div class="dropdown-content">
+                            <a href="/catalog/rules">Catalog Rules</a>
+                            <a href="/organization/scheduledPoints">Point Schedule</a>
+                            <a href="/organization/point_value">Point Value</a>
+                        </div>
+                    </div>
                 {% endif %}
             {% endif %}
             {% if session.get('role') == "Driver" %}
@@ -77,7 +81,6 @@
             </div>
             {% elif session.get('role') == "Driver" %}
                 <a href="/orders">Order History</a>
-                <a href="/support">Contact Support</a>
                 <form id="leaveform" method="POST" action="/organization/leave"
                 style="display:inline;" onsubmit="return confirmOrgLeave();">
                     <a onclick="document.getElementById('leaveform').submit()">Leave Organization</a>

@@ -1,0 +1,57 @@
+{% extends "orgnav.html" %}
+
+{% block title %}Point Schedule{% endblock %}
+
+{% block page_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/form.css">
+{% endblock %}
+
+{% block content %}
+<div class="container is-max-desktop mt-6">
+    <div class="box">
+        <h2 class="title is-2">Edit Point Schedule</h2>
+
+        <form method="POST" action="/organization/scheduledPoints">
+
+            <input type="hidden" name="RecurringID" value="{{ schedule.RecurringID }}">
+
+            <div class="field">
+                <label for="points">Points to Award</label>
+                <input type="number" name="Points" id="points"
+                    value="{{ schedule.Points }}" required>
+            </div>
+            
+            <div class="field"></div>
+                <label for="schedule">Schedule Type</label>
+                <select name="ScheduleType" id="schedule" required>
+                    <option value="Weekly" {{ 'selected' if schedule.ScheduleType == 'Weekly' else '' }}>Weekly</option>
+                    <option value="Biweekly" {{ 'selected' if schedule.ScheduleType == 'Biweekly' else '' }}>Biweekly</option>
+                    <option value="Monthly" {{ 'selected' if schedule.ScheduleType == 'Monthly' else '' }}>Monthly</option>
+                </select>
+            </div>
+
+            <div class="buttons">
+                <button type="submit" name="action" value="confirm" class="button is-success" {% if schedule.ScheduleStatus != "Active"%} disabled {% endif %}>
+                    Confirm Changes
+                </button>
+
+                {% if schedule.ScheduleStatus == "Active" %}
+                <button type="submit" name="action" value="deactivate" class="button is-danger">
+                    Deactivate
+                </button>
+                {% else %}
+                <button type="submit" name="action" value="activate" class="button is-success">
+                    Activate
+                </button>
+                {% endif %}
+
+                <button type="button" class="button is-info" onclick="window.location.href='{{ url_for('organization') }}'">
+                    Cancel
+                </button>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+{% endblock %}

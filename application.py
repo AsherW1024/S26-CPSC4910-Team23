@@ -15,6 +15,7 @@ import csv
 import io
 from datetime import date
 from cryptography.fernet import Fernet, InvalidToken
+from apscheduler.schedulers.background import BackgroundScheduler
 
 application = Flask(__name__)
 application.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-change-me-secret-key")
@@ -30,6 +31,66 @@ LOGIN_LOCKOUT_MINUTES = int(os.environ.get('LOGIN_LOCKOUT_MINUTES', 15))
 # -----------------------------
 # Security / Validation Helpers
 # -----------------------------
+
+scheduler = BackgroundScheduler()
+
+def runScheduledAwards():
+	now = datetime.now()
+
+	awards = selectDb("SELECT * FROM ScheduledPointAwards")
+
+	for award in awards:
+		if shouldScheduledBeRun(award, now):
+			applyAward(award)
+
+def shouldScheduledBeRun(award, now):
+	if award["LastRunDate"]:
+		if award["ScheduleType"] == "Weekly":
+			if (now - award["LastRunDate"]).days < 7:
+				return False
+		elif award["ScheduleType"] == "Biweekly":
+			if (now - award["LastRunDate"]).days < 14:
+				return False
+		elif award["ScheduleType"] == "Monthly":
+			if now.month == award["LastRunDate"].month:
+				return False
+
+	if award["ScheduleType"] == "Weekly":
+		return now.weekday() == 0
+
+	if award["ScheduleType"] == "Biweekly":
+		return now.day in (1, 15)
+
+	if award["ScheduleType"] == "Monthly":
+		return now.day == 1
+
+	return False
+
+def applyAward(award):
+	orgID = award["OrganizationID"]
+	driverID = award["DriverUName"]
+	points = award["Points"]
+	schedule = award["ScheduleType"]
+
+	updateDb("""
+		UPDATE DriverOrganizations
+		SET TotalPoints = TotalPoints + %s
+		WHERE OrganizationID = %s AND DriverID = %s
+		""", (points, orgID, driverID))
+
+	updateDb("""
+		UPDATE ScheduledPointAwards
+		SET LastRunDate = %s, NextRunDate = %s 
+		WHERE RecurringID = %s
+		""", (datetime.now(), award["RecurringID"]))
+
+scheduler.add_job(
+		func=runScheduledAwards,
+		trigger='cron',
+		hour=0,
+		minute=0
+	)
+scheduler.start()
 
 PASSWORD_MIN_LEN = 10
 PASSWORD_MAX_LEN = 128
@@ -479,6 +540,8 @@ def updateDb(query: str, params=None):
 		with connection.cursor() as cursor:
 			cursor.execute(query, params)
 			connection.commit()
+
+			return cursor.lastrowid
 	except Exception as e:
 		print(e)
 	finally:
@@ -773,9 +836,12 @@ def registerOrganization():
 		flash("Organization already exists", "registeredOrg")
 		return redirect(url_for("login"))
 
-	updateDb(
+	OrgID = updateDb(
 		"""INSERT INTO Organizations (Name, TimeCreated)
 		VALUES (%s, %s)""", (orgName, timeCreated))
+	updateDb("""
+			INSERT INTO ScheduledPointAwards (OrganizationID, Points, ScheduleType, startDate, DateCreated, ScheduleStatus)
+			VALUES (%s, %s, %s, %s, %s, %s)""", (OrgID, 20, "Monthly", timeCreated, timeCreated, "Active"))
 
 	session["createOrg"] = orgName
 	return redirect(url_for("sRegister"))
@@ -3435,15 +3501,21 @@ def applications():
 @application.route("/organization/applications/<int:UserID>/accept", methods=["POST"])
 def acceptedApplications(UserID):
 	reason = request.form.get("acceptReason")
+	
 	user = paramQueryDb("""SELECT Username FROM Users WHERE UserID = %s""", (session['UserID'],))
 	driver = paramQueryDb("""SELECT Username FROM Users WHERE UserID = %s""", (UserID,))
 	timeJoined= datetime.now()
-	updateDb("""UPDATE OrganizationApplications SET ApplicationStatus = %s, ReviewedByUName = %s, ReviewReason = %s WHERE DriverUName = %s AND OrganizationID = %s""", ("Accepted", user["Username"], reason, driver["Username"], session["OrgID"]))
+	updateDb("""UPDATE OrganizationApplications SET ApplicationStatus = %s, ReviewedByUName = %s, ReviewReason = %s WHERE DriverUName = %s AND OrganizationID = %s""", 
+				("Accepted", user["Username"], reason, driver["Username"], session["OrgID"]))
 	updateDb("""
 		UPDATE DriverOrganizations
-		SET OrganizationID = %s
+		SET OrganizationID = %s, TotalPoints = 20
 		WHERE DriverID = %s
 	""", (session["OrgID"], UserID))
+	updateDb("""
+			INSERT INTO PointAdjustments (OrganizationID, DriverUName, AdjustedByUName, DriverTotalPoints, AdjustmentType, AdjustmentPoints, AdjustmentReason, DateAdjusted)
+			VALUES (%s, %s, %s, %s, %s, %s, %s)
+		""", (session["OrgID"], driver["Username"], user["Username"], 20, "Award", 20, "Awarded following successful application review and acceptance into the organization", timeJoined))
 
 	try:
 		updateDb("""
@@ -3480,6 +3552,42 @@ def organization_leave(OrgID):
     session.pop("Organization", None)
     flash("You left the organization.", "success")
     return redirect(url_for("home"))
+
+@application.route("/organization/scheduledPoints")
+def editPointSchedule():
+	schedule = paramQueryDb("SELECT * FROM ScheduledPointAwards WHERE OrganizationID = %s", session["OrgID"])
+	return render_template("PointScheduleEdit.html", schedule=schedule)
+
+@application.route("/organization/scheduledPoints", methods=["POST"])
+def editPointSchedulePost():
+	action = request.form.get("action")
+	recurringID = request.form.get("RecurringID")
+
+	if action == "confirm":
+		points = request.form.get("Points")
+		scheduleType = request.form.get("ScheduleType")
+
+		updateDb("""
+			UPDATE ScheduledPointAwards
+			SET Points=%s, ScheduleType=%s, DateUpdated=%s
+			WHERE RecurringID=%s
+			""", (points, scheduleType, datetime.now(), recurringID))
+
+	elif action == "deactivate":
+		updateDb("""
+			UPDATE ScheduledPointAwards
+			SET ScheduleStatus='Paused', DateUpdated=%s
+			WHERE RecurringID=%s
+			""", (datetime.now(), recurringID))
+	elif action == "activate":
+		updateDb("""
+			UPDATE ScheduledPointAwards
+			SET ScheduleStatus='Active', DateUpdated=%s
+			WHERE RecurringID=%s
+			""", (datetime.now(), recurringID))
+
+	return redirect(url_for("organization"))
+
 
 @application.route("/organization/point_value")
 def pointValueScreen():
