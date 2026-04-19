@@ -23,7 +23,7 @@
 			<tbody>
 				<tr>
 					<td>{{orderData.get("pointTotal")}} Points</td>
-					<td>{{orderItems|length}}</td>
+					<td>{{orderItems|sum(attribute="amount")}}</td>
 					<td>{{orderData.get("orderTime")}}</td>
 					{% set streetAddress = orderData.get("deliveryAddress")%}
 					{%set cityState = orderData.get("deliveryCity")+", "+orderData.get("deliveryState")%}
